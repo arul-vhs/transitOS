@@ -1,5 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ComingSoon } from "@/components/app-shell";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { hasPermission } from "@/lib/auth-shared";
 
 export const Route = createFileRoute("/analytics")({
@@ -16,5 +15,5 @@ export const Route = createFileRoute("/analytics")({
       { property: "og:description", content: "Punctuality, utilisation and disruption analytics." },
     ],
   }),
-  component: () => <ComingSoon title="Analytics" subtitle="Punctuality, utilisation and disruption analytics." />,
+  component: () => <Outlet />,
 });

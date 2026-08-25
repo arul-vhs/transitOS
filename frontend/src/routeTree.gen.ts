@@ -13,6 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as AnalyticsIndexRouteImport } from './routes/analytics.index'
+import { Route as AnalyticsCrewRouteImport } from './routes/analytics.crew'
+import { Route as AnalyticsFleetRouteImport } from './routes/analytics.fleet'
+import { Route as AnalyticsIncidentsRouteImport } from './routes/analytics.incidents'
+import { Route as AnalyticsPlanVsActualRouteImport } from './routes/analytics.plan-vs-actual'
+import { Route as AnalyticsRoutesRouteImport } from './routes/analytics.routes'
 import { Route as CrewAvailabilityRouteImport } from './routes/crew.availability'
 import { Route as CrewConductorsRouteImport } from './routes/crew.conductors'
 import { Route as CrewDriversRouteImport } from './routes/crew.drivers'
@@ -21,6 +27,7 @@ import { Route as FleetMaintenanceRouteImport } from './routes/fleet.maintenance
 import { Route as NetworkPlannerRouteImport } from './routes/network.planner'
 import { Route as NetworkRoutesRouteImport } from './routes/network.routes'
 import { Route as OperationsDutiesRouteImport } from './routes/operations.duties'
+import { Route as OperationsIncidentsRouteImport } from './routes/operations.incidents'
 import { Route as OperationsTodayRouteImport } from './routes/operations.today'
 import { Route as OperationsTripsRouteImport } from './routes/operations.trips'
 import { Route as SchedulingOptimizerRouteImport } from './routes/scheduling.optimizer'
@@ -44,6 +51,36 @@ const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsIndexRoute = AnalyticsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AnalyticsRoute,
+} as any)
+const AnalyticsCrewRoute = AnalyticsCrewRouteImport.update({
+  id: '/crew',
+  path: '/crew',
+  getParentRoute: () => AnalyticsRoute,
+} as any)
+const AnalyticsFleetRoute = AnalyticsFleetRouteImport.update({
+  id: '/fleet',
+  path: '/fleet',
+  getParentRoute: () => AnalyticsRoute,
+} as any)
+const AnalyticsIncidentsRoute = AnalyticsIncidentsRouteImport.update({
+  id: '/incidents',
+  path: '/incidents',
+  getParentRoute: () => AnalyticsRoute,
+} as any)
+const AnalyticsPlanVsActualRoute = AnalyticsPlanVsActualRouteImport.update({
+  id: '/plan-vs-actual',
+  path: '/plan-vs-actual',
+  getParentRoute: () => AnalyticsRoute,
+} as any)
+const AnalyticsRoutesRoute = AnalyticsRoutesRouteImport.update({
+  id: '/routes',
+  path: '/routes',
+  getParentRoute: () => AnalyticsRoute,
 } as any)
 const CrewAvailabilityRoute = CrewAvailabilityRouteImport.update({
   id: '/crew/availability',
@@ -85,6 +122,11 @@ const OperationsDutiesRoute = OperationsDutiesRouteImport.update({
   path: '/operations/duties',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OperationsIncidentsRoute = OperationsIncidentsRouteImport.update({
+  id: '/operations/incidents',
+  path: '/operations/incidents',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OperationsTodayRoute = OperationsTodayRouteImport.update({
   id: '/operations/today',
   path: '/operations/today',
@@ -103,9 +145,14 @@ const SchedulingOptimizerRoute = SchedulingOptimizerRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
+  '/analytics': typeof AnalyticsRouteWithChildren
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/analytics/crew': typeof AnalyticsCrewRoute
+  '/analytics/fleet': typeof AnalyticsFleetRoute
+  '/analytics/incidents': typeof AnalyticsIncidentsRoute
+  '/analytics/plan-vs-actual': typeof AnalyticsPlanVsActualRoute
+  '/analytics/routes': typeof AnalyticsRoutesRoute
   '/crew/availability': typeof CrewAvailabilityRoute
   '/crew/conductors': typeof CrewConductorsRoute
   '/crew/drivers': typeof CrewDriversRoute
@@ -114,15 +161,21 @@ export interface FileRoutesByFullPath {
   '/network/planner': typeof NetworkPlannerRoute
   '/network/routes': typeof NetworkRoutesRoute
   '/operations/duties': typeof OperationsDutiesRoute
+  '/operations/incidents': typeof OperationsIncidentsRoute
   '/operations/today': typeof OperationsTodayRoute
   '/operations/trips': typeof OperationsTripsRoute
   '/scheduling/optimizer': typeof SchedulingOptimizerRoute
+  '/analytics/': typeof AnalyticsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/analytics/crew': typeof AnalyticsCrewRoute
+  '/analytics/fleet': typeof AnalyticsFleetRoute
+  '/analytics/incidents': typeof AnalyticsIncidentsRoute
+  '/analytics/plan-vs-actual': typeof AnalyticsPlanVsActualRoute
+  '/analytics/routes': typeof AnalyticsRoutesRoute
   '/crew/availability': typeof CrewAvailabilityRoute
   '/crew/conductors': typeof CrewConductorsRoute
   '/crew/drivers': typeof CrewDriversRoute
@@ -131,16 +184,23 @@ export interface FileRoutesByTo {
   '/network/planner': typeof NetworkPlannerRoute
   '/network/routes': typeof NetworkRoutesRoute
   '/operations/duties': typeof OperationsDutiesRoute
+  '/operations/incidents': typeof OperationsIncidentsRoute
   '/operations/today': typeof OperationsTodayRoute
   '/operations/trips': typeof OperationsTripsRoute
   '/scheduling/optimizer': typeof SchedulingOptimizerRoute
+  '/analytics': typeof AnalyticsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
+  '/analytics': typeof AnalyticsRouteWithChildren
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/analytics/crew': typeof AnalyticsCrewRoute
+  '/analytics/fleet': typeof AnalyticsFleetRoute
+  '/analytics/incidents': typeof AnalyticsIncidentsRoute
+  '/analytics/plan-vs-actual': typeof AnalyticsPlanVsActualRoute
+  '/analytics/routes': typeof AnalyticsRoutesRoute
   '/crew/availability': typeof CrewAvailabilityRoute
   '/crew/conductors': typeof CrewConductorsRoute
   '/crew/drivers': typeof CrewDriversRoute
@@ -149,9 +209,11 @@ export interface FileRoutesById {
   '/network/planner': typeof NetworkPlannerRoute
   '/network/routes': typeof NetworkRoutesRoute
   '/operations/duties': typeof OperationsDutiesRoute
+  '/operations/incidents': typeof OperationsIncidentsRoute
   '/operations/today': typeof OperationsTodayRoute
   '/operations/trips': typeof OperationsTripsRoute
   '/scheduling/optimizer': typeof SchedulingOptimizerRoute
+  '/analytics/': typeof AnalyticsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -160,6 +222,11 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/login'
     | '/settings'
+    | '/analytics/crew'
+    | '/analytics/fleet'
+    | '/analytics/incidents'
+    | '/analytics/plan-vs-actual'
+    | '/analytics/routes'
     | '/crew/availability'
     | '/crew/conductors'
     | '/crew/drivers'
@@ -168,15 +235,21 @@ export interface FileRouteTypes {
     | '/network/planner'
     | '/network/routes'
     | '/operations/duties'
+    | '/operations/incidents'
     | '/operations/today'
     | '/operations/trips'
     | '/scheduling/optimizer'
+    | '/analytics/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/analytics'
     | '/login'
     | '/settings'
+    | '/analytics/crew'
+    | '/analytics/fleet'
+    | '/analytics/incidents'
+    | '/analytics/plan-vs-actual'
+    | '/analytics/routes'
     | '/crew/availability'
     | '/crew/conductors'
     | '/crew/drivers'
@@ -185,15 +258,22 @@ export interface FileRouteTypes {
     | '/network/planner'
     | '/network/routes'
     | '/operations/duties'
+    | '/operations/incidents'
     | '/operations/today'
     | '/operations/trips'
     | '/scheduling/optimizer'
+    | '/analytics'
   id:
     | '__root__'
     | '/'
     | '/analytics'
     | '/login'
     | '/settings'
+    | '/analytics/crew'
+    | '/analytics/fleet'
+    | '/analytics/incidents'
+    | '/analytics/plan-vs-actual'
+    | '/analytics/routes'
     | '/crew/availability'
     | '/crew/conductors'
     | '/crew/drivers'
@@ -202,14 +282,16 @@ export interface FileRouteTypes {
     | '/network/planner'
     | '/network/routes'
     | '/operations/duties'
+    | '/operations/incidents'
     | '/operations/today'
     | '/operations/trips'
     | '/scheduling/optimizer'
+    | '/analytics/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AnalyticsRoute: typeof AnalyticsRoute
+  AnalyticsRoute: typeof AnalyticsRouteWithChildren
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
   CrewAvailabilityRoute: typeof CrewAvailabilityRoute
@@ -220,6 +302,7 @@ export interface RootRouteChildren {
   NetworkPlannerRoute: typeof NetworkPlannerRoute
   NetworkRoutesRoute: typeof NetworkRoutesRoute
   OperationsDutiesRoute: typeof OperationsDutiesRoute
+  OperationsIncidentsRoute: typeof OperationsIncidentsRoute
   OperationsTodayRoute: typeof OperationsTodayRoute
   OperationsTripsRoute: typeof OperationsTripsRoute
   SchedulingOptimizerRoute: typeof SchedulingOptimizerRoute
@@ -254,6 +337,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/analytics/': {
+      id: '/analytics/'
+      path: '/'
+      fullPath: '/analytics/'
+      preLoaderRoute: typeof AnalyticsIndexRouteImport
+      parentRoute: typeof AnalyticsRoute
+    }
+    '/analytics/crew': {
+      id: '/analytics/crew'
+      path: '/crew'
+      fullPath: '/analytics/crew'
+      preLoaderRoute: typeof AnalyticsCrewRouteImport
+      parentRoute: typeof AnalyticsRoute
+    }
+    '/analytics/fleet': {
+      id: '/analytics/fleet'
+      path: '/fleet'
+      fullPath: '/analytics/fleet'
+      preLoaderRoute: typeof AnalyticsFleetRouteImport
+      parentRoute: typeof AnalyticsRoute
+    }
+    '/analytics/incidents': {
+      id: '/analytics/incidents'
+      path: '/incidents'
+      fullPath: '/analytics/incidents'
+      preLoaderRoute: typeof AnalyticsIncidentsRouteImport
+      parentRoute: typeof AnalyticsRoute
+    }
+    '/analytics/plan-vs-actual': {
+      id: '/analytics/plan-vs-actual'
+      path: '/plan-vs-actual'
+      fullPath: '/analytics/plan-vs-actual'
+      preLoaderRoute: typeof AnalyticsPlanVsActualRouteImport
+      parentRoute: typeof AnalyticsRoute
+    }
+    '/analytics/routes': {
+      id: '/analytics/routes'
+      path: '/routes'
+      fullPath: '/analytics/routes'
+      preLoaderRoute: typeof AnalyticsRoutesRouteImport
+      parentRoute: typeof AnalyticsRoute
     }
     '/crew/availability': {
       id: '/crew/availability'
@@ -311,6 +436,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OperationsDutiesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/operations/incidents': {
+      id: '/operations/incidents'
+      path: '/operations/incidents'
+      fullPath: '/operations/incidents'
+      preLoaderRoute: typeof OperationsIncidentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/operations/today': {
       id: '/operations/today'
       path: '/operations/today'
@@ -335,9 +467,31 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AnalyticsRouteChildren {
+  AnalyticsCrewRoute: typeof AnalyticsCrewRoute
+  AnalyticsFleetRoute: typeof AnalyticsFleetRoute
+  AnalyticsIncidentsRoute: typeof AnalyticsIncidentsRoute
+  AnalyticsPlanVsActualRoute: typeof AnalyticsPlanVsActualRoute
+  AnalyticsRoutesRoute: typeof AnalyticsRoutesRoute
+  AnalyticsIndexRoute: typeof AnalyticsIndexRoute
+}
+
+const AnalyticsRouteChildren: AnalyticsRouteChildren = {
+  AnalyticsCrewRoute: AnalyticsCrewRoute,
+  AnalyticsFleetRoute: AnalyticsFleetRoute,
+  AnalyticsIncidentsRoute: AnalyticsIncidentsRoute,
+  AnalyticsPlanVsActualRoute: AnalyticsPlanVsActualRoute,
+  AnalyticsRoutesRoute: AnalyticsRoutesRoute,
+  AnalyticsIndexRoute: AnalyticsIndexRoute,
+}
+
+const AnalyticsRouteWithChildren = AnalyticsRoute._addFileChildren(
+  AnalyticsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AnalyticsRoute: AnalyticsRoute,
+  AnalyticsRoute: AnalyticsRouteWithChildren,
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
   CrewAvailabilityRoute: CrewAvailabilityRoute,
@@ -348,6 +502,7 @@ const rootRouteChildren: RootRouteChildren = {
   NetworkPlannerRoute: NetworkPlannerRoute,
   NetworkRoutesRoute: NetworkRoutesRoute,
   OperationsDutiesRoute: OperationsDutiesRoute,
+  OperationsIncidentsRoute: OperationsIncidentsRoute,
   OperationsTodayRoute: OperationsTodayRoute,
   OperationsTripsRoute: OperationsTripsRoute,
   SchedulingOptimizerRoute: SchedulingOptimizerRoute,

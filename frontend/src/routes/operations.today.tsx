@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { hasPermission } from "@/lib/auth-shared";
 import { getTrips, getDuties, validateDuty } from "@/lib/scheduling-fns";
+import { getIncidents } from "@/lib/rescheduling-fns";
 
 export const Route = createFileRoute("/operations/today")({
   beforeLoad: ({ context }) => {
@@ -54,6 +55,12 @@ function OperationsTodayPage() {
   const { data: dutiesList = [], isLoading: dutiesLoading } = useQuery({
     queryKey: ["today-duties", SERVICE_DATE],
     queryFn: () => getDuties({ serviceDate: SERVICE_DATE }),
+  });
+
+  // 2b. Fetch Live Incidents
+  const { data: incidentsList = [] } = useQuery({
+    queryKey: ["today-incidents", SERVICE_DATE],
+    queryFn: () => getIncidents({ serviceDate: SERVICE_DATE }),
   });
 
   // 3. Batch Validate Duties to count validation issues
@@ -116,9 +123,14 @@ function OperationsTodayPage() {
       title="Today's Operations"
       subtitle={`Live schedule monitoring, duty board, and dispatcher statistics for ${SERVICE_DATE}.`}
       actions={
-        <Button asChild size="sm">
-          <Link to="/operations/duties">Open Duty Builder</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link to="/operations/incidents">Disruption Manager</Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link to="/operations/duties">Open Duty Builder</Link>
+          </Button>
+        </div>
       }
     >
       <div className="space-y-6">
@@ -215,41 +227,84 @@ function OperationsTodayPage() {
             )}
           </section>
 
-          {/* Unassigned Trips List */}
-          <section className="panel p-4 space-y-4">
-            <div className="flex justify-between items-center border-b pb-2">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <AlertTriangle className="size-4 text-warning shrink-0" /> Unassigned Trips
-              </h3>
-              <Badge variant="outline" className="text-[10px] font-mono bg-warning/5 text-warning border-warning/20">
-                {unassignedTripsCount} Left
-              </Badge>
-            </div>
+          {/* Right Column Side Panels */}
+          <div className="space-y-6">
+            {/* Live Disruption Log */}
+            <section className="panel p-4 space-y-4">
+              <div className="flex justify-between items-center border-b pb-2">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <AlertTriangle className="size-4 text-destructive shrink-0" /> Live Disruption Log
+                </h3>
+                <Badge variant="outline" className="text-[10px] font-mono bg-destructive/5 text-destructive border-destructive/20">
+                  {incidentsList.filter(i => i.status !== "RESOLVED" && i.status !== "CANCELLED").length} Active
+                </Badge>
+              </div>
 
-            {loading ? (
-              <div className="py-20 text-center text-xs text-muted-foreground">Loading unassigned trips...</div>
-            ) : unassignedTripsCount === 0 ? (
-              <div className="py-12 text-center text-xs text-success font-medium bg-success/5 border border-success/10 rounded-md">
-                <CheckCircle2 className="size-5 text-success mx-auto mb-2" />
-                All trips assigned to duties!
-              </div>
-            ) : (
-              <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
-                {unassignedTrips.map((t) => (
-                  <div key={t.id} className="p-2.5 border rounded bg-secondary/10 flex justify-between items-center text-xs">
-                    <div>
-                      <p className="font-bold text-foreground">{t.tripCode}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{t.routeCode} ({t.origin} → {t.destination})</p>
+              {incidentsList.length === 0 ? (
+                <div className="py-8 text-center text-xs text-muted-foreground italic bg-secondary/5 border border-dashed rounded">
+                  No active service disruptions reported.
+                </div>
+              ) : (
+                <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                  {incidentsList.map((inc) => (
+                    <div key={inc.id} className="p-3 border rounded bg-background/50 hover:bg-background flex flex-col gap-1 text-xs">
+                      <div className="flex justify-between items-center">
+                        <Badge variant="outline" className="text-[9px] font-bold text-destructive bg-destructive/5 uppercase">
+                          {inc.type.replace("_", " ")}
+                        </Badge>
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          {new Date(inc.reportedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <p className="font-semibold text-foreground mt-0.5">{inc.description || "Disruption incident reported."}</p>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-[10px] text-muted-foreground">Status: <b>{inc.status}</b></span>
+                        <Button variant="ghost" size="xs" asChild className="h-6 text-[10px] px-1.5">
+                          <Link to="/operations/incidents">Manage Recovery <ArrowRight className="size-3 ml-1" /></Link>
+                        </Button>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-mono font-semibold text-primary">{formatMinutesToTime(t.startTime)}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{t.durationMin} mins</p>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Unassigned Trips List */}
+            <section className="panel p-4 space-y-4">
+              <div className="flex justify-between items-center border-b pb-2">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <AlertTriangle className="size-4 text-warning shrink-0" /> Unassigned Trips
+                </h3>
+                <Badge variant="outline" className="text-[10px] font-mono bg-warning/5 text-warning border-warning/20">
+                  {unassignedTripsCount} Left
+                </Badge>
               </div>
-            )}
-          </section>
+
+              {loading ? (
+                <div className="py-20 text-center text-xs text-muted-foreground">Loading unassigned trips...</div>
+              ) : unassignedTripsCount === 0 ? (
+                <div className="py-12 text-center text-xs text-success font-medium bg-success/5 border border-success/10 rounded-md">
+                  <CheckCircle2 className="size-5 text-success mx-auto mb-2" />
+                  All trips assigned to duties!
+                </div>
+              ) : (
+                <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                  {unassignedTrips.map((t) => (
+                    <div key={t.id} className="p-2.5 border rounded bg-secondary/10 flex justify-between items-center text-xs">
+                      <div>
+                        <p className="font-bold text-foreground">{t.tripCode}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{t.routeCode} ({t.origin} → {t.destination})</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-mono font-semibold text-primary">{formatMinutesToTime(t.startTime)}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{t.durationMin} mins</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
         </div>
       </div>
     </AppShell>

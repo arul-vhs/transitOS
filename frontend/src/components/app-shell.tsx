@@ -14,6 +14,7 @@ import {
   Wrench,
   LogOut,
   User,
+  AlertTriangle,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
@@ -45,6 +46,7 @@ const NAV: NavGroup[] = [
       { label: "Trip Management", to: "/operations/trips", icon: RouteIcon },
       { label: "Duty Builder", to: "/operations/duties", icon: CalendarClock },
       { label: "Schedule Optimizer", to: "/scheduling/optimizer", icon: Bus },
+      { label: "Disruption Manager", to: "/operations/incidents", icon: AlertTriangle },
     ],
   },
   {
@@ -88,6 +90,7 @@ function isNavVisible(role: string, to: string): boolean {
     case "/operations/trips":
     case "/operations/duties":
     case "/scheduling/optimizer":
+    case "/operations/incidents":
       return ["SCHEDULER", "DEPOT_MANAGER"].includes(role);
     case "/fleet/buses":
       return ["SCHEDULER", "DEPOT_MANAGER"].includes(role);
@@ -229,13 +232,13 @@ export function AppShell({
             <div className="flex shrink-0 items-center gap-4">
               {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
               
-              {user ? (
+              {user && user.name && user.role ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                       <Avatar className="h-9 w-9">
                         <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                          {user.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                          {user.name ? user.name.split(" ").map((n: string) => n[0]).join("").toUpperCase() : "U"}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
@@ -245,7 +248,7 @@ export function AppShell({
                       <div className="flex flex-col space-y-1">
                         <p className="text-sm font-medium leading-none">{user.name}</p>
                         <p className="text-xs leading-none text-muted-foreground capitalize">
-                          {user.role.toLowerCase().replace("_", " ")}
+                          {user.role ? user.role.toLowerCase().replace("_", " ") : ""}
                         </p>
                         <p className="text-[10px] leading-none text-primary/80 font-medium">
                           {user.tenantName}

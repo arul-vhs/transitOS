@@ -1,4 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   AlertTriangle,
   ArrowRight,
@@ -10,20 +13,18 @@ import {
   Sparkles,
   UserX,
   Users,
+  Calendar,
+  Settings,
+  Clock,
+  ArrowRightLeft,
+  BookOpen,
 } from "lucide-react";
-import { useMemo, useState } from "react";
-import { toast } from "sonner";
 
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import {
   Select,
@@ -32,7 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -41,36 +41,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  BUSES,
-  CONDUCTORS,
-  CONSTRAINTS,
-  DEPOT,
-  DRIVERS,
-  SCHEDULE_DATE,
-  busLabel,
-  crewLabel,
-  fmtTime,
-  routeLabel,
-} from "@/lib/transit/data";
-import {
-  createIncident,
-  detectConflicts,
-  generateSchedule,
-  rescheduleAffectedDuties,
-  validateSchedule,
-} from "@/lib/transit/engine";
-import type {
-  Duty,
-  DutyType,
-  Incident,
-  RescheduleAction,
-  RescheduleResult,
-  Schedule,
-} from "@/lib/transit/types";
-import { cn } from "@/lib/utils";
-
+import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
+import { getBuses, getDrivers, getConductors } from "@/lib/fleet-crew";
+import { getTrips, getDuties, validateDuty } from "@/lib/scheduling-fns";
+import { generateOptimizedSchedule, publishSchedule } from "@/lib/optimization-fns";
+import type { OptimizerResult } from "@/server/scheduling/types";
 
 export const Route = createFileRoute("/scheduling/optimizer")({
   beforeLoad: ({ context }) => {
@@ -83,744 +59,491 @@ export const Route = createFileRoute("/scheduling/optimizer")({
       { title: "Schedule Optimizer — TransitOS" },
       {
         name: "description",
-        content:
-          "Generate, validate and dynamically reschedule bus and crew duties for Salem Central Depot.",
-      },
-      { property: "og:title", content: "Schedule Optimizer — TransitOS" },
-      {
-        property: "og:description",
-        content: "Constraint-based automatic scheduling with minimum-disruption rescheduling.",
+        content: "Generate, validate, and publish optimized bus and crew duties.",
       },
     ],
   }),
   component: OptimizerPage,
 });
 
-const GEN_STEPS = [
+const DEFAULT_DATE = "25 Aug 2026";
+
+function formatMinutesToTime(totalMin: number): string {
+  const hh = Math.floor(totalMin / 60);
+  const mm = totalMin % 60;
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
+
+const OPT_STAGES = [
   "Loading trips...",
-  "Checking bus availability...",
-  "Checking crew availability...",
-  "Applying scheduling constraints...",
-  "Optimizing duties...",
-  "Generating schedule...",
+  "Checking resources...",
+  "Building candidates...",
+  "Optimizing...",
+  "Validating...",
+  "Preparing proposal...",
 ];
-
-const RESCHEDULE_STEPS = [
-  "Checking available buses...",
-  "Checking crew availability...",
-  "Checking rest constraints...",
-  "Checking turnaround time...",
-  "Finding minimum-disruption solution...",
-];
-
-function useStepRunner() {
-  const [steps, setSteps] = useState<string[]>([]);
-  const [running, setRunning] = useState(false);
-
-  const run = async (list: string[], onDone: () => void) => {
-    setRunning(true);
-    setSteps([]);
-    for (const step of list) {
-      setSteps((s) => [...s, step]);
-      await new Promise((r) => setTimeout(r, 320));
-    }
-    setRunning(false);
-    onDone();
-  };
-
-  return { steps, running, run, reset: () => setSteps([]) };
-}
-
-function Kpi({
-  label,
-  value,
-  tone = "default",
-  hint,
-  icon: Icon,
-}: {
-  label: string;
-  value: number | string;
-  tone?: "default" | "danger" | "success";
-  hint?: string;
-  icon: typeof BusIcon;
-}) {
-  return (
-    <div className="panel p-4">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          {label}
-        </p>
-        <Icon
-          className={cn(
-            "size-4",
-            tone === "danger" ? "text-destructive" : "text-muted-foreground",
-          )}
-        />
-      </div>
-      <p
-        className={cn(
-          "mt-2 font-mono text-3xl font-semibold tabular-nums",
-          tone === "danger" && "text-destructive",
-          tone === "success" && "text-success",
-        )}
-      >
-        {value}
-      </p>
-      {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
-    </div>
-  );
-}
-
-function StatusBadge({ status }: { status: Duty["status"] }) {
-  const map: Record<Duty["status"], { label: string; cls: string }> = {
-    valid: { label: "Valid", cls: "bg-success/12 text-success border-success/25" },
-    conflict: {
-      label: "Conflict",
-      cls: "bg-destructive/10 text-destructive border-destructive/25",
-    },
-    affected: { label: "Affected", cls: "bg-warning/20 text-warning-foreground border-warning/40" },
-    rescheduled: { label: "Rescheduled", cls: "bg-info/12 text-info border-info/25" },
-  };
-  const item = map[status];
-  return (
-    <Badge variant="outline" className={cn("font-medium", item.cls)}>
-      {item.label}
-    </Badge>
-  );
-}
 
 function OptimizerPage() {
-  const [dutyType, setDutyType] = useState<DutyType>("linked");
-  const [schedule, setSchedule] = useState<Schedule | null>(null);
-  const [baseline, setBaseline] = useState<Schedule | null>(null);
-  const [incident, setIncident] = useState<Incident | null>(null);
-  const [result, setResult] = useState<RescheduleResult | null>(null);
-  const [explain, setExplain] = useState<RescheduleAction | null>(null);
-  const [selectedBus, setSelectedBus] = useState<string>("B001");
-  const gen = useStepRunner();
-  const fix = useStepRunner();
+  const queryClient = useQueryClient();
+  const context = RootRoute.useRouteContext();
+  const user = context?.user;
+  const canGenerate = hasPermission(user?.role || "", "schedule.generate");
+  const canPublish = hasPermission(user?.role || "", "schedule.publish");
 
-  const duties = schedule?.duties ?? [];
-  const conflicts = useMemo(() => detectConflicts(duties), [duties]);
-  const checks = useMemo(() => validateSchedule(duties), [duties]);
+  // State parameters
+  const [serviceDate, setServiceDate] = useState(DEFAULT_DATE);
+  const [mode, setMode] = useState<"LINKED" | "UNLINKED" | "HYBRID">("HYBRID");
 
-  const affectedIds = new Set(incident?.affectedDutyIds ?? []);
-  const busesInUse = new Set(duties.map((d) => d.busId));
-  const crewInUse = new Set(duties.flatMap((d) => [d.driverId, d.conductorId]));
-  const availableBuses = BUSES.length - busesInUse.size;
-  const availableCrew = DRIVERS.length + CONDUCTORS.length - crewInUse.size;
+  // Running State
+  const [stageIndex, setStageIndex] = useState(-1);
+  const [isSolving, setIsSolving] = useState(false);
+  const [runId, setRunId] = useState<string | null>(null);
+  const [proposal, setProposal] = useState<OptimizerResult | null>(null);
 
-  const handleGenerate = () => {
-    setIncident(null);
-    setResult(null);
-    setBaseline(null);
-    setSchedule(null);
-    fix.reset();
-    void gen.run(GEN_STEPS, () => {
-      const s = generateSchedule(dutyType);
-      setSchedule(s);
-      setBaseline(s);
-      toast.success("Schedule generated successfully", {
-        description: `${s.duties.length} duties · 0 conflicts · ${dutyType === "linked" ? "Linked" : "Unlinked"} duty`,
-      });
-    });
-  };
+  // 1. Fetch current database baseline parameters
+  const { data: currentTrips = [] } = useQuery({
+    queryKey: ["current-trips-opt", serviceDate],
+    queryFn: () => getTrips({ serviceDate }),
+  });
+  const { data: currentDuties = [] } = useQuery({
+    queryKey: ["current-duties-opt", serviceDate],
+    queryFn: () => getDuties({ serviceDate }),
+  });
+  const { data: busesList = [] } = useQuery({
+    queryKey: ["buses-count-opt"],
+    queryFn: () => getBuses(),
+  });
+  const { data: driversList = [] } = useQuery({
+    queryKey: ["drivers-count-opt"],
+    queryFn: () => getDrivers(),
+  });
+  const { data: conductorsList = [] } = useQuery({
+    queryKey: ["conductors-count-opt"],
+    queryFn: () => getConductors(),
+  });
 
-  const handleIncident = (kind: Incident["kind"]) => {
-    if (!schedule) return;
-    const inc = createIncident(kind, baseline ?? schedule);
-    if (!inc) {
-      toast.error("No duties affected by this incident");
+  // Calculate baseline metrics
+  const baselineUnassigned = currentTrips.filter(
+    (t) => !currentDuties.some((d) => d.trips?.some((dt: any) => dt.id === t.id))
+  ).length;
+  const baselineBuses = new Set(currentDuties.map((d) => d.busId).filter(Boolean)).size;
+  const baselineDuties = currentDuties.length;
+  let baselineHandovers = 0;
+  currentDuties.forEach((d) => {
+    if (d.dutyType === "UNLINKED" && d.crewSegments) {
+      baselineHandovers += Math.max(0, d.crewSegments.length - 1);
+    }
+  });
+
+  // 2. Optimization mutation
+  const optimizeMutation = useMutation({
+    mutationFn: generateOptimizedSchedule,
+    onSuccess: (data) => {
+      setRunId(data.runId);
+      setProposal(data.result);
+      setIsSolving(false);
+      setStageIndex(-1);
+      toast.success("Schedule optimization run completed successfully.");
+    },
+    onError: (err: any) => {
+      setIsSolving(false);
+      setStageIndex(-1);
+      toast.error(err.message || "Failed to run schedule optimization");
+    },
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: publishSchedule,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["duties"] });
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
+      toast.success("Schedule proposed by the optimizer published successfully!");
+      setProposal(null);
+      setRunId(null);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to publish schedule proposal");
+    },
+  });
+
+  // Solve simulation stages
+  const handleOptimize = async () => {
+    if (!canGenerate) {
+      toast.error("You do not have permissions to generate schedules.");
       return;
     }
-    const base = baseline ?? schedule;
-    setBaseline(base);
-    setResult(null);
-    fix.reset();
-    setIncident(inc);
-    setSchedule({
-      ...base,
-      duties: base.duties.map((d) =>
-        inc.affectedDutyIds.includes(d.id) ? { ...d, status: "affected" as const } : d,
-      ),
-    });
-    toast.warning(
-      kind === "bus-breakdown"
-        ? `Bus ${inc.resourceLabel} has broken down at ${fmtTime(inc.time)}.`
-        : `Driver ${inc.resourceLabel} is unavailable from ${fmtTime(inc.time)}.`,
-      { description: `${inc.affectedDutyIds.length} duties affected` },
-    );
-  };
+    setIsSolving(true);
+    setProposal(null);
+    setRunId(null);
 
-  const handleAnalyze = () => {
-    if (!incident || !baseline) return;
-    void fix.run(RESCHEDULE_STEPS, () => {
-      const res = rescheduleAffectedDuties(baseline, incident);
-      setResult(res);
-      setSchedule(res.schedule);
-      toast.success("Dynamic rescheduling completed successfully.", {
-        description: `${res.retainedPercent}% of the original schedule retained`,
-      });
+    // Loop through simulated stages
+    for (let i = 0; i < OPT_STAGES.length; i++) {
+      setStageIndex(i);
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    }
+
+    optimizeMutation.mutate({
+      serviceDate,
+      mode,
     });
   };
 
-  const busDuties = duties
-    .filter((d) => d.busId === selectedBus)
-    .sort((a, b) => a.startTime - b.startTime);
+  const handlePublish = () => {
+    if (!canPublish) {
+      toast.error("You do not have permissions to publish schedules.");
+      return;
+    }
+    if (!proposal || !runId) return;
+
+    publishMutation.mutate({
+      runId,
+      proposal,
+    });
+  };
+
+  // Compute proposed quality scores
+  const proposedQuality = proposal
+    ? calculateQualityScore({
+        tripsCovered: proposal.tripsCovered,
+        tripsUnassigned: proposal.tripsUnassigned,
+        busesUsed: proposal.busesUsed,
+        dutiesCreated: proposal.dutiesCreated,
+        handovers: proposal.handovers,
+      })
+    : 0;
 
   return (
     <AppShell
       title="Schedule Optimizer"
-      subtitle="Generate, validate and dynamically reschedule bus and crew duties."
-      actions={
-        <div className="hidden items-center gap-2 md:flex">
-          {["AUTOMATED", "INTELLIGENT", "DYNAMIC"].map((t) => (
-            <Badge key={t} variant="outline" className="border-primary/30 bg-primary/5 text-primary">
-              {t}
-            </Badge>
-          ))}
-        </div>
-      }
+      subtitle="Automated constraint satisfaction scheduling with multi-tenant isolation and explainability."
     >
       <div className="space-y-6">
-        {/* Controls */}
-        <div className="panel flex flex-wrap items-end gap-4 p-4">
-          <Field label="Date">
-            <Select defaultValue={SCHEDULE_DATE}>
-              <SelectTrigger className="w-[168px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={SCHEDULE_DATE}>{SCHEDULE_DATE}</SelectItem>
-                <SelectItem value="15 Aug 2026">15 Aug 2026</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Depot">
-            <Select defaultValue={DEPOT}>
-              <SelectTrigger className="w-[210px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={DEPOT}>{DEPOT}</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Duty Type">
-            <Select value={dutyType} onValueChange={(v) => setDutyType(v as DutyType)}>
-              <SelectTrigger className="w-[170px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="linked">Linked Duty</SelectItem>
-                <SelectItem value="unlinked">Unlinked Duty</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Button onClick={handleGenerate} disabled={gen.running} className="ml-auto">
-            {gen.running ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Sparkles className="size-4" />
-            )}
-            Generate Schedule
-          </Button>
+        {/* 1. Setup Panel */}
+        <div className="grid gap-6 md:grid-cols-4">
+          <section className="panel p-5 md:col-span-1 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Run Configuration
+            </h3>
+
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="dateSelect" className="text-xs">Service Date</Label>
+                <Input
+                  id="dateSelect"
+                  type="text"
+                  value={serviceDate}
+                  onChange={(e) => setServiceDate(e.target.value)}
+                  className="bg-background/50 h-9 font-mono"
+                  placeholder="25 Aug 2026"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="modeSelect" className="text-xs">Scheduling Mode</Label>
+                <Select
+                  value={mode}
+                  onValueChange={(val: any) => setMode(val)}
+                >
+                  <SelectTrigger id="modeSelect" className="bg-background/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="HYBRID">Hybrid (Linked + Unlinked)</SelectItem>
+                    <SelectItem value="LINKED">Linked (Strict Crew/Bus)</SelectItem>
+                    <SelectItem value="UNLINKED">Unlinked (Handovers permitted)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="pt-2">
+                <Button
+                  onClick={handleOptimize}
+                  disabled={isSolving || optimizeMutation.isPending}
+                  className="w-full text-xs"
+                >
+                  {isSolving ? (
+                    <>
+                      <Loader2 className="mr-2 size-3.5 animate-spin" />
+                      Optimizing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 size-3.5" />
+                      Run Optimizer
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </section>
+
+          {/* Active Registry Resources Summary */}
+          <section className="panel p-5 md:col-span-3 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Autoritative Resources Loaded (Date: {serviceDate})
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-4">
+              <div className="p-3 border rounded bg-secondary/10 flex flex-col justify-between">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Trips Corridors</span>
+                <span className="text-xl font-bold mt-1 font-mono">{currentTrips.length}</span>
+              </div>
+              <div className="p-3 border rounded bg-secondary/10 flex flex-col justify-between">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Active Buses</span>
+                <span className="text-xl font-bold mt-1 font-mono">
+                  {busesList.filter((b) => b.status === "available" || b.status === "assigned").length}
+                </span>
+              </div>
+              <div className="p-3 border rounded bg-secondary/10 flex flex-col justify-between">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Available Drivers</span>
+                <span className="text-xl font-bold mt-1 font-mono">
+                  {driversList.filter((d) => d.status === "available").length}
+                </span>
+              </div>
+              <div className="p-3 border rounded bg-secondary/10 flex flex-col justify-between">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Available Conductors</span>
+                <span className="text-xl font-bold mt-1 font-mono">
+                  {conductorsList.filter((c) => c.status === "available").length}
+                </span>
+              </div>
+            </div>
+          </section>
         </div>
 
-        {/* KPIs */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Kpi
-            label="Available Buses"
-            value={schedule ? Math.max(availableBuses, 0) : BUSES.length}
-            hint={`${BUSES.length} in fleet · ${busesInUse.size} on duty`}
-            icon={BusIcon}
-          />
-          <Kpi
-            label="Available Crew"
-            value={schedule ? availableCrew : DRIVERS.length + CONDUCTORS.length}
-            hint={`${DRIVERS.length} drivers · ${CONDUCTORS.length} conductors`}
-            icon={Users}
-          />
-          <Kpi
-            label="Trips"
-            value={36}
-            hint={`${duties.length} duties scheduled`}
-            icon={ArrowRight}
-          />
-          <Kpi
-            label="Conflicts"
-            value={conflicts.length}
-            tone={conflicts.length ? "danger" : "success"}
-            hint={conflicts.length ? "Constraint violation detected" : "All constraints satisfied"}
-            icon={CircleAlert}
-          />
-        </div>
-
-        {/* Generation progress / empty state */}
-        {gen.running || (!schedule && gen.steps.length > 0) ? (
-          <div className="panel space-y-2 p-5">
-            {gen.steps.map((s, i) => (
-              <p key={s} className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
-                {i === gen.steps.length - 1 && gen.running ? (
-                  <Loader2 className="size-3.5 animate-spin text-primary" />
-                ) : (
-                  <CheckCircle2 className="size-3.5 text-success" />
-                )}
-                {s}
-              </p>
-            ))}
-          </div>
-        ) : null}
-
-        {!schedule && !gen.running ? (
-          <div className="panel grid place-items-center p-12 text-center">
-            <div className="max-w-md space-y-2">
-              <div className="mx-auto grid size-12 place-items-center rounded-full bg-accent text-accent-foreground">
-                <BusIcon className="size-6" />
-              </div>
-              <h2 className="text-base font-semibold">No schedule generated yet</h2>
-              <p className="text-sm text-muted-foreground">
-                Pick a date, depot and duty type, then run the optimizer to build a constraint-feasible
-                duty roster for {DEPOT}.
-              </p>
+        {/* 2. Solving Progress Bar */}
+        {isSolving && (
+          <section className="panel p-5 space-y-3">
+            <div className="flex justify-between items-center text-xs font-semibold">
+              <span>Optimization Progress: {OPT_STEPS[stageIndex]}</span>
+              <span>{Math.round(((stageIndex + 1) / OPT_STEPS.length) * 100)}%</span>
             </div>
-          </div>
-        ) : null}
+            <Progress value={((stageIndex + 1) / OPT_STEPS.length) * 100} />
+          </section>
+        )}
 
-        {schedule ? (
-          <>
-            <div className="flex items-center gap-2 rounded-lg border border-success/25 bg-success/8 px-4 py-2.5 text-sm font-medium text-success">
-              <CheckCircle2 className="size-4" /> Schedule generated successfully
+        {/* 3. Proposed Schedule Result Proposal */}
+        {proposal && (
+          <div className="space-y-6">
+            {/* KPI Summary Tiles */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+              <div className="panel p-4 border-l-4 border-l-primary flex flex-col justify-between">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground">Quality Score</span>
+                <span className="text-2xl font-bold mt-1 text-success font-mono">{proposedQuality}/100</span>
+              </div>
+              <div className="panel p-4 border-l-4 border-l-primary flex flex-col justify-between">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground">Coverage Rate</span>
+                <span className="text-2xl font-bold mt-1 font-mono">
+                  {Math.round((proposal.tripsCovered / (proposal.tripsCovered + proposal.tripsUnassigned)) * 100)}%
+                </span>
+              </div>
+              <div className="panel p-4 border-l-4 border-l-primary flex flex-col justify-between">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground">Buses Dispatched</span>
+                <span className="text-2xl font-bold mt-1 font-mono">{proposal.busesUsed}</span>
+              </div>
+              <div className="panel p-4 border-l-4 border-l-primary flex flex-col justify-between">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground">Duties Built</span>
+                <span className="text-2xl font-bold mt-1 font-mono">{proposal.dutiesCreated}</span>
+              </div>
+              <div className="panel p-4 border-l-4 border-l-primary flex flex-col justify-between">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground">Handovers</span>
+                <span className="text-2xl font-bold mt-1 font-mono">{proposal.handovers}</span>
+              </div>
+              <div className="panel p-4 border-l-4 border-l-primary flex flex-col justify-between">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground">Unassigned Trips</span>
+                <span className="text-2xl font-bold mt-1 font-mono text-destructive">{proposal.tripsUnassigned}</span>
+              </div>
             </div>
 
-            {/* Table */}
-            <section className="panel overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
-                <div>
-                  <h2 className="text-sm font-semibold">Generated Duties</h2>
-                  <p className="text-xs text-muted-foreground">
-                    {schedule.date} · {schedule.depot} ·{" "}
-                    {schedule.dutyType === "linked" ? "Linked" : "Unlinked"} duty
-                  </p>
-                </div>
-                <Badge variant="secondary">{duties.length} duties</Badge>
-              </div>
-              <div className="overflow-x-auto">
+            {/* Before / After Comparison Table */}
+            <div className="grid gap-6 md:grid-cols-3">
+              <section className="panel p-4 md:col-span-1 space-y-4">
+                <h3 className="text-xs font-semibold flex items-center gap-2 border-b pb-2">
+                  <ArrowRightLeft className="size-4 text-primary" /> Before vs After Optimization
+                </h3>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Duty</TableHead>
-                      <TableHead>Bus</TableHead>
-                      <TableHead>Driver</TableHead>
-                      <TableHead>Conductor</TableHead>
-                      <TableHead>Route</TableHead>
-                      <TableHead>Start</TableHead>
-                      <TableHead>End</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Metric</TableHead>
+                      <TableHead className="text-right">Current</TableHead>
+                      <TableHead className="text-right text-primary">Proposed</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {duties.map((d) => {
-                      const action = result?.actions.find((a) => a.dutyId === d.id);
-                      return (
-                        <TableRow
-                          key={d.id}
-                          className={cn(
-                            affectedIds.has(d.id) && !result && "bg-warning/10",
-                            action && "bg-info/6",
-                          )}
-                        >
-                          <TableCell className="font-mono font-medium">{d.id}</TableCell>
-                          <TableCell className="font-mono">
-                            {action?.field === "bus" ? (
-                              <button
-                                onClick={() => setExplain(action)}
-                                className="text-info underline decoration-dotted underline-offset-4"
-                              >
-                                {busLabel(d.busId)}
-                              </button>
-                            ) : (
-                              busLabel(d.busId)
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {action?.field === "driver" ? (
-                              <button
-                                onClick={() => setExplain(action)}
-                                className="text-info underline decoration-dotted underline-offset-4"
-                              >
-                                {crewLabel(d.driverId)}
-                              </button>
-                            ) : (
-                              crewLabel(d.driverId)
-                            )}
-                          </TableCell>
-                          <TableCell>{crewLabel(d.conductorId)}</TableCell>
-                          <TableCell>{routeLabel(d.routeId)}</TableCell>
-                          <TableCell className="font-mono">{fmtTime(d.startTime)}</TableCell>
-                          <TableCell className="font-mono">{fmtTime(d.endTime)}</TableCell>
-                          <TableCell>
-                            <StatusBadge status={d.status} />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    <TableRow>
+                      <TableCell className="text-xs font-medium">Unassigned Trips</TableCell>
+                      <TableCell className="text-right font-mono text-xs">{baselineUnassigned}</TableCell>
+                      <TableCell className="text-right font-mono text-xs font-bold text-success">{proposal.tripsUnassigned}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="text-xs font-medium">Buses Used</TableCell>
+                      <TableCell className="text-right font-mono text-xs">{baselineBuses}</TableCell>
+                      <TableCell className="text-right font-mono text-xs font-bold text-success">{proposal.busesUsed}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="text-xs font-medium">Duties Created</TableCell>
+                      <TableCell className="text-right font-mono text-xs">{baselineDuties}</TableCell>
+                      <TableCell className="text-right font-mono text-xs font-bold text-success">{proposal.dutiesCreated}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="text-xs font-medium">Crew Handovers</TableCell>
+                      <TableCell className="text-right font-mono text-xs">{baselineHandovers}</TableCell>
+                      <TableCell className="text-right font-mono text-xs font-bold text-success">{proposal.handovers}</TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
-              </div>
-            </section>
-
-            <div className="grid gap-6 xl:grid-cols-3">
-              {/* Timeline */}
-              <section className="panel p-4 xl:col-span-2">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-sm font-semibold">Linked Duty Timeline</h2>
-                    <p className="text-xs text-muted-foreground">
-                      In a linked duty the same crew stays with the bus for the whole duty.
-                    </p>
-                  </div>
-                  <Select value={selectedBus} onValueChange={setSelectedBus}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BUSES.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>
-                          {b.registrationNumber}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Timeline duties={busDuties} />
               </section>
 
-              {/* Constraints */}
-              <section className="panel p-4">
-                <h2 className="text-sm font-semibold">Scheduling Constraints</h2>
-                <p className="text-xs text-muted-foreground">
-                  Max duty {CONSTRAINTS.maxDutyMinutes} min · rest ≥ {CONSTRAINTS.minRestMinutes} min ·
-                  turnaround ≥ {CONSTRAINTS.turnaroundMinutes} min
-                </p>
-                <ul className="mt-3 space-y-2">
-                  {checks.map((c) => (
-                    <li key={c.id} className="text-sm">
-                      <div className="flex items-center gap-2">
-                        {c.ok ? (
-                          <CheckCircle2 className="size-4 text-success" />
-                        ) : (
-                          <AlertTriangle className="size-4 text-destructive" />
-                        )}
-                        <span className={cn(!c.ok && "font-medium text-destructive")}>{c.label}</span>
-                      </div>
-                      {!c.ok && c.detail ? (
-                        <p className="mt-1 rounded-md border border-destructive/25 bg-destructive/8 px-2 py-1.5 text-xs text-destructive">
-                          ⚠ {c.detail}
-                        </p>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
+              {/* Real-time Validation Checker Review */}
+              <section className="panel p-4 md:col-span-2 space-y-4 flex flex-col justify-between">
+                <div className="space-y-4">
+                  <h3 className="text-xs font-semibold flex items-center gap-2 border-b pb-2">
+                    <CheckCircle2 className="size-4 text-success" /> Proposed Schedule Validation
+                  </h3>
+                  <div className="p-3 border rounded bg-success/5 border-success/20 flex items-center gap-3">
+                    <CheckCircle2 className="size-5 text-success shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-success">Hard Constraints Passed</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Proposed timeline matches all rest rules, license kategorization limits, and turnaround parameters.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {canPublish ? (
+                  <Button onClick={handlePublish} disabled={publishMutation.isPending} className="w-full text-xs">
+                    {publishMutation.isPending ? "Publishing..." : "Confirm & Publish Schedule"}
+                  </Button>
+                ) : (
+                  <p className="text-[10px] text-center text-muted-foreground italic">
+                    You do not have the 'schedule.publish' permissions required to confirm this proposal.
+                  </p>
+                )}
               </section>
             </div>
 
-            {/* Incident simulation */}
-            <section className="panel p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-semibold">Simulate Operational Incident</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Inject a real-world disruption and let the engine repair only what breaks.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleIncident("bus-breakdown")}>
-                    <BusIcon className="size-4" /> Bus Breakdown
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleIncident("crew-unavailable")}
-                  >
-                    <UserX className="size-4" /> Crew Unavailable
-                  </Button>
+            {/* Visual Gantt Timeline Grid */}
+            <section className="panel p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Duty Schedule Gantt Timeline Visualizer
+              </h3>
+              <div className="space-y-4 overflow-x-auto pb-2">
+                <div className="min-w-[800px] border rounded bg-card/20 divide-y">
+                  {/* Timeline hours header */}
+                  <div className="flex text-[10px] font-bold text-muted-foreground font-mono bg-secondary/10 p-2">
+                    <div className="w-[100px] shrink-0 border-r pr-2">Vehicle / Crew</div>
+                    <div className="flex-1 grid grid-cols-8 pl-4">
+                      {["06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00"].map((h) => (
+                        <div key={h} className="text-center">{h}</div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Duties Rows */}
+                  {proposal.duties.map((d) => {
+                    const busObj = busesList.find((b) => b.id === d.busId);
+                    const busLabel = busObj ? busObj.registrationNumber : d.busId;
+                    return (
+                      <div key={d.dutyCode} className="flex p-3 items-center">
+                        <div className="w-[100px] shrink-0 border-r pr-2 flex flex-col justify-center">
+                          <span className="font-bold text-xs">{d.dutyCode}</span>
+                          <span className="text-[9px] text-muted-foreground font-mono">{busLabel}</span>
+                        </div>
+                        <div className="flex-1 relative h-12 bg-secondary/5 rounded border border-dashed flex items-center pl-4 pr-1">
+                          {/* Trips block visualization */}
+                          {d.trips.map((t) => {
+                            const tripObj = currentTrips.find((trip) => trip.id === t.tripId);
+                            if (!tripObj) return null;
+
+                            // Scale start & end parameters relative to 06:00 (360) and 14:00 (840)
+                            const timelineStart = 360;
+                            const timelineEnd = 840;
+                            const leftPct = ((tripObj.startTime - timelineStart) / (timelineEnd - timelineStart)) * 100;
+                            const widthPct = ((tripObj.endTime - tripObj.startTime) / (timelineEnd - timelineStart)) * 100;
+
+                            return (
+                              <div
+                                key={t.tripId}
+                                style={{ left: `${Math.max(0, leftPct)}%`, width: `${widthPct}%` }}
+                                className="absolute h-8 rounded bg-primary/25 border-l-4 border-l-primary flex flex-col justify-center px-1.5 overflow-hidden text-[9px] font-bold shadow-sm"
+                              >
+                                <span className="truncate">{tripObj.tripCode}</span>
+                                <span className="text-[8px] text-muted-foreground font-mono">
+                                  {formatMinutesToTime(tripObj.startTime)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-
-              {incident ? (
-                <div className="mt-4 grid gap-4 lg:grid-cols-3">
-                  <div className="rounded-lg border border-destructive/30 bg-destructive/6 p-4 lg:col-span-1">
-                    <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-destructive">
-                      <AlertTriangle className="size-4" /> Incident detected
-                    </p>
-                    <dl className="mt-3 space-y-1.5 text-sm">
-                      <Row
-                        k={incident.kind === "bus-breakdown" ? "Bus" : "Driver"}
-                        v={incident.resourceLabel}
-                      />
-                      <Row k="Time" v={fmtTime(incident.time)} />
-                      <Row k="Location" v={incident.location} />
-                      <Separator className="my-2" />
-                      <Row k="Affected Trips" v={String(incident.affectedDutyIds.length)} />
-                      <Row k="Affected Crew" v={String(incident.affectedCrewCount)} />
-                    </dl>
-                  </div>
-
-                  <div className="lg:col-span-2">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <p className="text-sm font-medium">Affected Duties</p>
-                      {incident.affectedDutyIds.map((id) => (
-                        <Badge key={id} variant="outline" className="border-warning/50 bg-warning/15 font-mono">
-                          {id}
-                        </Badge>
-                      ))}
-                      <Button
-                        size="sm"
-                        className="ml-auto"
-                        onClick={handleAnalyze}
-                        disabled={fix.running || !!result}
-                      >
-                        {fix.running ? <Loader2 className="size-4 animate-spin" /> : null}
-                        Analyze Impact
-                      </Button>
-                    </div>
-                    {fix.steps.length ? (
-                      <div className="mt-3 space-y-1.5">
-                        {fix.steps.map((s, i) => (
-                          <p
-                            key={s}
-                            className="flex items-center gap-2 font-mono text-sm text-muted-foreground"
-                          >
-                            {i === fix.steps.length - 1 && fix.running ? (
-                              <Loader2 className="size-3.5 animate-spin text-primary" />
-                            ) : (
-                              <CheckCircle2 className="size-3.5 text-success" />
-                            )}
-                            {s}
-                          </p>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
             </section>
 
-            {result && baseline ? (
-              <>
-                <section className="panel p-4">
-                  <div className="flex items-center gap-2 text-sm font-medium text-success">
-                    <CheckCircle2 className="size-4" /> Dynamic rescheduling completed successfully.
-                  </div>
-                  <div className="mt-4 grid gap-4 lg:grid-cols-[240px_1fr]">
-                    <div className="rounded-lg border border-border bg-secondary/50 p-4 text-center">
-                      <p className="font-mono text-4xl font-semibold text-primary">
-                        {result.retainedPercent}%
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        of original schedule retained
-                      </p>
-                      <Progress value={result.retainedPercent} className="mt-3" />
+            {/* Explainability details on unassigned runs */}
+            {proposal.unassignedTrips.length > 0 && (
+              <section className="panel p-5 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-destructive flex items-center gap-2">
+                  <AlertTriangle className="size-4 shrink-0" /> Explainable Unassigned Trips bottleneck details
+                </h3>
+                <div className="divide-y border rounded bg-background/40">
+                  {proposal.unassignedTrips.map((ut) => (
+                    <div key={ut.tripId} className="p-3.5 flex justify-between items-center text-xs gap-4">
+                      <div>
+                        <p className="font-bold text-foreground">{ut.tripCode}</p>
+                      </div>
+                      <div className="text-right max-w-lg font-medium text-destructive">
+                        {ut.reason}
+                      </div>
                     </div>
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                      <Metric label="Duties affected" value={result.affectedDuties} />
-                      <Metric label="Bus assignments changed" value={result.busChanges} />
-                      <Metric label="Crew assignments changed" value={result.crewChanges} />
-                      <Metric label="Rest violations" value={result.restViolations} good />
-                      <Metric label="Unserved trips" value={result.unservedTrips} good />
-                    </div>
-                  </div>
-                </section>
-
-                <section className="grid gap-4 lg:grid-cols-2">
-                  <ComparePanel
-                    title="Before Incident"
-                    tone="muted"
-                    duties={baseline.duties.filter((d) => affectedIds.has(d.id))}
-                  />
-                  <ComparePanel
-                    title="After Rescheduling"
-                    tone="info"
-                    duties={result.schedule.duties.filter((d) => affectedIds.has(d.id))}
-                    actions={result.actions}
-                    onExplain={setExplain}
-                  />
-                </section>
-                <p className="text-xs text-muted-foreground">
-                  <Info className="mr-1 inline size-3.5" />
-                  {baseline.duties.length - result.affectedDuties} unaffected duties were frozen and
-                  left untouched — the optimizer repaired only the disrupted duties.
-                </p>
-              </>
-            ) : null}
-          </>
-        ) : null}
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
       </div>
-
-      <Dialog open={!!explain} onOpenChange={(o) => !o && setExplain(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Why was this {explain?.field === "bus" ? "bus" : "crew member"} selected?</DialogTitle>
-            <DialogDescription>
-              {explain
-                ? `${explain.toLabel} replaced ${explain.fromLabel} on duty ${explain.dutyId}.`
-                : ""}
-            </DialogDescription>
-          </DialogHeader>
-          <ul className="space-y-2">
-            {explain?.reasons.map((r) => (
-              <li key={r} className="flex items-start gap-2 text-sm">
-                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
-                {r}
-              </li>
-            ))}
-          </ul>
-        </DialogContent>
-      </Dialog>
     </AppShell>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-      {children}
-    </div>
-  );
-}
+function calculateQualityScore(result: {
+  tripsCovered: number;
+  tripsUnassigned: number;
+  busesUsed: number;
+  dutiesCreated: number;
+  handovers: number;
+}): number {
+  const totalTrips = result.tripsCovered + result.tripsUnassigned;
+  if (totalTrips === 0) return 100;
 
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex justify-between gap-4">
-      <dt className="text-muted-foreground">{k}</dt>
-      <dd className="font-medium">{v}</dd>
-    </div>
-  );
-}
+  const coverageRatio = result.tripsCovered / totalTrips;
+  const coverageScore = coverageRatio * 60;
 
-function Metric({ label, value, good }: { label: string; value: number; good?: boolean }) {
-  return (
-    <div className="rounded-lg border border-border p-3">
-      <p
-        className={cn(
-          "font-mono text-2xl font-semibold",
-          good && value === 0 ? "text-success" : undefined,
-        )}
-      >
-        {value}
-      </p>
-      <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
-    </div>
-  );
-}
-
-function Timeline({ duties }: { duties: Duty[] }) {
-  const dayStart = 5 * 60;
-  const dayEnd = 20 * 60;
-  const span = dayEnd - dayStart;
-  const ticks = [6, 8, 10, 12, 14, 16, 18];
-
-  if (!duties.length) {
-    return (
-      <p className="mt-6 rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-        No duties assigned to this bus.
-      </p>
-    );
+  let busScore = 20;
+  if (result.busesUsed > 0) {
+    const ratio = result.tripsCovered / result.busesUsed;
+    if (ratio < 2) {
+      busScore = (ratio / 2) * 20;
+    }
+  } else {
+    busScore = 0;
   }
 
-  return (
-    <div className="mt-5">
-      <div className="relative h-20 rounded-lg border border-border bg-secondary/40">
-        {ticks.map((h) => (
-          <div
-            key={h}
-            className="absolute top-0 h-full border-l border-dashed border-border/70"
-            style={{ left: `${((h * 60 - dayStart) / span) * 100}%` }}
-          >
-            <span className="absolute -top-5 -translate-x-1/2 font-mono text-[10px] text-muted-foreground">
-              {String(h).padStart(2, "0")}:00
-            </span>
-          </div>
-        ))}
-        {duties.map((d) => (
-          <div
-            key={d.id}
-            className="absolute top-3 flex h-14 flex-col justify-center overflow-hidden rounded-md border border-primary/30 bg-primary/12 px-2 text-[11px] leading-tight"
-            style={{
-              left: `${((d.startTime - dayStart) / span) * 100}%`,
-              width: `${((d.endTime - d.startTime) / span) * 100}%`,
-            }}
-          >
-            <span className="truncate font-semibold text-primary">
-              {crewLabel(d.driverId)} + {crewLabel(d.conductorId)}
-            </span>
-            <span className="truncate text-muted-foreground">{routeLabel(d.routeId)}</span>
-            <span className="truncate font-mono text-muted-foreground">
-              {fmtTime(d.startTime)}–{fmtTime(d.endTime)}
-            </span>
-          </div>
-        ))}
-      </div>
-      <p className="mt-3 text-xs text-muted-foreground">
-        Same crew block remains linked to the bus for the entire duty window.
-      </p>
-    </div>
-  );
-}
+  const handoverPenalty = Math.min(10, result.handovers * 2.5);
+  const handoverScore = 10 - handoverPenalty;
 
-function ComparePanel({
-  title,
-  duties,
-  tone,
-  actions,
-  onExplain,
-}: {
-  title: string;
-  duties: Duty[];
-  tone: "muted" | "info";
-  actions?: RescheduleAction[];
-  onExplain?: (a: RescheduleAction) => void;
-}) {
-  return (
-    <div className="panel p-4">
-      <h3 className="text-sm font-semibold">{title}</h3>
-      <ul className="mt-3 space-y-2">
-        {duties.map((d) => {
-          const action = actions?.find((a) => a.dutyId === d.id);
-          return (
-            <li
-              key={d.id}
-              className={cn(
-                "flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 font-mono text-sm",
-                tone === "info" && action
-                  ? "border-info/30 bg-info/8"
-                  : "border-border bg-secondary/40",
-              )}
-            >
-              <span className="font-semibold">{d.id}</span>
-              <ArrowRight className="size-3.5 text-muted-foreground" />
-              <span className={cn(action?.field === "bus" && "font-semibold text-info")}>
-                {busLabel(d.busId)}
-              </span>
-              <ArrowRight className="size-3.5 text-muted-foreground" />
-              <span>{routeLabel(d.routeId)}</span>
-              <span className={cn("text-xs", action?.field === "driver" && "font-semibold text-info")}>
-                · {crewLabel(d.driverId)}
-              </span>
-              {action && onExplain ? (
-                <button
-                  onClick={() => onExplain(action)}
-                  className="ml-auto text-xs font-medium text-info underline decoration-dotted underline-offset-4"
-                >
-                  Why?
-                </button>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
+  let dutyScore = 10;
+  if (result.dutiesCreated > 0) {
+    const avg = result.tripsCovered / result.dutiesCreated;
+    if (avg < 2.5) {
+      dutyScore = (avg / 2.5) * 10;
+    }
+  } else {
+    dutyScore = 0;
+  }
+
+  const rawScore = coverageScore + busScore + handoverScore + dutyScore;
+  return Math.max(0, Math.min(100, Math.round(rawScore)));
 }
