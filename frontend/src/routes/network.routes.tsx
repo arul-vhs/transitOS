@@ -502,48 +502,48 @@ function RoutesPage() {
       <div className="space-y-6">
         {/* 1. Metrics overview */}
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
-          <div className="panel p-4 flex flex-col justify-between">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Corridors</p>
-            <p className="text-2xl font-bold mt-1 text-foreground">{totalRoutes}</p>
+          <div className="glass-card p-4 rounded-xl border flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Corridors</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-foreground">{totalRoutes}</span>
           </div>
-          <div className="panel p-4 border-l-4 border-l-success flex flex-col justify-between">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active</p>
-            <p className="text-2xl font-bold mt-1 text-success">{activeRoutes}</p>
+          <div className="glass-card p-4 rounded-xl border-l-4 border-l-success flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-success">{activeRoutes}</span>
           </div>
-          <div className="panel p-4 border-l-4 border-l-info flex flex-col justify-between">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Draft</p>
-            <p className="text-2xl font-bold mt-1 text-info">{draftRoutes}</p>
+          <div className="glass-card p-4 rounded-xl border-l-4 border-l-info flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Draft</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-info">{draftRoutes}</span>
           </div>
-          <div className="panel p-4 border-l-4 border-l-warning flex flex-col justify-between">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Proposed</p>
-            <p className="text-2xl font-bold mt-1 text-warning">{proposedRoutes}</p>
+          <div className="glass-card p-4 rounded-xl border-l-4 border-l-warning flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Proposed</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-warning">{proposedRoutes}</span>
           </div>
-          <div className="panel p-4 flex flex-col justify-between">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Avg Length</p>
-            <p className="text-2xl font-bold mt-1 text-foreground">{avgLength} km</p>
+          <div className="glass-card p-4 rounded-xl border-l-4 border-l-primary flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Avg Length</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-foreground">{avgLength} km</span>
           </div>
-          <div className="panel p-4 flex flex-col justify-between">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Avg Duration</p>
-            <p className="text-2xl font-bold mt-1 text-foreground">{avgDuration} min</p>
+          <div className="glass-card p-4 rounded-xl border-l-4 border-l-secondary flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Avg Duration</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-foreground">{avgDuration} min</span>
           </div>
         </div>
 
         {/* 2. Filter Bar */}
-        <div className="panel p-4 flex flex-wrap gap-4 items-center justify-between">
+        <div className="glass-panel p-4 flex flex-wrap gap-4 items-center justify-between">
           <div className="flex flex-1 flex-wrap gap-3 items-center min-w-[280px]">
             <div className="relative flex-1 max-w-sm min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
               <Input
                 placeholder="Search route code, name, stops..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 bg-background/50"
+                className="pl-8 bg-background/60 text-xs border-border/80"
               />
             </div>
             <div className="flex items-center gap-2">
-              <Filter className="size-4 text-muted-foreground shrink-0" />
+              <Filter className="size-3.5 text-muted-foreground shrink-0" />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px] bg-background/50">
+                <SelectTrigger className="w-36 bg-background/60 text-xs border-border/80">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -557,7 +557,7 @@ function RoutesPage() {
             </div>
             <div className="flex items-center gap-2">
               <Select value={directionFilter} onValueChange={setDirectionFilter}>
-                <SelectTrigger className="w-[140px] bg-background/50">
+                <SelectTrigger className="w-36 bg-background/60 text-xs border-border/80">
                   <SelectValue placeholder="Direction" />
                 </SelectTrigger>
                 <SelectContent>
@@ -574,11 +574,11 @@ function RoutesPage() {
         {/* 3. Columns Layout: Left List, Right Tabs */}
         <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
           {/* Left panel: list of routes */}
-          <section className="panel p-3 h-fit space-y-3">
-            <p className="px-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Corridor Registers
+          <section className="glass-panel p-3.5 h-fit space-y-3">
+            <p className="px-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Corridor Registers ({routesList.length})
             </p>
-            <div className="max-h-[500px] overflow-y-auto space-y-1 pr-1">
+            <div className="max-h-[540px] overflow-y-auto space-y-1.5 pr-1">
               {isLoading ? (
                 <div className="py-10 text-center text-xs text-muted-foreground">Loading corridors...</div>
               ) : routesList.length === 0 ? (
@@ -588,27 +588,32 @@ function RoutesPage() {
                   <button
                     key={r.id}
                     onClick={() => setSelectedRouteId(r.id)}
-                    className={`w-full rounded-md px-3 py-2.5 text-left transition-colors flex items-center justify-between border ${
+                    className={cn(
+                      "w-full rounded-xl p-3 text-left transition-all duration-150 flex items-center justify-between border cursor-pointer",
                       r.id === selectedRouteId
-                        ? "bg-primary/10 border-primary/20 text-primary"
-                        : "hover:bg-secondary border-transparent"
-                    }`}
+                        ? "bg-primary/10 border-primary shadow-xs ring-1 ring-primary/30"
+                        : "hover:bg-muted/60 bg-card/50 border-border/70"
+                    )}
                   >
                     <div>
                       <div className="flex items-center gap-2">
                         <span
-                          className="size-3.5 rounded-full border border-white/50"
+                          className="size-3 rounded-full border border-white/40 shadow-xs shrink-0"
                           style={{ backgroundColor: r.color || "#3B82F6" }}
-                        ></span>
-                        <p className="text-sm font-semibold">{r.code}</p>
+                        />
+                        <span className="font-bold text-xs font-mono text-foreground">{r.code}</span>
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 uppercase font-mono">
+                          {r.direction}
+                        </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px]">{r.name}</p>
+                      <p className="text-[11px] text-muted-foreground mt-1 truncate max-w-[220px]">
+                        {r.origin} ➔ {r.destination}
+                      </p>
                     </div>
-                    <div className="text-right">
-                      <Badge variant="outline" className="text-[9px] h-5 py-0 px-1 font-semibold uppercase shrink-0">
-                        {r.status}
-                      </Badge>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{r.stopsCount} stops</p>
+
+                    <div className="text-right text-[10px] font-mono text-muted-foreground">
+                      <p>{r.lengthKm} km</p>
+                      <p>{r.durationMin} min</p>
                     </div>
                   </button>
                 ))

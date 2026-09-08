@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import {
   AlertTriangle,
@@ -19,6 +19,15 @@ import {
   MapPin,
   GitCommit,
   Check,
+  Radio,
+  Clock,
+  ShieldAlert,
+  ArrowDown,
+  Zap,
+  Activity,
+  Flame,
+  CheckCircle,
+  HelpCircle,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -35,13 +44,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
 import { getBuses, getDrivers, getConductors } from "@/lib/fleet-crew";
@@ -55,6 +64,7 @@ import {
   generateRecoveryProposals,
   approveRecoveryProposal,
 } from "@/lib/rescheduling-fns";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/operations/incidents")({
   beforeLoad: ({ context }) => {
@@ -75,6 +85,12 @@ export const Route = createFileRoute("/operations/incidents")({
 });
 
 const DEFAULT_DATE = "25 Aug 2026";
+
+function formatMinutesToTime(totalMin: number): string {
+  const hh = Math.floor(totalMin / 60);
+  const mm = totalMin % 60;
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
 
 function IncidentsPage() {
   const queryClient = useQueryClient();
@@ -118,10 +134,6 @@ function IncidentsPage() {
   const { data: driversList = [] } = useQuery({
     queryKey: ["drivers-dropdown"],
     queryFn: () => getDrivers(),
-  });
-  const { data: conductorsList = [] } = useQuery({
-    queryKey: ["conductors-dropdown"],
-    queryFn: () => getConductors(),
   });
   const { data: tripsList = [] } = useQuery({
     queryKey: ["trips-dropdown"],
@@ -180,11 +192,9 @@ function IncidentsPage() {
   });
 
   // Automatically select first incident in list
-  useEffect(() => {
-    if (incidentsList.length > 0 && !selectedIncidentId) {
-      setSelectedIncidentId(incidentsList[0].id);
-    }
-  }, [incidentsList, selectedIncidentId]);
+  if (incidentsList.length > 0 && !selectedIncidentId) {
+    setSelectedIncidentId(incidentsList[0].id);
+  }
 
   const handleReportIncident = (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,16 +218,6 @@ function IncidentsPage() {
     });
   };
 
-  // Dynamically load Leaflet Map
-  useEffect(() => {
-    if (selectedIncidentObj) {
-      const container = document.getElementById("incident-map");
-      if (container) {
-        // Simple mock styling for the Leaflet component if Leaflet maps are loaded in root shell
-      }
-    }
-  }, [selectedIncidentId, selectedIncident]);
-
   const activeRun = selectedIncident?.reschedulingRuns?.[0];
   const proposals = activeRun?.proposals || [];
 
@@ -226,86 +226,140 @@ function IncidentsPage() {
     (a, b) => Number(a.objectiveScore) - Number(b.objectiveScore)
   );
   const recommendedProposalId = sortedProposals[0]?.id;
-
   const selectedIncidentObj = selectedIncident;
 
   return (
     <AppShell
       title="Disruption Recovery Manager"
-      subtitle="Dynamic real-time incident analysis and constraint-reoptimization recovery schedules."
+      subtitle="Algorithmic incident triage, passenger delay containment, and automated multi-option recovery schedules."
       actions={
         canGenerate && (
-          <Button onClick={() => setShowReportDialog(true)} size="sm">
-            <Plus className="mr-2 size-4" /> Report Disruption
+          <Button
+            onClick={() => setShowReportDialog(true)}
+            size="sm"
+            className="bg-destructive text-destructive-foreground font-semibold shadow-md shadow-destructive/20 text-xs hover:scale-[1.02] transition-all"
+          >
+            <Plus className="mr-1.5 size-4" /> Report Disruption
           </Button>
         )
       }
     >
-      <div className="grid gap-6 lg:grid-cols-4">
+      <div className="grid gap-6 lg:grid-cols-12">
         {/* Left Column: Incidents Ticker list */}
-        <div className="lg:col-span-1 space-y-4">
-          <section className="panel p-4 space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Logged Incidents
-            </h3>
+        <div className="lg:col-span-4 space-y-4">
+          <section className="glass-panel p-4 space-y-3 flex flex-col h-[740px]">
+            <div className="flex items-center justify-between border-b border-border/60 pb-2.5 px-1">
+              <div className="flex items-center gap-2">
+                <Radio className="size-4 text-destructive animate-pulse" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Active Incidents ({incidentsList.length})
+                </h3>
+              </div>
+              <Badge variant="outline" className="text-[10px] font-mono">
+                {DEFAULT_DATE}
+              </Badge>
+            </div>
 
             {listLoading ? (
-              <div className="py-12 text-center text-xs text-muted-foreground">Loading disruptions log...</div>
+              <div className="py-20 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2 flex-1">
+                <Loader2 className="size-5 animate-spin text-primary" />
+                <span>Loading disruptions log...</span>
+              </div>
             ) : incidentsList.length === 0 ? (
-              <div className="py-12 text-center text-xs text-muted-foreground italic">No incidents reported today.</div>
+              <div className="py-20 text-center text-xs text-muted-foreground italic flex-1 flex flex-col items-center justify-center p-4">
+                <CheckCircle className="size-8 text-emerald-500/60 mb-2" />
+                <p className="font-semibold text-foreground">No Incidents Logged</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Click 'Report Disruption' to record an incident.</p>
+              </div>
             ) : (
-              <div className="space-y-2">
-                {incidentsList.map((inc) => (
-                  <button
-                    key={inc.id}
-                    onClick={() => setSelectedIncidentId(inc.id)}
-                    className={`w-full p-3 border rounded-lg text-left transition-all ${
-                      selectedIncidentId === inc.id
-                        ? "border-primary bg-primary/5"
-                        : "hover:bg-secondary/10"
-                    }`}
-                  >
-                    <div className="flex justify-between items-center gap-2">
-                      <Badge variant="outline" className="text-[9px] uppercase font-bold text-destructive bg-destructive/5">
-                        {inc.type.replace("_", " ")}
-                      </Badge>
-                      <span className="text-[10px] text-muted-foreground">
-                        {new Date(inc.reportedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                    <p className="text-xs font-bold mt-1.5 truncate text-foreground">
-                      {inc.description || "Service Disruption"}
-                    </p>
-                    <div className="flex justify-between items-center mt-2 text-[10px] text-muted-foreground">
-                      <span>Status: <b>{inc.status}</b></span>
-                      <span>Severity: <b className="text-destructive">{inc.severity}</b></span>
-                    </div>
-                  </button>
-                ))}
+              <div className="space-y-2.5 overflow-y-auto flex-1 pr-1">
+                {incidentsList.map((inc) => {
+                  const isSelected = selectedIncidentId === inc.id;
+
+                  return (
+                    <button
+                      key={inc.id}
+                      onClick={() => setSelectedIncidentId(inc.id)}
+                      className={cn(
+                        "w-full p-3 rounded-xl border text-left transition-all duration-150 flex flex-col gap-2 cursor-pointer",
+                        isSelected
+                          ? "border-destructive bg-destructive/10 shadow-xs ring-1 ring-destructive/30"
+                          : "border-border/70 bg-card/60 hover:bg-muted/60"
+                      )}
+                    >
+                      <div className="flex justify-between items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[9px] uppercase font-bold font-mono px-1.5 py-0",
+                            inc.severity === "critical"
+                              ? "border-destructive/40 text-destructive bg-destructive/10"
+                              : "border-warning/40 text-warning bg-warning/10"
+                          )}
+                        >
+                          {inc.type.replace("_", " ")}
+                        </Badge>
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          {formatMinutesToTime(inc.startTime)}
+                        </span>
+                      </div>
+
+                      <p className="text-xs font-bold truncate text-foreground">
+                        {inc.description || "Operational disruption reported on vehicle/crew."}
+                      </p>
+
+                      <div className="flex justify-between items-center text-[10px] text-muted-foreground font-mono pt-1 border-t border-border/40">
+                        <span>Status: <strong className="text-foreground uppercase">{inc.status}</strong></span>
+                        <span className={cn("font-bold uppercase", inc.severity === "critical" ? "text-destructive" : "text-warning")}>
+                          {inc.severity}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </section>
         </div>
 
         {/* Center/Right Details Panel */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-8 space-y-6">
           {detailsLoading ? (
-            <div className="panel p-20 text-center text-xs text-muted-foreground">Loading incident data...</div>
+            <div className="glass-panel p-24 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
+              <Loader2 className="size-6 animate-spin text-primary" />
+              <span>Analyzing disruption chain...</span>
+            </div>
           ) : !selectedIncidentObj ? (
-            <div className="panel p-20 text-center text-xs text-muted-foreground italic">Select an incident to view details.</div>
+            <div className="glass-panel p-24 text-center text-xs text-muted-foreground flex flex-col items-center justify-center">
+              <ShieldAlert className="size-10 text-muted-foreground/40 mb-2" />
+              <p className="font-semibold text-foreground">No Disruption Selected</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Select an incident from the left to inspect downline impacts.</p>
+            </div>
           ) : (
             <div className="space-y-6">
-              {/* Incident Status Card */}
-              <section className="panel p-5 space-y-4">
-                <div className="flex justify-between items-start gap-4">
+              {/* INCIDENT STATUS HEADER CARD */}
+              <section className="glass-panel p-5 space-y-4">
+                <div className="flex flex-wrap justify-between items-start gap-4 border-b border-border/60 pb-3.5">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-bold">{selectedIncidentObj.type.replace("_", " ")}</h2>
-                      <Badge variant="destructive" className="uppercase text-[9px]">{selectedIncidentObj.severity}</Badge>
-                      <Badge variant="secondary" className="uppercase text-[9px]">{selectedIncidentObj.status}</Badge>
+                    <div className="flex items-center gap-2.5">
+                      <h2 className="text-lg font-bold text-foreground font-mono">{selectedIncidentObj.type.replace("_", " ")}</h2>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "uppercase text-[9px] font-mono font-bold",
+                          selectedIncidentObj.severity === "critical"
+                            ? "border-destructive/40 text-destructive bg-destructive/10"
+                            : "border-warning/40 text-warning bg-warning/10"
+                        )}
+                      >
+                        {selectedIncidentObj.severity} Severity
+                      </Badge>
+                      <Badge variant="secondary" className="uppercase text-[9px] font-bold">
+                        {selectedIncidentObj.status}
+                      </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Reported by {selectedIncidentObj.reporter?.name || "System"} on {selectedIncidentObj.serviceDate} at {new Date(selectedIncidentObj.reportedAt).toLocaleTimeString()}
+                      Logged at {formatMinutesToTime(selectedIncidentObj.startTime)} · Location: <strong className="text-foreground">{selectedIncidentObj.location || "En Route Corridor"}</strong>
                     </p>
                   </div>
 
@@ -315,9 +369,17 @@ function IncidentsPage() {
                         onClick={() => generateProposalsMutation.mutate(selectedIncidentObj.id)}
                         disabled={generateProposalsMutation.isPending}
                         size="sm"
-                        className="text-xs"
+                        className="bg-primary text-primary-foreground text-xs font-semibold shadow-md shadow-primary/20"
                       >
-                        {generateProposalsMutation.isPending ? "Solving..." : "Solve Disruption"}
+                        {generateProposalsMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-1.5 size-3.5 animate-spin" /> Solving...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="mr-1.5 size-3.5" /> Solve Disruption
+                          </>
+                        )}
                       </Button>
                     ) : null}
 
@@ -327,59 +389,83 @@ function IncidentsPage() {
                         disabled={resolveIncidentMutation.isPending}
                         variant="outline"
                         size="sm"
-                        className="text-xs text-success hover:text-success"
+                        className="text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
                       >
-                        Resolve Disruption
+                        <Check className="size-3.5 mr-1" /> Mark Resolved
                       </Button>
                     )}
                   </div>
                 </div>
 
-                <div className="p-3 border rounded bg-secondary/5 text-xs font-medium space-y-1">
-                  <p>Location: <b>{selectedIncidentObj.location || "N/A"}</b></p>
-                  <p>Incident Start: <b>{startTime} mins</b></p>
-                  {selectedIncidentObj.description && <p>Details: <i>{selectedIncidentObj.description}</i></p>}
+                <div className="grid gap-3 sm:grid-cols-3 text-xs bg-secondary/30 rounded-xl p-3 border border-border/60">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Resource Affected:</span>
+                    <p className="font-mono font-bold text-foreground mt-0.5">
+                      {selectedIncidentObj.resourceType === "bus" ? "Bus Vehicle" : "Crew Member"} ({selectedIncidentObj.resourceId || "N/A"})
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Expected Duration:</span>
+                    <p className="font-mono font-bold text-foreground mt-0.5">
+                      {selectedIncidentObj.expectedEndTime ? `${selectedIncidentObj.expectedEndTime - selectedIncidentObj.startTime} mins` : "Indefinite"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Description:</span>
+                    <p className="text-muted-foreground mt-0.5 italic truncate">{selectedIncidentObj.description || "Standard delay logged"}</p>
+                  </div>
                 </div>
               </section>
 
-              {/* Impact Traversal Flow Card (Visual Dependency Graph) */}
-              <section className="panel p-5 space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Operational Disruption Impact Dependency Graph
+              {/* RIPPLE EFFECT IMPACT TIMELINE */}
+              <section className="glass-panel p-5 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Activity className="size-4 text-warning" /> Disruption Downstream Propagation Chain
                 </h3>
 
-                <div className="flex flex-col gap-3 max-w-xl mx-auto">
-                  <div className="p-3.5 border rounded-lg bg-destructive/5 border-destructive/20 flex items-center gap-3">
-                    <AlertTriangle className="size-5 text-destructive shrink-0" />
+                <div className="flex flex-col gap-2.5 max-w-xl mx-auto py-2">
+                  {/* Source Node */}
+                  <div className="p-3.5 rounded-xl border border-destructive/30 bg-destructive/5 flex items-center gap-3">
+                    <div className="size-8 rounded-lg bg-destructive/10 text-destructive grid place-items-center shrink-0">
+                      <Flame className="size-4.5" />
+                    </div>
                     <div>
-                      <p className="text-xs font-bold text-destructive">Disruption Source Incident</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{selectedIncidentObj.type} reported at {selectedIncidentObj.startTime} mins</p>
+                      <p className="text-xs font-bold text-destructive">Origin Incident: {selectedIncidentObj.type}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Reported at {formatMinutesToTime(selectedIncidentObj.startTime)} at {selectedIncidentObj.location || "Salem Corridor"}</p>
                     </div>
                   </div>
 
-                  <div className="flex justify-center"><GitCommit className="size-4 text-muted-foreground rotate-90" /></div>
+                  <div className="flex justify-center my-0.5">
+                    <ArrowDown className="size-4 text-muted-foreground/60" />
+                  </div>
 
-                  <div className="p-3.5 border rounded-lg bg-secondary/10 flex items-center gap-3">
-                    <BusIcon className="size-5 text-primary shrink-0" />
+                  {/* Resource Node */}
+                  <div className="p-3.5 rounded-xl border border-border/70 bg-card/60 flex items-center gap-3">
+                    <div className="size-8 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
+                      <BusIcon className="size-4.5" />
+                    </div>
                     <div>
-                      <p className="text-xs font-bold">Direct Resource Affected</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{selectedIncidentObj.resourceType === "bus" ? "Bus vehicle" : "Crew driver"} ID: {selectedIncidentObj.resourceId || "N/A"}</p>
+                      <p className="text-xs font-bold text-foreground">Direct Resource Immobilized</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Assigned duty block trips blocked from subsequent on-time departure</p>
                     </div>
                   </div>
 
                   {selectedIncidentObj.impacts?.length > 0 && (
                     <>
-                      <div className="flex justify-center"><GitCommit className="size-4 text-muted-foreground rotate-90" /></div>
+                      <div className="flex justify-center my-0.5">
+                        <ArrowDown className="size-4 text-muted-foreground/60" />
+                      </div>
 
-                      <div className="p-3.5 border rounded-lg bg-warning/5 border-warning/20 space-y-2">
-                        <p className="text-xs font-bold text-warning flex items-center gap-2">
-                          <AlertTriangle className="size-4" /> Downstream Affected Trip chain & crew impacts
-                        </p>
-                        <div className="divide-y text-[10px] text-muted-foreground">
+                      <div className="p-3.5 rounded-xl border border-warning/30 bg-warning/5 space-y-2">
+                        <div className="flex items-center gap-2 text-xs font-bold text-warning">
+                          <AlertTriangle className="size-4" />
+                          <span>Downstream Cascade Impact ({selectedIncidentObj.impacts.length} trips affected)</span>
+                        </div>
+                        <div className="divide-y divide-border/40 text-[11px] text-muted-foreground">
                           {selectedIncidentObj.impacts.map((imp: any) => (
-                            <div key={imp.id} className="py-1.5 flex justify-between gap-4">
-                              <span>Trip <b>{imp.trip?.tripCode || "Unbound"}</b> ({imp.impactType})</span>
-                              <span className="font-semibold text-warning uppercase">{imp.impactLevel}</span>
+                            <div key={imp.id} className="py-1.5 flex justify-between gap-4 font-mono">
+                              <span>Trip <strong>{imp.trip?.tripCode || "Departure"}</strong> ({imp.impactType})</span>
+                              <span className="font-bold text-warning uppercase text-[10px]">{imp.impactLevel}</span>
                             </div>
                           ))}
                         </div>
@@ -389,12 +475,18 @@ function IncidentsPage() {
                 </div>
               </section>
 
-              {/* Side-by-Side Recovery Proposals Comparison Table */}
+              {/* RECOVERY PROPOSALS CARDS */}
               {proposals.length > 0 && (
-                <section className="panel p-5 space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Generated Recovery Proposals Comparison
-                  </h3>
+                <section className="glass-panel p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                    <div>
+                      <h3 className="text-sm font-bold tracking-tight text-foreground">Algorithmic Recovery Options</h3>
+                      <p className="text-xs text-muted-foreground">Side-by-side comparison of candidate reschedule plans</p>
+                    </div>
+                    <Badge variant="outline" className="font-mono text-xs text-primary border-primary/30">
+                      {proposals.length} Proposals Generated
+                    </Badge>
+                  </div>
 
                   <div className="grid gap-4 md:grid-cols-3">
                     {proposals.map((prop: any) => {
@@ -402,68 +494,72 @@ function IncidentsPage() {
                       return (
                         <div
                           key={prop.id}
-                          className={`p-4 border rounded-xl flex flex-col justify-between relative ${
+                          className={cn(
+                            "p-4 rounded-xl border flex flex-col justify-between relative transition-all duration-150",
                             isRecommended
-                              ? "border-primary bg-primary/5 shadow-sm"
-                              : "bg-background"
-                          }`}
+                              ? "border-emerald-500/50 bg-emerald-500/5 shadow-md shadow-emerald-500/5"
+                              : "border-border/70 bg-card/60"
+                          )}
                         >
                           {isRecommended && (
-                            <Badge className="absolute top-2 right-2 bg-success text-white hover:bg-success text-[8px] h-5 px-1.5">
+                            <Badge className="absolute top-2.5 right-2.5 bg-emerald-500 text-white hover:bg-emerald-500 text-[9px] font-mono font-bold px-1.5 py-0">
                               Recommended
                             </Badge>
                           )}
                           <div className="space-y-3">
                             <div>
-                              <p className="text-xs font-bold uppercase text-muted-foreground">Option {prop.proposalNumber}</p>
-                              <p className="text-lg font-bold font-mono mt-1 text-primary">Score: {prop.objectiveScore}</p>
+                              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
+                                Strategy Option {prop.proposalNumber}
+                              </p>
+                              <p className="text-xl font-bold font-mono mt-1 text-primary">
+                                Score: {prop.objectiveScore}
+                              </p>
                             </div>
 
-                            <div className="space-y-1.5 text-xs border-y py-2.5 my-2">
+                            <div className="space-y-1.5 text-xs border-y border-border/60 py-2.5 my-2 font-mono">
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">Trips Recovered:</span>
-                                <span className="font-bold text-success font-mono">{prop.tripsRecovered}</span>
+                                <span className="font-bold text-emerald-600 dark:text-emerald-400">{prop.tripsRecovered}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">Cancellations:</span>
-                                <span className="font-bold text-destructive font-mono">{prop.cancellations}</span>
+                                <span className="font-bold text-destructive">{prop.cancellations}</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-muted-foreground">Handovers:</span>
-                                <span className="font-bold font-mono">{prop.handovers}</span>
+                                <span className="text-muted-foreground">Relief Handovers:</span>
+                                <span className="font-bold text-foreground">{prop.handovers}</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-muted-foreground">New Buses:</span>
-                                <span className="font-bold font-mono">{prop.busesUsed}</span>
+                                <span className="text-muted-foreground">Reserve Buses:</span>
+                                <span className="font-bold text-foreground">{prop.busesUsed}</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-muted-foreground">Delay Minutes:</span>
-                                <span className="font-bold font-mono">{prop.delayMinutes} mins</span>
+                                <span className="text-muted-foreground">Net Delay:</span>
+                                <span className="font-bold text-warning">{prop.delayMinutes} min</span>
                               </div>
                             </div>
 
-                            <p className="text-[10px] text-muted-foreground italic mt-2">
-                              {prop.explanation}
+                            <p className="text-[11px] text-muted-foreground leading-relaxed italic">
+                              "{prop.explanation}"
                             </p>
                           </div>
 
                           <div className="pt-4 mt-auto">
-                            {prop.status === "APPLIED" ? (
-                              <Badge className="w-full justify-center bg-success text-white h-8 text-xs">
-                                <Check className="size-3.5 mr-1" /> Plan Applied
-                              </Badge>
-                            ) : canPublish ? (
+                            {canPublish ? (
                               <Button
                                 onClick={() => approveProposalMutation.mutate({ proposalId: prop.id })}
                                 disabled={approveProposalMutation.isPending}
-                                className="w-full text-xs"
-                                size="sm"
+                                className={cn(
+                                  "w-full text-xs font-semibold h-8.5",
+                                  isRecommended ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-500/20" : ""
+                                )}
+                                variant={isRecommended ? "default" : "outline"}
                               >
-                                {approveProposalMutation.isPending ? "Applying..." : "Approve Plan"}
+                                {approveProposalMutation.isPending ? "Applying..." : "Approve & Dispatch"}
                               </Button>
                             ) : (
-                              <p className="text-[9px] text-muted-foreground text-center italic">
-                                Publisher permission required
+                              <p className="text-[10px] text-center text-muted-foreground italic">
+                                Lacks schedule.publish permission
                               </p>
                             )}
                           </div>
@@ -473,185 +569,121 @@ function IncidentsPage() {
                   </div>
                 </section>
               )}
-
-              {/* GIS Maps Section */}
-              <section className="panel p-5 space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <MapPin className="size-4 text-primary" /> GIS Spatial Disruption Location Map
-                </h3>
-                <div
-                  id="incident-map"
-                  className="h-[300px] border rounded bg-secondary/5 flex items-center justify-center text-xs text-muted-foreground"
-                >
-                  <div className="text-center space-y-2">
-                    <MapPin className="size-8 text-primary mx-auto animate-bounce" />
-                    <p className="font-bold text-foreground">Live Route Corridor Map</p>
-                    <p className="text-[10px] max-w-sm mx-auto">
-                      Visualizing affected corridor route networks and replacement bus path lines.
-                    </p>
-                  </div>
-                </div>
-              </section>
             </div>
           )}
         </div>
       </div>
 
-      {/* Report Incident Dialog */}
-      {showReportDialog && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleReportIncident} className="panel p-6 max-w-md w-full space-y-4">
-            <h3 className="text-sm font-bold border-b pb-2 flex items-center gap-2">
-              <AlertTriangle className="size-5 text-destructive shrink-0" /> Report Disruption Incident
-            </h3>
+      {/* REPORT DISRUPTION MODAL */}
+      <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+        <DialogContent className="sm:max-w-[480px]">
+          <form onSubmit={handleReportIncident}>
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <AlertTriangle className="size-4 text-destructive" />
+                Report Operational Disruption
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Record an incident to compute downstream ripple effects and recovery options.
+              </DialogDescription>
+            </DialogHeader>
 
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <Label htmlFor="incidentType" className="text-xs">Incident Type</Label>
-                <Select value={type} onValueChange={setType}>
-                  <SelectTrigger id="incidentType">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="BUS_BREAKDOWN">Bus Breakdown</SelectItem>
-                    <SelectItem value="BUS_UNAVAILABLE">Bus Unavailable</SelectItem>
-                    <SelectItem value="DRIVER_ABSENT">Driver Absent</SelectItem>
-                    <SelectItem value="CONDUCTOR_ABSENT">Conductor Absent</SelectItem>
-                    <SelectItem value="CREW_EMERGENCY">Crew Emergency</SelectItem>
-                    <SelectItem value="TRIP_DELAY">Trip Delay</SelectItem>
-                    <SelectItem value="TRIP_CANCELLED">Trip Cancelled</SelectItem>
-                    <SelectItem value="ROUTE_BLOCKED">Route Blocked</SelectItem>
-                    <SelectItem value="MANUAL_DISRUPTION">Manual Disruption</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="incidentSeverity" className="text-xs">Severity</Label>
-                <Select value={severity} onValueChange={(val: any) => setSeverity(val)}>
-                  <SelectTrigger id="incidentSeverity">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="critical">Critical</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="resType" className="text-xs">ResourceType</Label>
-                <Select value={resourceType} onValueChange={(val: any) => setResourceType(val)}>
-                  <SelectTrigger id="resType">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bus">Bus</SelectItem>
-                    <SelectItem value="crew">Crew</SelectItem>
-                    <SelectItem value="none">None</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {resourceType === "bus" && (
-                <div className="space-y-1">
-                  <Label htmlFor="busSelect" className="text-xs">Select Bus</Label>
-                  <Select value={resourceId} onValueChange={setResourceId}>
-                    <SelectTrigger id="busSelect">
-                      <SelectValue placeholder="Select Bus" />
+            <div className="py-4 space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Disruption Category</Label>
+                  <Select value={type} onValueChange={setType}>
+                    <SelectTrigger className="text-xs font-mono">
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {busesList.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>{b.registrationNumber}</SelectItem>
-                      ))}
+                      <SelectItem value="BUS_BREAKDOWN">Bus Mechanical Breakdown</SelectItem>
+                      <SelectItem value="TRAFFIC_DELAY">Heavy Corridor Traffic</SelectItem>
+                      <SelectItem value="CREW_ABSENCE">Crew Medical Absence</SelectItem>
+                      <SelectItem value="ACCIDENT">Corridor Collision / Blockage</SelectItem>
+                      <SelectItem value="ROAD_BLOCK">Road Closure / Detour</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-              )}
 
-              {resourceType === "crew" && (
-                <div className="space-y-1">
-                  <Label htmlFor="crewSelect" className="text-xs">Select Crew</Label>
-                  <Select value={resourceId} onValueChange={setResourceId}>
-                    <SelectTrigger id="crewSelect">
-                      <SelectValue placeholder="Select Driver/Conductor" />
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Incident Severity</Label>
+                  <Select value={severity} onValueChange={(val: any) => setSeverity(val)}>
+                    <SelectTrigger className="text-xs font-mono">
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {[...driversList, ...conductorsList].map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name} ({c.role})</SelectItem>
-                      ))}
+                      <SelectItem value="low">Low (Minor Delay)</SelectItem>
+                      <SelectItem value="medium">Medium (Trip Impact)</SelectItem>
+                      <SelectItem value="high">High (Corridor Blocked)</SelectItem>
+                      <SelectItem value="critical">Critical (Fleet Grounded)</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              )}
-
-              {type === "TRIP_DELAY" || type === "TRIP_CANCELLED" ? (
-                <div className="space-y-1">
-                  <Label htmlFor="tripSelect" className="text-xs">Select Trip</Label>
-                  <Select value={tripId} onValueChange={setTripId}>
-                    <SelectTrigger id="tripSelect">
-                      <SelectValue placeholder="Select Trip" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tripsList.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>{t.tripCode} ({t.origin} → {t.destination})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : null}
-
-              {type === "ROUTE_BLOCKED" && (
-                <div className="space-y-1">
-                  <Label htmlFor="routeSelect" className="text-xs">Select Route</Label>
-                  <Select value={routeId} onValueChange={setRouteId}>
-                    <SelectTrigger id="routeSelect">
-                      <SelectValue placeholder="Select Route" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {routesList.map((r) => (
-                        <SelectItem key={r.id} value={r.id}>{r.code} - {r.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <Label htmlFor="startT" className="text-xs">Incident Start Time (mins)</Label>
-                  <Input id="startT" type="number" value={startTime} onChange={(e) => setStartTime(Number(e.target.value))} className="h-9" />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="endT" className="text-xs">Expected End Time (mins)</Label>
-                  <Input id="endT" type="number" value={expectedEndTime || ""} onChange={(e) => setExpectedEndTime(e.target.value ? Number(e.target.value) : null)} className="h-9" />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="loc" className="text-xs">Incident Location (station/depot)</Label>
-                <Input id="loc" type="text" value={locationName} onChange={(e) => setLocationName(e.target.value)} className="h-9" placeholder="Depot A / Bus Station B" />
+              <div className="space-y-1.5">
+                <Label className="text-xs">Location / Road Milestone</Label>
+                <Input
+                  type="text"
+                  placeholder="e.g. Salem 4-Roads Junction"
+                  value={locationName}
+                  onChange={(e) => setLocationName(e.target.value)}
+                  className="text-xs"
+                  required
+                />
               </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="desc" className="text-xs">Detailed description</Label>
-                <Input id="desc" type="text" value={descriptionText} onChange={(e) => setDescriptionText(e.target.value)} className="h-9" placeholder="e.g. flat tire / engine overheat" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Impact Start Time</Label>
+                  <Input
+                    type="time"
+                    value={formatMinutesToTime(startTime)}
+                    onChange={(e) => setStartTime(parseTimeToMinutes(e.target.value))}
+                    className="font-mono text-xs"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Expected Clearance Time</Label>
+                  <Input
+                    type="time"
+                    value={formatMinutesToTime(expectedEndTime || startTime + 120)}
+                    onChange={(e) => setExpectedEndTime(parseTimeToMinutes(e.target.value))}
+                    className="font-mono text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Incident Notes / Details</Label>
+                <Input
+                  type="text"
+                  placeholder="e.g. Radiator overheat; bus stopped at platform 3"
+                  value={descriptionText}
+                  onChange={(e) => setDescriptionText(e.target.value)}
+                  className="text-xs"
+                />
               </div>
             </div>
 
-            <div className="flex gap-2 justify-end pt-3">
-              <Button type="button" onClick={() => setShowReportDialog(false)} variant="ghost" className="text-xs">
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowReportDialog(false)} className="text-xs">
                 Cancel
               </Button>
-              <Button type="submit" disabled={createIncidentMutation.isPending} className="text-xs">
-                {createIncidentMutation.isPending ? "Logging..." : "Log Disruption"}
+              <Button type="submit" disabled={createIncidentMutation.isPending} className="bg-destructive text-destructive-foreground text-xs font-semibold">
+                {createIncidentMutation.isPending ? "Logging..." : "Record Disruption"}
               </Button>
-            </div>
+            </DialogFooter>
           </form>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
+}
+
+function parseTimeToMinutes(timeStr: string): number {
+  const [hStr, mStr] = timeStr.split(":");
+  return Number(hStr || 0) * 60 + Number(mStr || 0);
 }

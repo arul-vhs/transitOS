@@ -1,10 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, User, ShieldAlert, CheckCircle, Clock } from "lucide-react";
+import {
+  CalendarClock,
+  User,
+  ShieldAlert,
+  CheckCircle,
+  Clock,
+  Users,
+  ShieldCheck,
+  Zap,
+  Activity,
+  Layers,
+  Sparkles,
+  Info,
+} from "lucide-react";
 import { useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { hasPermission } from "@/lib/auth-shared";
 import { getCrewAvailability } from "@/lib/fleet-crew";
 import { cn } from "@/lib/utils";
@@ -17,14 +31,13 @@ export const Route = createFileRoute("/crew/availability")({
   },
   head: () => ({
     meta: [
-      { title: "Crew Availability — TransitOS" },
+      { title: "Crew Availability Matrix — TransitOS" },
       { name: "description", content: "Visual crew availability, shift waves and rest timelines." },
     ],
   }),
   component: CrewAvailabilityPage,
 });
 
-// Helper to check if a crew member is available at a given hour
 interface HourStatus {
   status: "available" | "resting" | "on-duty" | "leave" | "unavailable" | "off-duty";
   label: string;
@@ -63,23 +76,23 @@ function getHourStatus(member: any, hour: number): HourStatus {
 function getHourColor(status: string) {
   switch (status) {
     case "available":
-      return "bg-success hover:bg-success/90 text-success-foreground";
+      return "bg-emerald-500/80 hover:bg-emerald-500 text-white shadow-2xs";
     case "resting":
-      return "bg-warning hover:bg-warning/90 text-warning-foreground text-[10px] font-bold flex items-center justify-center";
+      return "bg-amber-500/80 hover:bg-amber-500 text-white shadow-2xs";
     case "on-duty":
-      return "bg-primary hover:bg-primary/90 text-primary-foreground";
+      return "bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xs";
     case "leave":
-      return "bg-destructive/20 text-destructive border border-destructive/20";
+      return "bg-destructive/20 text-destructive border border-destructive/30";
     case "unavailable":
       return "bg-muted text-muted-foreground";
     case "off-duty":
-      return "bg-secondary text-secondary-foreground/40";
+      return "bg-secondary/40 text-muted-foreground/50";
     default:
       return "bg-background";
   }
 }
 
-const TIMELINE_HOURS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+const TIMELINE_HOURS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
 
 function CrewAvailabilityPage() {
   const [roleFilter, setRoleFilter] = useState<"all" | "driver" | "conductor">("all");
@@ -91,19 +104,34 @@ function CrewAvailabilityPage() {
 
   const filteredCrew = crewList.filter((c) => roleFilter === "all" || c.role === roleFilter);
 
+  const availableCount = crewList.filter((c) => c.status === "available").length;
+  const onDutyCount = crewList.filter((c) => c.status === "on-duty").length;
+  const restingCount = crewList.filter((c) => c.status === "resting").length;
+
   return (
     <AppShell
-      title="Crew Availability"
-      subtitle="Timeline register demonstrating active driver and conductor availability constraints."
+      title="Crew Availability Matrix"
+      subtitle="Visual 24-hour crew roster timeline, continuous driving constraints, and rest period compliance."
+      actions={
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="font-mono text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
+            {availableCount} Available Now
+          </Badge>
+          <Badge variant="outline" className="font-mono text-xs border-primary/30 text-primary bg-primary/10">
+            {onDutyCount} On Route
+          </Badge>
+        </div>
+      }
     >
       <div className="space-y-6">
-        {/* 1. Header Filter Actions */}
-        <div className="panel p-4 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex gap-2">
+        {/* 1. FILTER & LEGEND HEADER */}
+        <div className="glass-panel p-4 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
             <Button
               variant={roleFilter === "all" ? "default" : "outline"}
               size="sm"
               onClick={() => setRoleFilter("all")}
+              className="text-xs h-8"
             >
               All Crew ({crewList.length})
             </Button>
@@ -111,6 +139,7 @@ function CrewAvailabilityPage() {
               variant={roleFilter === "driver" ? "default" : "outline"}
               size="sm"
               onClick={() => setRoleFilter("driver")}
+              className="text-xs h-8"
             >
               Drivers ({crewList.filter((c) => c.role === "driver").length})
             </Button>
@@ -118,78 +147,78 @@ function CrewAvailabilityPage() {
               variant={roleFilter === "conductor" ? "default" : "outline"}
               size="sm"
               onClick={() => setRoleFilter("conductor")}
+              className="text-xs h-8"
             >
               Conductors ({crewList.filter((c) => c.role === "conductor").length})
             </Button>
           </div>
-          
-          <div className="flex flex-wrap gap-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            <span className="flex items-center gap-1.5"><span className="size-3 rounded bg-success block"></span> Available</span>
-            <span className="flex items-center gap-1.5"><span className="size-3 rounded bg-primary block"></span> On Duty</span>
-            <span className="flex items-center gap-1.5"><span className="size-3 rounded bg-warning block"></span> Resting</span>
-            <span className="flex items-center gap-1.5"><span className="size-3 rounded bg-destructive/30 block"></span> Leave</span>
-            <span className="flex items-center gap-1.5"><span className="size-3 rounded bg-muted block"></span> Unavailable</span>
+
+          <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-emerald-500 shadow-2xs"></span> Available</span>
+            <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-primary shadow-2xs"></span> On Duty</span>
+            <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-amber-500 shadow-2xs"></span> Mandatory Rest</span>
+            <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-destructive/40"></span> Leave</span>
+            <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-secondary"></span> Off Duty</span>
           </div>
         </div>
 
-        {/* 2. Visual Timeline panel */}
-        <div className="panel p-5 overflow-x-auto">
+        {/* 2. GANTT TIMELINE MATRIX */}
+        <div className="glass-panel p-5 overflow-x-auto">
           {isLoading ? (
-            <div className="py-10 text-center text-muted-foreground">Loading crew timeline registers...</div>
+            <div className="py-16 text-center text-xs text-muted-foreground">Loading crew availability matrix...</div>
           ) : filteredCrew.length === 0 ? (
-            <div className="py-10 text-center text-muted-foreground">No crew members registered.</div>
+            <div className="py-16 text-center text-xs text-muted-foreground">No crew members registered in this category.</div>
           ) : (
-            <div className="min-w-[800px] space-y-4">
+            <div className="min-w-[960px] space-y-3">
               {/* Hours Header Row */}
-              <div className="grid grid-cols-[180px_1fr] items-center text-xs font-bold text-muted-foreground border-b pb-2">
-                <div>Crew Member</div>
-                <div className="grid gap-1 text-center" style={{ gridTemplateColumns: 'repeat(17, minmax(0, 1fr))' }}>
+              <div className="grid grid-cols-[200px_1fr] items-center text-xs font-bold text-muted-foreground border-b border-border/60 pb-2.5">
+                <div className="text-xs font-mono uppercase tracking-wider">Crew Member</div>
+                <div
+                  className="grid gap-1 text-center"
+                  style={{ gridTemplateColumns: `repeat(${TIMELINE_HOURS.length}, minmax(0, 1fr))` }}
+                >
                   {TIMELINE_HOURS.map((h) => (
-                    <div key={h} className="font-mono">
-                      {String(h).padStart(2, "0")}
+                    <div key={h} className="font-mono text-[11px]">
+                      {String(h).padStart(2, "0")}:00
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Crew Timeline Rows */}
-              <div className="divide-y space-y-3">
+              {/* Crew Rows */}
+              <div className="space-y-2 divide-y divide-border/30">
                 {filteredCrew.map((member) => (
-                  <div key={member.id} className="grid grid-cols-[180px_1fr] items-center py-2.5">
-                    <div className="pr-4">
-                      <div className="font-semibold text-sm truncate flex items-center gap-1.5">
-                        <User className="size-3.5 text-muted-foreground shrink-0" />
-                        {member.name}
-                      </div>
-                      <div className="flex gap-2 items-center mt-1">
-                        <span className="text-[10px] font-mono text-muted-foreground uppercase">{member.employeeId}</span>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[8px] h-4 py-0 px-1 border-primary/20 bg-primary/5 uppercase text-primary shrink-0",
-                            member.role === "conductor" && "border-info/20 bg-info/5 text-info"
-                          )}
-                        >
-                          {member.role}
+                  <div
+                    key={member.id}
+                    className="grid grid-cols-[200px_1fr] items-center pt-2 hover:bg-muted/30 p-1.5 rounded-lg transition-colors"
+                  >
+                    <div className="pr-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-foreground truncate">{member.name}</span>
+                        <Badge variant="outline" className="text-[9px] uppercase font-mono px-1 py-0">
+                          {member.role === "driver" ? "DRV" : "CND"}
                         </Badge>
                       </div>
+                      <span className="text-[10px] text-muted-foreground font-mono">{member.employeeId}</span>
                     </div>
 
-                    <div className="grid gap-1 h-9" style={{ gridTemplateColumns: 'repeat(17, minmax(0, 1fr))' }}>
+                    {/* Hour Blocks */}
+                    <div
+                      className="grid gap-1"
+                      style={{ gridTemplateColumns: `repeat(${TIMELINE_HOURS.length}, minmax(0, 1fr))` }}
+                    >
                       {TIMELINE_HOURS.map((hour) => {
-                        const cell = getHourStatus(member, hour);
+                        const { status, label } = getHourStatus(member, hour);
                         return (
                           <div
                             key={hour}
+                            title={`${member.name} (${String(hour).padStart(2, "0")}:00): ${label}`}
                             className={cn(
-                              "rounded-md transition-all flex items-center justify-center text-[8px] font-bold uppercase",
-                              getHourColor(cell.status)
+                              "h-7 rounded-md text-[10px] font-mono font-bold flex items-center justify-center transition-all cursor-default select-none",
+                              getHourColor(status)
                             )}
-                            title={`${member.name} (${member.role}): ${cell.label} at ${String(hour).padStart(2, "0")}:00`}
                           >
-                            {cell.status === "resting" && "REST"}
-                            {cell.status === "on-duty" && "BUSY"}
-                            {cell.status === "leave" && "LV"}
+                            {status === "resting" ? "R" : status === "on-duty" ? "D" : ""}
                           </div>
                         );
                       })}

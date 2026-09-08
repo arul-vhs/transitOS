@@ -1,19 +1,33 @@
 import { createServerFn } from "@tanstack/react-start";
+import { toServerFnArgs } from "./server-fn-utils";
 
-// Use dynamic variables to prevent static import-protection analysis on client builds
-const AUTH_SERVER_PATH = "../server/auth";
+const _loginFn = createServerFn({ method: "POST" })
+  .validator((credentials: { email: string; password?: string }) => credentials)
+  .handler(async ({ data }) => {
+    const { loginFnImpl } = await import("../server/auth");
+    return await loginFnImpl(data);
+  });
 
-export const loginFn = createServerFn("POST", async (credentials: { email: string; password?: string }) => {
-  const { loginFnImpl } = await import(AUTH_SERVER_PATH);
-  return await loginFnImpl(credentials);
-});
+export const loginFn = async (
+  credentials: { email: string; password?: string } | { data: { email: string; password?: string } }
+) => {
+  return await _loginFn(toServerFnArgs(credentials)!);
+};
 
-export const logoutFn = createServerFn("POST", async () => {
-  const { logoutFnImpl } = await import(AUTH_SERVER_PATH);
+const _logoutFn = createServerFn({ method: "POST" }).handler(async () => {
+  const { logoutFnImpl } = await import("../server/auth");
   return await logoutFnImpl();
 });
 
-export const getCurrentUserFn = createServerFn("GET", async () => {
-  const { getCurrentUserFnImpl } = await import(AUTH_SERVER_PATH);
+export const logoutFn = async () => {
+  return await _logoutFn();
+};
+
+const _getCurrentUserFn = createServerFn({ method: "GET" }).handler(async () => {
+  const { getCurrentUserFnImpl } = await import("../server/auth");
   return await getCurrentUserFnImpl();
 });
+
+export const getCurrentUserFn = async () => {
+  return await _getCurrentUserFn();
+};

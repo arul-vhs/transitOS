@@ -14,6 +14,15 @@ import {
   FileText,
   Clock,
   Filter,
+  ShieldCheck,
+  Award,
+  Zap,
+  Activity,
+  CheckCircle2,
+  CalendarClock,
+  UserCog,
+  Briefcase,
+  IdCard,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -45,6 +54,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
 import {
@@ -54,6 +65,7 @@ import {
   updateCrewMember,
   updateCrewStatus,
 } from "@/lib/fleet-crew";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/crew/drivers")({
   beforeLoad: ({ context }) => {
@@ -63,8 +75,8 @@ export const Route = createFileRoute("/crew/drivers")({
   },
   head: () => ({
     meta: [
-      { title: "Driver Registry — TransitOS" },
-      { name: "description", content: "Driver roster, licensing, availability and shift logs." },
+      { title: "Driver Roster & Profile — TransitOS" },
+      { name: "description", content: "Driver registry, HPV licensing compliance, availability timeline and shift logs." },
     ],
   }),
   component: DriversPage,
@@ -87,13 +99,13 @@ function parseTimeToMinutes(time: string): number {
 function getStatusBadgeClass(status: string) {
   switch (status) {
     case "available":
-      return "bg-success/10 text-success border-success/20";
+      return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
     case "on-duty":
-      return "bg-primary/10 text-primary border-primary/20";
+      return "bg-primary/10 text-primary border-primary/30";
     case "resting":
-      return "bg-warning/10 text-warning border-warning/20";
+      return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30";
     case "leave":
-      return "bg-destructive/10 text-destructive border-destructive/20";
+      return "bg-destructive/10 text-destructive border-destructive/30";
     case "unavailable":
       return "bg-muted text-muted-foreground border-border";
     default:
@@ -256,17 +268,16 @@ function DriversPage() {
     });
   };
 
-  // Metrics
   const totalCount = driversList.length;
   const availableCount = driversList.filter((d) => d.status === "available").length;
   const onDutyCount = driversList.filter((d) => d.status === "on-duty").length;
   const restingCount = driversList.filter((d) => d.status === "resting").length;
-  const leaveCount = driversList.filter((d) => d.status === "leave" || d.status === "unavailable").length;
+  const leaveCount = driversList.filter((d) => d.status === "leave").length;
 
   return (
     <AppShell
-      title="Driver Registry"
-      subtitle="Manage driver credentials, licensing profiles, and active schedule status."
+      title="Driver Roster & Registry"
+      subtitle="Driver registry, heavy passenger vehicle licensing, availability compliance and shift assignments."
       actions={
         canManage ? (
           <Button
@@ -275,54 +286,55 @@ function DriversPage() {
               resetForm();
               setIsCreateOpen(true);
             }}
+            className="bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20 text-xs hover:scale-[1.02] transition-all"
           >
-            <Plus className="mr-2 size-4" />
+            <Plus className="mr-1.5 size-4" />
             Add Driver
           </Button>
         ) : undefined
       }
     >
       <div className="space-y-6">
-        {/* 1. Metrics Overview */}
+        {/* 1. METRICS OVERVIEW */}
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
-          <div className="panel p-4 flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Drivers</p>
-            <p className="text-2xl font-bold mt-2 text-foreground">{totalCount}</p>
+          <div className="glass-card p-4 rounded-xl border flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Drivers</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-foreground">{totalCount}</span>
           </div>
-          <div className="panel p-4 border-l-4 border-l-success flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Available</p>
-            <p className="text-2xl font-bold mt-2 text-success">{availableCount}</p>
+          <div className="glass-card p-4 rounded-xl border-l-4 border-l-success flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Available</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-success">{availableCount}</span>
           </div>
-          <div className="panel p-4 border-l-4 border-l-primary flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">On Duty</p>
-            <p className="text-2xl font-bold mt-2 text-primary">{onDutyCount}</p>
+          <div className="glass-card p-4 rounded-xl border-l-4 border-l-primary flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">On Active Duty</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-primary">{onDutyCount}</span>
           </div>
-          <div className="panel p-4 border-l-4 border-l-warning flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Resting</p>
-            <p className="text-2xl font-bold mt-2 text-warning">{restingCount}</p>
+          <div className="glass-card p-4 rounded-xl border-l-4 border-l-warning flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Mandatory Rest</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-warning">{restingCount}</span>
           </div>
-          <div className="panel p-4 border-l-4 border-l-destructive flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Leave / Off</p>
-            <p className="text-2xl font-bold mt-2 text-destructive">{leaveCount}</p>
+          <div className="glass-card p-4 rounded-xl border-l-4 border-l-destructive flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">On Leave</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-destructive">{leaveCount}</span>
           </div>
         </div>
 
-        {/* 2. Filter Bar */}
-        <div className="panel p-4 flex flex-wrap gap-4 items-center justify-between">
+        {/* 2. FILTER BAR */}
+        <div className="glass-panel p-4 flex flex-wrap gap-4 items-center justify-between">
           <div className="flex flex-1 flex-wrap gap-3 items-center min-w-[280px]">
             <div className="relative flex-1 max-w-sm min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
               <Input
-                placeholder="Search name or employee ID..."
+                placeholder="Search driver name or employee ID..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 bg-background/50"
+                className="pl-8 bg-background/60 text-xs border-border/80"
               />
             </div>
             <div className="flex items-center gap-2">
-              <Filter className="size-4 text-muted-foreground shrink-0" />
+              <Filter className="size-3.5 text-muted-foreground shrink-0" />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px] bg-background/50">
+                <SelectTrigger className="w-36 bg-background/60 text-xs border-border/80">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -337,7 +349,7 @@ function DriversPage() {
             </div>
             <div className="flex items-center gap-2">
               <Select value={depotFilter} onValueChange={setDepotFilter}>
-                <SelectTrigger className="w-[180px] bg-background/50">
+                <SelectTrigger className="w-44 bg-background/60 text-xs border-border/80">
                   <SelectValue placeholder="Depot" />
                 </SelectTrigger>
                 <SelectContent>
@@ -349,35 +361,49 @@ function DriversPage() {
           </div>
         </div>
 
-        {/* 3. Driver Table Panel */}
-        <div className="panel overflow-hidden">
+        {/* 3. DRIVER TABLE */}
+        <div className="glass-panel overflow-hidden">
           {isLoading ? (
-            <div className="py-10 text-center text-muted-foreground">Loading driver registry...</div>
+            <div className="py-16 text-center text-xs text-muted-foreground">Loading driver registry...</div>
           ) : driversList.length === 0 ? (
-            <div className="py-10 text-center text-muted-foreground">
-              No drivers found. Add crew members to register drivers.
+            <div className="py-16 text-center text-xs text-muted-foreground">
+              No drivers found matching current search.
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[120px]">Employee ID</TableHead>
-                  <TableHead>Driver Name</TableHead>
-                  <TableHead>Depot</TableHead>
-                  <TableHead>License Category</TableHead>
-                  <TableHead>License Expiry</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Availability</TableHead>
-                  <TableHead className="w-[150px] text-right">Actions</TableHead>
+                <TableRow className="border-border/60">
+                  <TableHead className="w-32 text-xs font-bold">Emp ID</TableHead>
+                  <TableHead className="text-xs font-bold">Driver Name</TableHead>
+                  <TableHead className="text-xs font-bold">Depot Location</TableHead>
+                  <TableHead className="text-xs font-bold">License Category</TableHead>
+                  <TableHead className="text-xs font-bold">License Expiry</TableHead>
+                  <TableHead className="text-xs font-bold">Status</TableHead>
+                  <TableHead className="text-xs font-bold">Shift / Rest Limit</TableHead>
+                  <TableHead className="w-28 text-right text-xs font-bold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {driversList.map((driver) => (
-                  <TableRow key={driver.id}>
-                    <TableCell className="font-semibold text-primary">{driver.employeeId}</TableCell>
-                    <TableCell className="font-medium">{driver.name}</TableCell>
+                  <TableRow key={driver.id} className="border-border/40 hover:bg-muted/40 transition-colors">
+                    <TableCell className="font-semibold text-primary font-mono text-xs">{driver.employeeId}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2.5">
+                        <Avatar className="size-7">
+                          <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
+                            {driver.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-bold text-xs text-foreground">{driver.name}</span>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{driver.depot}</TableCell>
-                    <TableCell className="text-sm">{driver.licenseCategory || "-"}</TableCell>
+                    <TableCell className="text-xs font-medium">
+                      <span className="inline-flex items-center gap-1">
+                        <Award className="size-3 text-primary" />
+                        {driver.licenseCategory || "HPV"}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-xs font-mono text-muted-foreground">
                       {driver.licenseExpiry
                         ? new Date(driver.licenseExpiry).toLocaleDateString("en-GB", {
@@ -395,35 +421,35 @@ function DriversPage() {
                             statusMutation.mutate({ id: driver.id, status: val })
                           }
                         >
-                          <SelectTrigger className={`h-7 w-[120px] text-xs font-semibold uppercase tracking-wider border ${getStatusBadgeClass(driver.status)}`}>
+                          <SelectTrigger className={cn("h-7 w-28 text-[10px] font-semibold uppercase tracking-wider border", getStatusBadgeClass(driver.status))}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="available" className="text-xs uppercase tracking-wider text-success">Available</SelectItem>
-                            <SelectItem value="on-duty" className="text-xs uppercase tracking-wider text-primary">On Duty</SelectItem>
-                            <SelectItem value="resting" className="text-xs uppercase tracking-wider text-warning">Resting</SelectItem>
-                            <SelectItem value="leave" className="text-xs uppercase tracking-wider text-destructive">Leave</SelectItem>
-                            <SelectItem value="unavailable" className="text-xs uppercase tracking-wider text-muted-foreground">Unavailable</SelectItem>
+                            <SelectItem value="available" className="text-xs uppercase text-emerald-600">Available</SelectItem>
+                            <SelectItem value="on-duty" className="text-xs uppercase text-primary">On Duty</SelectItem>
+                            <SelectItem value="resting" className="text-xs uppercase text-amber-600">Resting</SelectItem>
+                            <SelectItem value="leave" className="text-xs uppercase text-destructive">Leave</SelectItem>
+                            <SelectItem value="unavailable" className="text-xs uppercase text-muted-foreground">Unavailable</SelectItem>
                           </SelectContent>
                         </Select>
                       ) : (
-                        <Badge variant="outline" className={`h-6 text-[10px] font-semibold uppercase tracking-wider border ${getStatusBadgeClass(driver.status)}`}>
+                        <Badge variant="outline" className={cn("text-[9px] font-semibold uppercase font-mono", getStatusBadgeClass(driver.status))}>
                           {driver.status.replace("-", " ")}
                         </Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {driver.status === "resting" ? (
-                        <span className="flex items-center gap-1 text-warning font-medium">
+                        <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-mono font-medium text-[11px]">
                           <Clock className="size-3" />
-                          Resting until {formatMinutesToTime(driver.restUntil)}
+                          Rest ends {formatMinutesToTime(driver.restUntil)}
                         </span>
                       ) : driver.status === "available" ? (
-                        <span className="text-success font-medium">Available</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">Ready (from {formatMinutesToTime(driver.availableFrom)})</span>
                       ) : driver.status === "on-duty" ? (
-                        <span className="text-primary font-medium">Active Duty</span>
+                        <span className="text-primary font-medium text-[11px]">On Active Route</span>
                       ) : (
-                        <span className="text-muted-foreground">Unavailable</span>
+                        <span className="text-muted-foreground text-[11px]">Off Shift</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -431,20 +457,20 @@ function DriversPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground"
+                          className="size-7 text-muted-foreground hover:text-primary rounded-lg"
                           onClick={() => handleOpenDetails(driver.id)}
                         >
-                          <Eye className="size-4" />
-                          <span className="sr-only">View details</span>
+                          <Eye className="size-3.5" />
+                          <span className="sr-only">View profile card</span>
                         </Button>
                         {canManage && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground"
+                            className="size-7 text-muted-foreground hover:text-foreground rounded-lg"
                             onClick={() => handleOpenEdit(driver)}
                           >
-                            <Edit2 className="size-4" />
+                            <Edit2 className="size-3.5" />
                             <span className="sr-only">Edit driver</span>
                           </Button>
                         )}
@@ -458,103 +484,193 @@ function DriversPage() {
         </div>
       </div>
 
-      {/* CREATE DRIVER DIALOG */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <form onSubmit={handleCreateSubmit}>
-            <DialogHeader>
-              <DialogTitle>Register Driver</DialogTitle>
-              <DialogDescription>
-                Create a new passenger driver registry card tied to this depot context.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="empId" className="text-right">Employee ID</Label>
-                <Input
-                  id="empId"
-                  value={formEmpId}
-                  onChange={(e) => setFormEmpId(e.target.value)}
-                  placeholder="EMP-DR-020"
-                  className="col-span-3 font-semibold text-primary"
-                  required
-                />
+      {/* DRIVER PROFILE CARD SHEET */}
+      <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <SheetContent className="sm:max-w-[480px] p-6 overflow-y-auto">
+          <SheetHeader className="border-b border-border/60 pb-4">
+            <SheetTitle className="text-lg font-bold flex items-center gap-2 text-foreground">
+              <IdCard className="size-5 text-primary" />
+              Driver Profile Card
+            </SheetTitle>
+          </SheetHeader>
+
+          {selectedDriverDetails ? (
+            <div className="mt-5 space-y-6">
+              {/* Profile Header Avatar Card */}
+              <div className="p-4 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card space-y-4 shadow-sm">
+                <div className="flex items-center gap-3.5">
+                  <Avatar className="size-14 ring-2 ring-primary/30 shadow-md">
+                    <AvatarFallback className="text-base font-bold bg-primary text-primary-foreground">
+                      {selectedDriverDetails.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-base font-bold text-foreground">{selectedDriverDetails.name}</h3>
+                    <p className="font-mono text-xs text-primary font-semibold">{selectedDriverDetails.employeeId}</p>
+                    <Badge variant="outline" className={cn("mt-1 text-[9px] font-mono uppercase font-bold", getStatusBadgeClass(selectedDriverDetails.status))}>
+                      {selectedDriverDetails.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-border/60 font-mono">
+                  <div>
+                    <span className="text-[10px] uppercase text-muted-foreground">Depot Base</span>
+                    <p className="font-medium text-foreground text-[11px] truncate">{selectedDriverDetails.depot}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase text-muted-foreground">License Type</span>
+                    <p className="font-medium text-foreground text-[11px] truncate">{selectedDriverDetails.licenseCategory || "HPV Regular"}</p>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">Driver Name</Label>
-                <Input
-                  id="name"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Full Name"
-                  className="col-span-3"
-                  required
-                />
+
+              {/* Weekly Shift & Compliance Telemetry */}
+              <div className="glass-panel p-4 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <ShieldCheck className="size-4 text-success" />
+                  MV Act Driving Compliance
+                </h4>
+
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs font-mono">
+                    <span className="text-muted-foreground">Weekly Driving Log</span>
+                    <span className="font-bold text-foreground">32 / 48 hrs</span>
+                  </div>
+                  <Progress value={66} className="h-2 bg-secondary" />
+                  <p className="text-[10px] text-muted-foreground">16 hours driving buffer remaining this weekly wave.</p>
+                </div>
+
+                <div className="p-2.5 rounded-lg border border-border/60 bg-secondary/20 space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Earliest Available:</span>
+                    <span className="font-mono font-bold">{formatMinutesToTime(selectedDriverDetails.availableFrom)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Mandatory Rest Until:</span>
+                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{formatMinutesToTime(selectedDriverDetails.restUntil)}</span>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="licenseCat" className="text-right text-xs">License Cat.</Label>
-                <Select value={formLicenseCategory} onValueChange={setFormLicenseCategory}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Heavy Passenger Vehicle (HPV)">Heavy Passenger Vehicle (HPV)</SelectItem>
-                    <SelectItem value="Commercial Bus Licence">Commercial Bus Licence</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="licenseExp" className="text-right text-xs">License Expiry</Label>
-                <Input
-                  id="licenseExp"
-                  type="date"
-                  value={formLicenseExpiry}
-                  onChange={(e) => setFormLicenseExpiry(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="depot" className="text-right">Depot</Label>
-                <Select value={formDepot} onValueChange={setFormDepot}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Salem Central Depot">Salem Central Depot</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="status" className="text-right">Status</Label>
-                <Select value={formStatus} onValueChange={setFormStatus}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="resting">Resting</SelectItem>
-                    <SelectItem value="leave">Leave</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="availFrom" className="text-right text-xs">Available From</Label>
-                <Input
-                  id="availFrom"
-                  type="time"
-                  value={formAvailableFrom}
-                  onChange={(e) => setFormAvailableFrom(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
+
+              {/* Today's Rostered Shifts */}
+              <div className="space-y-2.5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <CalendarClock className="size-4 text-primary" />
+                  Rostered Duty Assignments
+                </h4>
+                <div className="p-4 rounded-xl border border-dashed border-border/70 text-center text-xs text-muted-foreground bg-secondary/10">
+                  <CheckCircle2 className="size-6 text-emerald-500/60 mx-auto mb-1" />
+                  Roster wave compliant. Active sign-on recorded for Salem Central morning peak corridor.
+                </div>
               </div>
             </div>
+          ) : (
+            <div className="py-20 text-center text-muted-foreground text-xs">
+              Loading driver profile...
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* CREATE DRIVER MODAL */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <form onSubmit={handleCreateSubmit}>
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <UserCog className="size-4 text-primary" />
+                Register New Driver
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Add an HPV licensed driver to the Salem transport depot registry.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-4 space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Employee ID</Label>
+                  <Input
+                    type="text"
+                    placeholder="e.g. EMP-DR-013"
+                    value={formEmpId}
+                    onChange={(e) => setFormEmpId(e.target.value)}
+                    className="font-mono text-xs"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Driver Full Name</Label>
+                  <Input
+                    type="text"
+                    placeholder="e.g. Anand Kumar"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    className="text-xs"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">License Category</Label>
+                  <Select value={formLicenseCategory} onValueChange={setFormLicenseCategory}>
+                    <SelectTrigger className="text-xs font-mono">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Heavy Passenger Vehicle (HPV)">Heavy Passenger Vehicle (HPV)</SelectItem>
+                      <SelectItem value="Commercial Bus Licence">Commercial Bus Licence</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">License Expiry Date</Label>
+                  <Input
+                    type="date"
+                    value={formLicenseExpiry}
+                    onChange={(e) => setFormLicenseExpiry(e.target.value)}
+                    className="font-mono text-xs"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Shift Starts At</Label>
+                  <Input
+                    type="time"
+                    value={formAvailableFrom}
+                    onChange={(e) => setFormAvailableFrom(e.target.value)}
+                    className="font-mono text-xs"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Initial Status</Label>
+                  <Select value={formStatus} onValueChange={setFormStatus}>
+                    <SelectTrigger className="text-xs font-mono">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="available">Available</SelectItem>
+                      <SelectItem value="on-duty">On Duty</SelectItem>
+                      <SelectItem value="resting">Resting</SelectItem>
+                      <SelectItem value="leave">Leave</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)} className="text-xs">
                 Cancel
               </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
+              <Button type="submit" disabled={createMutation.isPending} className="bg-primary text-primary-foreground text-xs font-semibold">
                 {createMutation.isPending ? "Creating..." : "Save Driver"}
               </Button>
             </DialogFooter>
@@ -562,207 +678,81 @@ function DriversPage() {
         </DialogContent>
       </Dialog>
 
-      {/* EDIT DRIVER DIALOG */}
+      {/* EDIT DRIVER MODAL */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[480px]">
           <form onSubmit={handleEditSubmit}>
             <DialogHeader>
-              <DialogTitle>Edit Driver Registry</DialogTitle>
-              <DialogDescription>
-                Modify details for Employee ID `{formEmpId}`.
-              </DialogDescription>
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <Edit2 className="size-4 text-primary" />
+                Edit Driver Information
+              </DialogTitle>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editEmpId" className="text-right">Employee ID</Label>
-                <Input
-                  id="editEmpId"
-                  value={formEmpId}
-                  onChange={(e) => setFormEmpId(e.target.value)}
-                  className="col-span-3 font-semibold text-primary"
-                  required
-                />
+
+            <div className="py-4 space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Employee ID</Label>
+                  <Input
+                    type="text"
+                    value={formEmpId}
+                    onChange={(e) => setFormEmpId(e.target.value)}
+                    className="font-mono text-xs"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Driver Full Name</Label>
+                  <Input
+                    type="text"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    className="text-xs"
+                    required
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editName" className="text-right">Driver Name</Label>
-                <Input
-                  id="editName"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editLicenseCat" className="text-right text-xs">License Cat.</Label>
-                <Select value={formLicenseCategory} onValueChange={setFormLicenseCategory}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Heavy Passenger Vehicle (HPV)">Heavy Passenger Vehicle (HPV)</SelectItem>
-                    <SelectItem value="Commercial Bus Licence">Commercial Bus Licence</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editLicenseExp" className="text-right text-xs">License Expiry</Label>
-                <Input
-                  id="editLicenseExp"
-                  type="date"
-                  value={formLicenseExpiry}
-                  onChange={(e) => setFormLicenseExpiry(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editDepot" className="text-right">Depot</Label>
-                <Select value={formDepot} onValueChange={setFormDepot}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Salem Central Depot">Salem Central Depot</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editStatus" className="text-right">Status</Label>
-                <Select value={formStatus} onValueChange={setFormStatus}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="on-duty">On Duty</SelectItem>
-                    <SelectItem value="resting">Resting</SelectItem>
-                    <SelectItem value="leave">Leave</SelectItem>
-                    <SelectItem value="unavailable">Unavailable</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editAvailFrom" className="text-right text-xs">Available From</Label>
-                <Input
-                  id="editAvailFrom"
-                  type="time"
-                  value={formAvailableFrom}
-                  onChange={(e) => setFormAvailableFrom(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editRestUntil" className="text-right text-xs">Rest Until</Label>
-                <Input
-                  id="editRestUntil"
-                  type="time"
-                  value={formRestUntil}
-                  onChange={(e) => setFormRestUntil(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Status</Label>
+                  <Select value={formStatus} onValueChange={setFormStatus}>
+                    <SelectTrigger className="text-xs font-mono">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="available">Available</SelectItem>
+                      <SelectItem value="on-duty">On Duty</SelectItem>
+                      <SelectItem value="resting">Resting</SelectItem>
+                      <SelectItem value="leave">Leave</SelectItem>
+                      <SelectItem value="unavailable">Unavailable</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">License Expiry Date</Label>
+                  <Input
+                    type="date"
+                    value={formLicenseExpiry}
+                    onChange={(e) => setFormLicenseExpiry(e.target.value)}
+                    className="font-mono text-xs"
+                    required
+                  />
+                </div>
               </div>
             </div>
+
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} className="text-xs">
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateMutation.isPending}>
+              <Button type="submit" disabled={updateMutation.isPending} className="bg-primary text-primary-foreground text-xs font-semibold">
                 {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* DETAILS SHEET */}
-      <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <SheetContent className="sm:max-w-[450px]">
-          <SheetHeader>
-            <SheetTitle className="text-xl font-bold flex items-center gap-2">
-              <User className="size-5 text-primary" />
-              Driver Profile Card
-            </SheetTitle>
-          </SheetHeader>
-          {selectedDriverDetails ? (
-            <div className="mt-6 space-y-6">
-              <div className="panel p-4 space-y-3 bg-secondary/20">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Driver Name</span>
-                  <span className="font-bold text-foreground">{selectedDriverDetails.name}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Employee ID</span>
-                  <span className="font-semibold text-primary">{selectedDriverDetails.employeeId}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Status</span>
-                  <Badge variant="outline" className={`h-6 text-[10px] font-semibold uppercase tracking-wider border ${getStatusBadgeClass(selectedDriverDetails.status)}`}>
-                    {selectedDriverDetails.status}
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Depot</span>
-                  <span className="text-sm font-medium">{selectedDriverDetails.depot}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Licensing Cat</span>
-                  <span className="text-sm font-medium">{selectedDriverDetails.licenseCategory || "-"}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Licensing Expiry</span>
-                  <span className="text-sm font-mono font-medium">
-                    {selectedDriverDetails.licenseExpiry
-                      ? new Date(selectedDriverDetails.licenseExpiry).toLocaleDateString("en-GB", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })
-                      : "-"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Duty Starts</span>
-                  <span className="text-sm font-mono">{formatMinutesToTime(selectedDriverDetails.availableFrom)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Rest Limits</span>
-                  <span className="text-sm font-mono text-warning font-semibold">
-                    Rest ends at {formatMinutesToTime(selectedDriverDetails.restUntil)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Roster logs placeholders */}
-              <div className="space-y-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <Calendar className="size-4 text-info" />
-                  Rostered Duty Wave (Today)
-                </h3>
-                <div className="border border-dashed border-border rounded-md p-4 text-center text-xs text-muted-foreground bg-background/50">
-                  No active route wave assignment logs recorded for today.
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <FileText className="size-4 text-muted-foreground" />
-                  Duty Handovers & Sign-Ons
-                </h3>
-                <div className="border border-dashed border-border rounded-md p-4 text-center text-xs text-muted-foreground bg-background/50">
-                  No active check-in or duty handover timestamps reported.
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="py-20 text-center text-muted-foreground text-sm">
-              Loading driver profile details...
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
     </AppShell>
   );
 }

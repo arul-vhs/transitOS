@@ -381,45 +381,46 @@ function RoutePlannerPage() {
         {/* Left Column: Form & Analytics */}
         <div className="space-y-6">
           {/* Metadata Section */}
-          <section className="panel p-4 space-y-4">
-            <h3 className="text-sm font-semibold flex items-center gap-2">
+          <section className="glass-panel p-5 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 border-b border-border/60 pb-2.5">
               <Compass className="size-4 text-primary" /> Corridor Specifications
             </h3>
 
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="code">Route Code</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="code" className="text-xs">Route Code</Label>
                   <Input
                     id="code"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     placeholder="e.g. Route 106"
-                    className="font-bold text-primary"
+                    className="font-mono text-xs font-bold text-primary bg-background/60"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="direction">Direction</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="direction" className="text-xs">Direction</Label>
                   <Select value={direction} onValueChange={setDirection}>
-                    <SelectTrigger id="direction">
+                    <SelectTrigger id="direction" className="text-xs font-mono bg-background/60">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="UP">UP</SelectItem>
-                      <SelectItem value="DOWN">DOWN</SelectItem>
+                      <SelectItem value="UP">UP Direction</SelectItem>
+                      <SelectItem value="DOWN">DOWN Direction</SelectItem>
                       <SelectItem value="CIRCULAR">CIRCULAR</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="name">Route Name</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="name" className="text-xs">Route Name</Label>
                 <Input
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Gugai - Alagapuram Loop"
+                  className="text-xs bg-background/60"
                 />
               </div>
 

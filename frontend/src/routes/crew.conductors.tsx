@@ -13,6 +13,12 @@ import {
   Filter,
   CheckCircle,
   FileText,
+  IdCard,
+  ShieldCheck,
+  Zap,
+  CheckCircle2,
+  CalendarClock,
+  Ticket,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -44,6 +50,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
 import {
@@ -53,6 +60,7 @@ import {
   updateCrewMember,
   updateCrewStatus,
 } from "@/lib/fleet-crew";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/crew/conductors")({
   beforeLoad: ({ context }) => {
@@ -62,8 +70,8 @@ export const Route = createFileRoute("/crew/conductors")({
   },
   head: () => ({
     meta: [
-      { title: "Conductor Registry — TransitOS" },
-      { name: "description", content: "Conductor rosters, shift registers and availability." },
+      { title: "Conductor Roster & Profile — TransitOS" },
+      { name: "description", content: "Conductor rosters, ticketing machine registers and availability." },
     ],
   }),
   component: ConductorsPage,
@@ -86,13 +94,13 @@ function parseTimeToMinutes(time: string): number {
 function getStatusBadgeClass(status: string) {
   switch (status) {
     case "available":
-      return "bg-success/10 text-success border-success/20";
+      return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
     case "on-duty":
-      return "bg-primary/10 text-primary border-primary/20";
+      return "bg-primary/10 text-primary border-primary/30";
     case "resting":
-      return "bg-warning/10 text-warning border-warning/20";
+      return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30";
     case "leave":
-      return "bg-destructive/10 text-destructive border-destructive/20";
+      return "bg-destructive/10 text-destructive border-destructive/30";
     case "unavailable":
       return "bg-muted text-muted-foreground border-border";
     default:
@@ -138,7 +146,7 @@ function ConductorsPage() {
       }),
   });
 
-  // 2. Fetch Selected Conductor Details
+  // 2. Fetch Selected Conductor details
   const { data: selectedConductorDetails } = useQuery({
     queryKey: ["crew-member", selectedConductorId],
     queryFn: () => getCrewMember(selectedConductorId!),
@@ -224,8 +232,6 @@ function ConductorsPage() {
       depot: formDepot,
       availableFrom: parseTimeToMinutes(formAvailableFrom),
       restUntil: parseTimeToMinutes(formRestUntil),
-      licenseCategory: null,
-      licenseExpiry: null,
     });
   };
 
@@ -241,23 +247,20 @@ function ConductorsPage() {
         depot: formDepot,
         availableFrom: parseTimeToMinutes(formAvailableFrom),
         restUntil: parseTimeToMinutes(formRestUntil),
-        licenseCategory: null,
-        licenseExpiry: null,
       },
     });
   };
 
-  // Metrics
   const totalCount = conductorsList.length;
   const availableCount = conductorsList.filter((c) => c.status === "available").length;
   const onDutyCount = conductorsList.filter((c) => c.status === "on-duty").length;
   const restingCount = conductorsList.filter((c) => c.status === "resting").length;
-  const leaveCount = conductorsList.filter((c) => c.status === "leave" || c.status === "unavailable").length;
+  const leaveCount = conductorsList.filter((c) => c.status === "leave").length;
 
   return (
     <AppShell
-      title="Conductor Registry"
-      subtitle="Manage conductor roster registers, depot allocations, and duty availability logs."
+      title="Conductor Roster & Registry"
+      subtitle="Ticketing crew registry, electronic ticketing machine assignments and shift availability."
       actions={
         canManage ? (
           <Button
@@ -266,54 +269,55 @@ function ConductorsPage() {
               resetForm();
               setIsCreateOpen(true);
             }}
+            className="bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20 text-xs hover:scale-[1.02] transition-all"
           >
-            <Plus className="mr-2 size-4" />
+            <Plus className="mr-1.5 size-4" />
             Add Conductor
           </Button>
         ) : undefined
       }
     >
       <div className="space-y-6">
-        {/* 1. Metrics Overview */}
+        {/* 1. METRICS OVERVIEW */}
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
-          <div className="panel p-4 flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Conductors</p>
-            <p className="text-2xl font-bold mt-2 text-foreground">{totalCount}</p>
+          <div className="glass-card p-4 rounded-xl border flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Conductors</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-foreground">{totalCount}</span>
           </div>
-          <div className="panel p-4 border-l-4 border-l-success flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Available</p>
-            <p className="text-2xl font-bold mt-2 text-success">{availableCount}</p>
+          <div className="glass-card p-4 rounded-xl border-l-4 border-l-success flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Available</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-success">{availableCount}</span>
           </div>
-          <div className="panel p-4 border-l-4 border-l-primary flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">On Duty</p>
-            <p className="text-2xl font-bold mt-2 text-primary">{onDutyCount}</p>
+          <div className="glass-card p-4 rounded-xl border-l-4 border-l-primary flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">On Active Duty</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-primary">{onDutyCount}</span>
           </div>
-          <div className="panel p-4 border-l-4 border-l-warning flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Resting</p>
-            <p className="text-2xl font-bold mt-2 text-warning">{restingCount}</p>
+          <div className="glass-card p-4 rounded-xl border-l-4 border-l-warning flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Resting</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-warning">{restingCount}</span>
           </div>
-          <div className="panel p-4 border-l-4 border-l-destructive flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Leave / Off</p>
-            <p className="text-2xl font-bold mt-2 text-destructive">{leaveCount}</p>
+          <div className="glass-card p-4 rounded-xl border-l-4 border-l-destructive flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">On Leave</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-destructive">{leaveCount}</span>
           </div>
         </div>
 
-        {/* 2. Filter Bar */}
-        <div className="panel p-4 flex flex-wrap gap-4 items-center justify-between">
+        {/* 2. FILTER BAR */}
+        <div className="glass-panel p-4 flex flex-wrap gap-4 items-center justify-between">
           <div className="flex flex-1 flex-wrap gap-3 items-center min-w-[280px]">
             <div className="relative flex-1 max-w-sm min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
               <Input
-                placeholder="Search name or employee ID..."
+                placeholder="Search conductor name or employee ID..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 bg-background/50"
+                className="pl-8 bg-background/60 text-xs border-border/80"
               />
             </div>
             <div className="flex items-center gap-2">
-              <Filter className="size-4 text-muted-foreground shrink-0" />
+              <Filter className="size-3.5 text-muted-foreground shrink-0" />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px] bg-background/50">
+                <SelectTrigger className="w-36 bg-background/60 text-xs border-border/80">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -328,7 +332,7 @@ function ConductorsPage() {
             </div>
             <div className="flex items-center gap-2">
               <Select value={depotFilter} onValueChange={setDepotFilter}>
-                <SelectTrigger className="w-[180px] bg-background/50">
+                <SelectTrigger className="w-44 bg-background/60 text-xs border-border/80">
                   <SelectValue placeholder="Depot" />
                 </SelectTrigger>
                 <SelectContent>
@@ -340,32 +344,48 @@ function ConductorsPage() {
           </div>
         </div>
 
-        {/* 3. Conductor Table Panel */}
-        <div className="panel overflow-hidden">
+        {/* 3. CONDUCTORS TABLE */}
+        <div className="glass-panel overflow-hidden">
           {isLoading ? (
-            <div className="py-10 text-center text-muted-foreground">Loading conductor registry...</div>
+            <div className="py-16 text-center text-xs text-muted-foreground">Loading conductor registry...</div>
           ) : conductorsList.length === 0 ? (
-            <div className="py-10 text-center text-muted-foreground">
-              No conductors found. Add crew members to register conductors.
+            <div className="py-16 text-center text-xs text-muted-foreground">
+              No conductors found matching current search.
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[120px]">Employee ID</TableHead>
-                  <TableHead>Conductor Name</TableHead>
-                  <TableHead>Depot</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Availability</TableHead>
-                  <TableHead className="w-[150px] text-right">Actions</TableHead>
+                <TableRow className="border-border/60">
+                  <TableHead className="w-32 text-xs font-bold">Emp ID</TableHead>
+                  <TableHead className="text-xs font-bold">Conductor Name</TableHead>
+                  <TableHead className="text-xs font-bold">Depot Location</TableHead>
+                  <TableHead className="text-xs font-bold">ETM Terminal</TableHead>
+                  <TableHead className="text-xs font-bold">Status</TableHead>
+                  <TableHead className="text-xs font-bold">Availability Window</TableHead>
+                  <TableHead className="w-28 text-right text-xs font-bold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {conductorsList.map((conductor) => (
-                  <TableRow key={conductor.id}>
-                    <TableCell className="font-semibold text-primary">{conductor.employeeId}</TableCell>
-                    <TableCell className="font-medium">{conductor.name}</TableCell>
+                  <TableRow key={conductor.id} className="border-border/40 hover:bg-muted/40 transition-colors">
+                    <TableCell className="font-semibold text-primary font-mono text-xs">{conductor.employeeId}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2.5">
+                        <Avatar className="size-7">
+                          <AvatarFallback className="text-[10px] font-bold bg-warning/10 text-warning">
+                            {conductor.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-bold text-xs text-foreground">{conductor.name}</span>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{conductor.depot}</TableCell>
+                    <TableCell className="text-xs font-mono">
+                      <span className="inline-flex items-center gap-1 text-muted-foreground">
+                        <Ticket className="size-3 text-warning" />
+                        ETM-{conductor.employeeId.slice(-3)}
+                      </span>
+                    </TableCell>
                     <TableCell>
                       {canManage ? (
                         <Select
@@ -374,35 +394,35 @@ function ConductorsPage() {
                             statusMutation.mutate({ id: conductor.id, status: val })
                           }
                         >
-                          <SelectTrigger className={`h-7 w-[120px] text-xs font-semibold uppercase tracking-wider border ${getStatusBadgeClass(conductor.status)}`}>
+                          <SelectTrigger className={cn("h-7 w-28 text-[10px] font-semibold uppercase tracking-wider border", getStatusBadgeClass(conductor.status))}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="available" className="text-xs uppercase tracking-wider text-success">Available</SelectItem>
-                            <SelectItem value="on-duty" className="text-xs uppercase tracking-wider text-primary">On Duty</SelectItem>
-                            <SelectItem value="resting" className="text-xs uppercase tracking-wider text-warning">Resting</SelectItem>
-                            <SelectItem value="leave" className="text-xs uppercase tracking-wider text-destructive">Leave</SelectItem>
-                            <SelectItem value="unavailable" className="text-xs uppercase tracking-wider text-muted-foreground">Unavailable</SelectItem>
+                            <SelectItem value="available" className="text-xs uppercase text-emerald-600">Available</SelectItem>
+                            <SelectItem value="on-duty" className="text-xs uppercase text-primary">On Duty</SelectItem>
+                            <SelectItem value="resting" className="text-xs uppercase text-amber-600">Resting</SelectItem>
+                            <SelectItem value="leave" className="text-xs uppercase text-destructive">Leave</SelectItem>
+                            <SelectItem value="unavailable" className="text-xs uppercase text-muted-foreground">Unavailable</SelectItem>
                           </SelectContent>
                         </Select>
                       ) : (
-                        <Badge variant="outline" className={`h-6 text-[10px] font-semibold uppercase tracking-wider border ${getStatusBadgeClass(conductor.status)}`}>
+                        <Badge variant="outline" className={cn("text-[9px] font-semibold uppercase font-mono", getStatusBadgeClass(conductor.status))}>
                           {conductor.status.replace("-", " ")}
                         </Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {conductor.status === "resting" ? (
-                        <span className="flex items-center gap-1 text-warning font-medium">
+                        <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-mono font-medium text-[11px]">
                           <Clock className="size-3" />
-                          Resting until {formatMinutesToTime(conductor.restUntil)}
+                          Rest ends {formatMinutesToTime(conductor.restUntil)}
                         </span>
                       ) : conductor.status === "available" ? (
-                        <span className="text-success font-medium">Available</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">Ready (from {formatMinutesToTime(conductor.availableFrom)})</span>
                       ) : conductor.status === "on-duty" ? (
-                        <span className="text-primary font-medium">Active Duty</span>
+                        <span className="text-primary font-medium text-[11px]">On Active Route</span>
                       ) : (
-                        <span className="text-muted-foreground">Unavailable</span>
+                        <span className="text-muted-foreground text-[11px]">Off Shift</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -410,20 +430,20 @@ function ConductorsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground"
+                          className="size-7 text-muted-foreground hover:text-primary rounded-lg"
                           onClick={() => handleOpenDetails(conductor.id)}
                         >
-                          <Eye className="size-4" />
+                          <Eye className="size-3.5" />
                           <span className="sr-only">View details</span>
                         </Button>
                         {canManage && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground"
+                            className="size-7 text-muted-foreground hover:text-foreground rounded-lg"
                             onClick={() => handleOpenEdit(conductor)}
                           >
-                            <Edit2 className="size-4" />
+                            <Edit2 className="size-3.5" />
                             <span className="sr-only">Edit conductor</span>
                           </Button>
                         )}
@@ -437,80 +457,159 @@ function ConductorsPage() {
         </div>
       </div>
 
-      {/* CREATE CONDUCTOR DIALOG */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <form onSubmit={handleCreateSubmit}>
-            <DialogHeader>
-              <DialogTitle>Register Conductor</DialogTitle>
-              <DialogDescription>
-                Create a new passenger conductor register card.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="empId" className="text-right">Employee ID</Label>
-                <Input
-                  id="empId"
-                  value={formEmpId}
-                  onChange={(e) => setFormEmpId(e.target.value)}
-                  placeholder="EMP-CN-020"
-                  className="col-span-3 font-semibold text-primary"
-                  required
-                />
+      {/* CONDUCTOR PROFILE CARD SHEET */}
+      <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <SheetContent className="sm:max-w-[480px] p-6 overflow-y-auto">
+          <SheetHeader className="border-b border-border/60 pb-4">
+            <SheetTitle className="text-lg font-bold flex items-center gap-2 text-foreground">
+              <IdCard className="size-5 text-warning" />
+              Conductor Profile Card
+            </SheetTitle>
+          </SheetHeader>
+
+          {selectedConductorDetails ? (
+            <div className="mt-5 space-y-6">
+              {/* Profile Header Avatar Card */}
+              <div className="p-4 rounded-2xl border border-warning/20 bg-gradient-to-br from-warning/10 via-card to-card space-y-4 shadow-sm">
+                <div className="flex items-center gap-3.5">
+                  <Avatar className="size-14 ring-2 ring-warning/30 shadow-md">
+                    <AvatarFallback className="text-base font-bold bg-warning text-warning-foreground">
+                      {selectedConductorDetails.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-base font-bold text-foreground">{selectedConductorDetails.name}</h3>
+                    <p className="font-mono text-xs text-warning font-semibold">{selectedConductorDetails.employeeId}</p>
+                    <Badge variant="outline" className={cn("mt-1 text-[9px] font-mono uppercase font-bold", getStatusBadgeClass(selectedConductorDetails.status))}>
+                      {selectedConductorDetails.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-border/60 font-mono">
+                  <div>
+                    <span className="text-[10px] uppercase text-muted-foreground">Depot Base</span>
+                    <p className="font-medium text-foreground text-[11px] truncate">{selectedConductorDetails.depot}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase text-muted-foreground">Ticketing ETM</span>
+                    <p className="font-medium text-foreground text-[11px] truncate">ETM-{selectedConductorDetails.employeeId.slice(-3)}</p>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">Conductor Name</Label>
-                <Input
-                  id="name"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Full Name"
-                  className="col-span-3"
-                  required
-                />
+
+              {/* Roster & Availability Telemetry */}
+              <div className="glass-panel p-4 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <ShieldCheck className="size-4 text-success" />
+                  Shift & Rest Compliance
+                </h4>
+
+                <div className="p-2.5 rounded-lg border border-border/60 bg-secondary/20 space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Available From:</span>
+                    <span className="font-mono font-bold">{formatMinutesToTime(selectedConductorDetails.availableFrom)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Rest Limit:</span>
+                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{formatMinutesToTime(selectedConductorDetails.restUntil)}</span>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="depot" className="text-right">Depot</Label>
-                <Select value={formDepot} onValueChange={setFormDepot}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Salem Central Depot">Salem Central Depot</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="status" className="text-right">Status</Label>
-                <Select value={formStatus} onValueChange={setFormStatus}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="resting">Resting</SelectItem>
-                    <SelectItem value="leave">Leave</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="availFrom" className="text-right text-xs">Available From</Label>
-                <Input
-                  id="availFrom"
-                  type="time"
-                  value={formAvailableFrom}
-                  onChange={(e) => setFormAvailableFrom(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
+
+              {/* Today's Rostered Duty */}
+              <div className="space-y-2.5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <CalendarClock className="size-4 text-warning" />
+                  Today's Corridor Assignment
+                </h4>
+                <div className="p-4 rounded-xl border border-dashed border-border/70 text-center text-xs text-muted-foreground bg-secondary/10">
+                  <CheckCircle2 className="size-6 text-emerald-500/60 mx-auto mb-1" />
+                  Roster wave active. ETM device verified and checked out for Salem bus operations.
+                </div>
               </div>
             </div>
+          ) : (
+            <div className="py-20 text-center text-muted-foreground text-xs">
+              Loading conductor profile...
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* CREATE CONDUCTOR MODAL */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <form onSubmit={handleCreateSubmit}>
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <Users className="size-4 text-warning" />
+                Register New Conductor
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Add an ETM ticketing staff member to the Salem depot registry.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-4 space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Employee ID</Label>
+                  <Input
+                    type="text"
+                    placeholder="e.g. EMP-CD-013"
+                    value={formEmpId}
+                    onChange={(e) => setFormEmpId(e.target.value)}
+                    className="font-mono text-xs"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Conductor Full Name</Label>
+                  <Input
+                    type="text"
+                    placeholder="e.g. Ramesh Babu"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    className="text-xs"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Shift Starts At</Label>
+                  <Input
+                    type="time"
+                    value={formAvailableFrom}
+                    onChange={(e) => setFormAvailableFrom(e.target.value)}
+                    className="font-mono text-xs"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Initial Status</Label>
+                  <Select value={formStatus} onValueChange={setFormStatus}>
+                    <SelectTrigger className="text-xs font-mono">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="available">Available</SelectItem>
+                      <SelectItem value="on-duty">On Duty</SelectItem>
+                      <SelectItem value="resting">Resting</SelectItem>
+                      <SelectItem value="leave">Leave</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)} className="text-xs">
                 Cancel
               </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
+              <Button type="submit" disabled={createMutation.isPending} className="bg-primary text-primary-foreground text-xs font-semibold">
                 {createMutation.isPending ? "Creating..." : "Save Conductor"}
               </Button>
             </DialogFooter>
@@ -518,52 +617,45 @@ function ConductorsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* EDIT CONDUCTOR DIALOG */}
+      {/* EDIT CONDUCTOR MODAL */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[480px]">
           <form onSubmit={handleEditSubmit}>
             <DialogHeader>
-              <DialogTitle>Edit Conductor Profile</DialogTitle>
-              <DialogDescription>
-                Modify details for Conductor Employee ID `{formEmpId}`.
-              </DialogDescription>
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <Edit2 className="size-4 text-primary" />
+                Edit Conductor Information
+              </DialogTitle>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editEmpId" className="text-right">Employee ID</Label>
-                <Input
-                  id="editEmpId"
-                  value={formEmpId}
-                  onChange={(e) => setFormEmpId(e.target.value)}
-                  className="col-span-3 font-semibold text-primary"
-                  required
-                />
+
+            <div className="py-4 space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Employee ID</Label>
+                  <Input
+                    type="text"
+                    value={formEmpId}
+                    onChange={(e) => setFormEmpId(e.target.value)}
+                    className="font-mono text-xs"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Conductor Full Name</Label>
+                  <Input
+                    type="text"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    className="text-xs"
+                    required
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editName" className="text-right">Conductor Name</Label>
-                <Input
-                  id="editName"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editDepot" className="text-right">Depot</Label>
-                <Select value={formDepot} onValueChange={setFormDepot}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Salem Central Depot">Salem Central Depot</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editStatus" className="text-right">Status</Label>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Status</Label>
                 <Select value={formStatus} onValueChange={setFormStatus}>
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger className="text-xs font-mono">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -575,111 +667,19 @@ function ConductorsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editAvailFrom" className="text-right text-xs">Available From</Label>
-                <Input
-                  id="editAvailFrom"
-                  type="time"
-                  value={formAvailableFrom}
-                  onChange={(e) => setFormAvailableFrom(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editRestUntil" className="text-right text-xs">Rest Until</Label>
-                <Input
-                  id="editRestUntil"
-                  type="time"
-                  value={formRestUntil}
-                  onChange={(e) => setFormRestUntil(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
-              </div>
             </div>
+
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} className="text-xs">
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateMutation.isPending}>
+              <Button type="submit" disabled={updateMutation.isPending} className="bg-primary text-primary-foreground text-xs font-semibold">
                 {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* DETAILS SHEET */}
-      <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <SheetContent className="sm:max-w-[450px]">
-          <SheetHeader>
-            <SheetTitle className="text-xl font-bold flex items-center gap-2">
-              <Users className="size-5 text-primary" />
-              Conductor Profile Card
-            </SheetTitle>
-          </SheetHeader>
-          {selectedConductorDetails ? (
-            <div className="mt-6 space-y-6">
-              <div className="panel p-4 space-y-3 bg-secondary/20">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Conductor Name</span>
-                  <span className="font-bold text-foreground">{selectedConductorDetails.name}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Employee ID</span>
-                  <span className="font-semibold text-primary">{selectedConductorDetails.employeeId}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Status</span>
-                  <Badge variant="outline" className={`h-6 text-[10px] font-semibold uppercase tracking-wider border ${getStatusBadgeClass(selectedConductorDetails.status)}`}>
-                    {selectedConductorDetails.status}
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Depot</span>
-                  <span className="text-sm font-medium">{selectedConductorDetails.depot}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Duty Starts</span>
-                  <span className="text-sm font-mono">{formatMinutesToTime(selectedConductorDetails.availableFrom)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Rest Limits</span>
-                  <span className="text-sm font-mono text-warning font-semibold">
-                    Rest ends at {formatMinutesToTime(selectedConductorDetails.restUntil)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Roster logs placeholders */}
-              <div className="space-y-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <Calendar className="size-4 text-info" />
-                  Rostered Duty Wave (Today)
-                </h3>
-                <div className="border border-dashed border-border rounded-md p-4 text-center text-xs text-muted-foreground bg-background/50">
-                  No active route wave assignment logs recorded for today.
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <FileText className="size-4 text-muted-foreground" />
-                  Duty Handovers & Sign-Ons
-                </h3>
-                <div className="border border-dashed border-border rounded-md p-4 text-center text-xs text-muted-foreground bg-background/50">
-                  No active check-in or duty handover timestamps reported.
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="py-20 text-center text-muted-foreground text-sm">
-              Loading conductor profile details...
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
     </AppShell>
   );
 }

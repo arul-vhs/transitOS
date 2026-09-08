@@ -23,6 +23,14 @@ import {
   X,
   FilePlus,
   RefreshCw,
+  Search,
+  ShieldCheck,
+  Zap,
+  Layers,
+  Sparkles,
+  UserCog,
+  Check,
+  Sliders,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -48,7 +56,20 @@ import {
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
 import { getBuses, getDrivers, getConductors } from "@/lib/fleet-crew";
-import { getTrips, getDuties, getDuty, createDuty, updateDuty, deleteDuty, addTripToDuty, removeTripFromDuty, createCrewHandover, clearHandoverSegments, validateDuty } from "@/lib/scheduling-fns";
+import {
+  getTrips,
+  getDuties,
+  getDuty,
+  createDuty,
+  updateDuty,
+  deleteDuty,
+  addTripToDuty,
+  removeTripFromDuty,
+  createCrewHandover,
+  clearHandoverSegments,
+  validateDuty,
+} from "@/lib/scheduling-fns";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/operations/duties")({
   beforeLoad: ({ context }) => {
@@ -58,8 +79,8 @@ export const Route = createFileRoute("/operations/duties")({
   },
   head: () => ({
     meta: [
-      { title: "Duty Builder — TransitOS" },
-      { name: "description", content: "Linked and unlinked duty blocks with crew handovers." },
+      { title: "Duty Builder & Editor — TransitOS" },
+      { name: "description", content: "Linked and unlinked duty blocks with crew handovers and real-time compliance analyzer." },
     ],
   }),
   component: DutiesPage,
@@ -84,9 +105,11 @@ function DutiesPage() {
   const user = context?.user;
   const canModify = hasPermission(user?.role || "", "schedule.modify");
 
-  // Filter state
+  // Filter & Search state
   const [serviceDate, setServiceDate] = useState(DEFAULT_DATE);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dutySearch, setDutySearch] = useState("");
+  const [unassignedSearch, setUnassignedSearch] = useState("");
 
   // Selected Duty in Visual Editor
   const [selectedDutyId, setSelectedDutyId] = useState<string | null>(null);
@@ -97,7 +120,7 @@ function DutiesPage() {
 
   // Form states (Duty)
   const [formDutyCode, setFormDutyCode] = useState("");
-  const [formDutyType, setFormDutyType] = useState("LINKED");
+  const [formDutyType, setFormDutyType] = useState<"LINKED" | "UNLINKED">("LINKED");
 
   // Form states (Crew Handover Segment)
   const [handoverDriverId, setHandoverDriverId] = useState("");
@@ -152,24 +175,31 @@ function DutiesPage() {
     enabled: !!selectedDutyId,
   });
 
-  // Resolve unassigned trips for dropdown selection
+  // Resolve unassigned trips for dropdown/panel selection
   const assignedTripIds = new Set<string>();
   dutiesList.forEach((d) => {
     if (d.trips) {
       d.trips.forEach((t: any) => assignedTripIds.add(t.id));
     }
   });
-  const unassignedTrips = allTripsList.filter((t) => !assignedTripIds.has(t.id) && t.status !== "cancelled");
+  const unassignedTrips = allTripsList.filter(
+    (t) => !assignedTripIds.has(t.id) && t.status !== "cancelled"
+  );
 
-  // Selectable dropdown trip
-  const [selectedTripToAdd, setSelectedTripToAdd] = useState("");
-  useEffect(() => {
-    if (unassignedTrips.length > 0) {
-      setSelectedTripToAdd(unassignedTrips[0].id);
-    } else {
-      setSelectedTripToAdd("");
-    }
-  }, [unassignedTrips]);
+  const filteredUnassignedTrips = unassignedTrips.filter((t) => {
+    if (!unassignedSearch) return true;
+    const matchRoute = (t.routeCode || "").toLowerCase().includes(unassignedSearch.toLowerCase());
+    const matchTime = formatMinutesToTime(t.startTime).includes(unassignedSearch);
+    return matchRoute || matchTime;
+  });
+
+  // Filtered duties
+  const filteredDuties = dutiesList.filter((d) => {
+    if (!dutySearch) return true;
+    const matchCode = (d.dutyCode || "").toLowerCase().includes(dutySearch.toLowerCase());
+    const matchBus = (d.busRegNumber || "").toLowerCase().includes(dutySearch.toLowerCase());
+    return matchCode || matchBus;
+  });
 
   // Set default crew values for handover form
   useEffect(() => {
@@ -289,7 +319,6 @@ function DutiesPage() {
     });
   };
 
-  // Triggers updates for select dropdown fields (bus, driver, conductor, status)
   const handleFieldChange = (field: string, val: string | null) => {
     if (!selectedDuty) return;
     const updateData = {
@@ -316,30 +345,34 @@ function DutiesPage() {
 
   return (
     <AppShell
-      title="Duty Builder"
-      subtitle="Visual scheduler, crew handover segments, and turnaround buffer validators."
+      title="Duty Builder & Editor"
+      subtitle="Interactive duty composition studio, crew handover timelines, and Motor Vehicle Act compliance analyzer."
       actions={
         canModify ? (
-          <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 size-4" />
+          <Button
+            size="sm"
+            onClick={() => setIsCreateOpen(true)}
+            className="bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20 text-xs hover:scale-[1.02] transition-all"
+          >
+            <Plus className="mr-1.5 size-4" />
             Create Duty Block
           </Button>
         ) : undefined
       }
     >
       <div className="space-y-6">
-        {/* 1. Top Controls */}
-        <div className="panel p-4 flex flex-wrap gap-4 items-center justify-between">
+        {/* TOP FILTER BAR */}
+        <div className="glass-panel p-4 flex flex-wrap gap-4 items-center justify-between">
           <div className="flex flex-1 flex-wrap gap-3 items-center min-w-[280px]">
             {/* Service Date Input */}
             <div className="flex items-center gap-2">
-              <Calendar className="size-4 text-muted-foreground shrink-0" />
+              <Calendar className="size-4 text-primary shrink-0" />
               <Input
                 type="text"
                 placeholder="25 Aug 2026"
                 value={serviceDate}
                 onChange={(e) => setServiceDate(e.target.value)}
-                className="w-[140px] bg-background/50 h-9 text-sm"
+                className="w-36 bg-background/60 h-9 text-xs font-mono border-border/80"
               />
             </div>
 
@@ -347,7 +380,7 @@ function DutiesPage() {
             <div className="flex items-center gap-2">
               <Filter className="size-4 text-muted-foreground shrink-0" />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[150px] bg-background/50">
+                <SelectTrigger className="w-40 bg-background/60 h-9 text-xs border-border/80">
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
@@ -359,551 +392,584 @@ function DutiesPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Duty Search */}
+            <div className="relative flex-1 min-w-[180px] max-w-xs">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search duties or buses..."
+                value={dutySearch}
+                onChange={(e) => setDutySearch(e.target.value)}
+                className="pl-8 bg-background/60 h-9 text-xs border-border/80"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="font-mono text-xs border-primary/30 text-primary bg-primary/5">
+              {dutiesList.length} Duties Total
+            </Badge>
+            <Badge variant="outline" className="font-mono text-xs border-warning/30 text-warning bg-warning/5">
+              {unassignedTrips.length} Unassigned Trips
+            </Badge>
           </div>
         </div>
 
-        {/* 2. Main Work Area: Duties list sidebar + Visual Editor */}
-        <div className="grid gap-6 lg:grid-cols-4">
-          {/* Sidebar: Duties List */}
-          <div className="panel p-3 lg:col-span-1 space-y-3 flex flex-col h-[650px]">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
-              Duties Register
-            </h3>
+        {/* 3-COLUMN WORKSPACE: DUTY LIST | VISUAL CANVAS | UNASSIGNED POOL */}
+        <div className="grid gap-6 lg:grid-cols-12">
+          {/* LEFT COLUMN: DUTIES ROSTER */}
+          <div className="glass-panel p-3.5 lg:col-span-3 space-y-3 flex flex-col h-[740px]">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Duties List ({filteredDuties.length})
+              </h3>
+              <Badge variant="secondary" className="text-[10px] font-mono">
+                {serviceDate}
+              </Badge>
+            </div>
 
             {dutiesLoading ? (
-              <div className="py-20 text-center text-xs text-muted-foreground flex-1">Loading duties...</div>
-            ) : dutiesList.length === 0 ? (
-              <div className="py-20 text-center text-xs text-muted-foreground flex-1">
-                No duties built. Create one to begin scheduling.
+              <div className="py-24 text-center text-xs text-muted-foreground flex-1 flex flex-col items-center justify-center gap-2">
+                <RefreshCw className="size-5 animate-spin text-primary" />
+                <span>Loading duty blocks...</span>
+              </div>
+            ) : filteredDuties.length === 0 ? (
+              <div className="py-20 text-center text-xs text-muted-foreground flex-1 flex flex-col items-center justify-center p-4">
+                <CalendarClock className="size-8 text-muted-foreground/50 mb-2" />
+                <p className="font-medium text-foreground">No duties found</p>
+                <p className="text-[11px] text-muted-foreground mt-1">Create a duty block or adjust filters.</p>
               </div>
             ) : (
               <div className="space-y-2 overflow-y-auto flex-1 pr-1">
-                {dutiesList.map((d) => (
-                  <button
-                    key={d.id}
-                    onClick={() => setSelectedDutyId(d.id)}
-                    className={`w-full text-left p-3 rounded-lg border transition-all flex flex-col gap-1.5 ${
-                      selectedDutyId === d.id
-                        ? "border-primary bg-primary/5 hover:bg-primary/8 text-primary"
-                        : "border-border bg-background/50 hover:bg-background/80"
-                    }`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-sm text-foreground">{d.dutyCode}</span>
-                      <Badge variant="outline" className="text-[9px] font-mono px-1">
-                        {d.dutyType}
-                      </Badge>
-                    </div>
-                    <div className="text-[11px] text-muted-foreground space-y-0.5">
-                      <p>
-                        Time: <b>{formatMinutesToTime(d.startTime)} - {formatMinutesToTime(d.endTime)}</b>
-                      </p>
-                      <p>Bus: <b>{d.busRegNumber || "None"}</b></p>
-                      <p>Status: <span className="uppercase text-[9px] font-bold">{d.status}</span></p>
-                    </div>
-                  </button>
-                ))}
+                {filteredDuties.map((d) => {
+                  const isSelected = selectedDutyId === d.id;
+                  const tripCount = d.trips?.length || 0;
+
+                  return (
+                    <button
+                      key={d.id}
+                      onClick={() => setSelectedDutyId(d.id)}
+                      className={cn(
+                        "w-full text-left p-3 rounded-xl border transition-all duration-150 flex flex-col gap-2 cursor-pointer",
+                        isSelected
+                          ? "border-primary bg-primary/10 shadow-xs ring-1 ring-primary/30"
+                          : "border-border/70 bg-card/60 hover:bg-muted/60 hover:border-border"
+                      )}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <span className={cn("font-bold text-sm font-mono", isSelected ? "text-primary" : "text-foreground")}>
+                            {d.dutyCode}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            {tripCount} {tripCount === 1 ? "trip" : "trips"}
+                          </span>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[9px] font-mono px-1.5 py-0 uppercase font-bold",
+                            d.dutyType === "LINKED" ? "border-primary/40 text-primary bg-primary/5" : "border-info/40 text-info bg-info/5"
+                          )}
+                        >
+                          {d.dutyType}
+                        </Badge>
+                      </div>
+
+                      <div className="text-[11px] text-muted-foreground space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-1 font-mono text-[10px]">
+                            <Clock className="size-3 text-muted-foreground" />
+                            {formatMinutesToTime(d.startTime)} – {formatMinutesToTime(d.endTime)}
+                          </span>
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "text-[9px] uppercase font-bold px-1.5 py-0",
+                              d.status === "published" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : ""
+                            )}
+                          >
+                            {d.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="truncate max-w-[140px] font-mono text-foreground/80">
+                            {d.busRegNumber || "No Bus Assigned"}
+                          </span>
+                          <span className="text-muted-foreground truncate">{d.driverName || "No Driver"}</span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
 
-          {/* Main Visual Editor */}
-          <div className="lg:col-span-3 space-y-6">
+          {/* MIDDLE COLUMN: VISUAL DUTY EDITOR CANVAS */}
+          <div className="glass-panel p-5 lg:col-span-6 space-y-6 flex flex-col h-[740px] overflow-y-auto">
             {selectedDuty ? (
-              <div className="space-y-6">
-                {/* Duty Configuration Panel */}
-                <section className="panel p-5 space-y-4">
-                  <div className="flex justify-between items-start border-b pb-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-bold text-foreground">{selectedDuty.dutyCode}</h2>
-                        <Badge variant="outline">{selectedDuty.dutyType}</Badge>
-                        <Badge variant={selectedDuty.status === "published" ? "default" : "secondary"}>
-                          {selectedDuty.status}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Service Date: {selectedDuty.serviceDate} · Start Time: {formatMinutesToTime(selectedDuty.startTime)} · End Time: {formatMinutesToTime(selectedDuty.endTime)}
-                      </p>
-                    </div>
-                    {canModify && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:bg-destructive/10 h-8 w-8"
-                        onClick={() => {
-                          if (confirm(`Permanently delete duty ${selectedDuty.dutyCode}?`)) {
-                            deleteDutyMutation.mutate(selectedDuty.id);
-                          }
-                        }}
+              <div className="space-y-6 flex-1">
+                {/* Duty Header & Quick Actions */}
+                <div className="flex items-start justify-between border-b border-border/70 pb-4">
+                  <div>
+                    <div className="flex items-center gap-2.5">
+                      <h2 className="text-xl font-bold tracking-tight text-foreground font-mono">{selectedDuty.dutyCode}</h2>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "font-mono text-xs uppercase font-semibold",
+                          selectedDuty.dutyType === "LINKED" ? "border-primary/40 text-primary" : "border-info/40 text-info"
+                        )}
                       >
-                        <Trash2 className="size-4" />
-                      </Button>
+                        {selectedDuty.dutyType}
+                      </Badge>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "font-bold text-xs uppercase",
+                          selectedDuty.status === "published" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : ""
+                        )}
+                      >
+                        {selectedDuty.status}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                      <span>Date: <strong className="text-foreground">{selectedDuty.serviceDate}</strong></span>
+                      <span>·</span>
+                      <span>Span: <strong className="font-mono text-foreground">{formatMinutesToTime(selectedDuty.startTime)} - {formatMinutesToTime(selectedDuty.endTime)}</strong></span>
+                    </p>
+                  </div>
+
+                  {canModify && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:bg-destructive/10 h-8 w-8 rounded-lg"
+                      onClick={() => {
+                        if (confirm(`Permanently delete duty ${selectedDuty.dutyCode}?`)) {
+                          deleteDutyMutation.mutate(selectedDuty.id);
+                        }
+                      }}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  )}
+                </div>
+
+                {/* COMPLIANCE ALERT RADAR */}
+                <div
+                  className={cn(
+                    "p-3.5 rounded-xl border flex items-start gap-3 transition-all",
+                    validation.isValid
+                      ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300"
+                      : "border-destructive/30 bg-destructive/5 text-destructive"
+                  )}
+                >
+                  {validation.isValid ? (
+                    <CheckCircle2 className="size-5 text-emerald-500 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="size-5 text-destructive shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1 text-xs">
+                    <p className="font-bold">
+                      {validation.isValid ? "MV Act Compliance Satisfied" : "Labor & Turnaround Compliance Alerts"}
+                    </p>
+                    {validation.issues && validation.issues.length > 0 ? (
+                      <ul className="list-disc pl-4 mt-1 space-y-0.5 text-[11px]">
+                        {validation.issues.map((iss: string, i: number) => (
+                          <li key={i}>{iss}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        No continuous driving violations or turnaround buffer overlaps detected.
+                      </p>
                     )}
                   </div>
+                </div>
 
-                  {/* Operational Resource Assignment form */}
-                  <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 items-end">
-                    {/* Bus Select */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="busSelect" className="text-xs text-muted-foreground flex items-center gap-1.5">
-                        <BusIcon className="size-3.5" /> Bus Assignment
-                      </Label>
-                      <Select
-                        disabled={!canModify}
-                        value={selectedDuty.busId || "none"}
-                        onValueChange={(val) => handleFieldChange("busId", val === "none" ? null : val)}
-                      >
-                        <SelectTrigger id="busSelect" className="h-9 bg-background/50">
-                          <SelectValue placeholder="Unassigned" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Unassigned</SelectItem>
-                          {busesList.map((b) => (
-                            <SelectItem key={b.id} value={b.id}>
-                              {b.registrationNumber} ({b.busType})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Duty Type Select */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="typeSelect" className="text-xs text-muted-foreground flex items-center gap-1.5">
-                        {selectedDuty.dutyType === "LINKED" ? (
-                          <LinkIcon className="size-3.5" />
-                        ) : (
-                          <Unlink className="size-3.5" />
-                        )}
-                        Duty Configuration
-                      </Label>
-                      <Select
-                        disabled={!canModify}
-                        value={selectedDuty.dutyType}
-                        onValueChange={(val) => handleFieldChange("dutyType", val)}
-                      >
-                        <SelectTrigger id="typeSelect" className="h-9 bg-background/50">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="LINKED">Linked Crew</SelectItem>
-                          <SelectItem value="UNLINKED">Unlinked Handovers</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Status Select */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="statusSelect" className="text-xs text-muted-foreground flex items-center gap-1.5">
-                        <Settings className="size-3.5" /> Block Status
-                      </Label>
-                      <Select
-                        disabled={!canModify}
-                        value={selectedDuty.status}
-                        onValueChange={(val) => handleFieldChange("status", val)}
-                      >
-                        <SelectTrigger id="statusSelect" className="h-9 bg-background/50">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="draft">Draft</SelectItem>
-                          <SelectItem value="assigned">Assigned</SelectItem>
-                          <SelectItem value="published">Published</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                {/* RESOURCE ASSIGNMENT FORM */}
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {/* Bus Select */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                      <BusIcon className="size-3 text-primary" /> Assigned Vehicle
+                    </Label>
+                    <Select
+                      value={selectedDuty.busId || "none"}
+                      onValueChange={(val) => handleFieldChange("busId", val === "none" ? null : val)}
+                      disabled={!canModify}
+                    >
+                      <SelectTrigger className="h-9 text-xs bg-background/60 font-mono">
+                        <SelectValue placeholder="Select Bus" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">-- Unassigned --</SelectItem>
+                        {busesList.map((b) => (
+                          <SelectItem key={b.id} value={b.id}>
+                            {b.registrationNumber} ({b.fleetNumber || b.busType})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  {/* Linked Crew Form Block (only for LINKED) */}
-                  {selectedDuty.dutyType === "LINKED" && (
-                    <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-dashed">
-                      {/* Driver Select */}
-                      <div className="space-y-1.5">
-                        <Label htmlFor="driverSelect" className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          <Users className="size-3.5" /> Linked Driver
-                        </Label>
-                        <Select
-                          disabled={!canModify}
-                          value={selectedDuty.driverId || "none"}
-                          onValueChange={(val) => handleFieldChange("driverId", val === "none" ? null : val)}
-                        >
-                          <SelectTrigger id="driverSelect" className="h-9 bg-background/50">
-                            <SelectValue placeholder="Unassigned" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Unassigned</SelectItem>
-                            {driversList.map((d) => (
-                              <SelectItem key={d.id} value={d.id}>
-                                {d.name} ({d.employeeId})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                  {/* Driver Select */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                      <UserCog className="size-3 text-success" /> Primary Driver
+                    </Label>
+                    <Select
+                      value={selectedDuty.driverId || "none"}
+                      onValueChange={(val) => handleFieldChange("driverId", val === "none" ? null : val)}
+                      disabled={!canModify}
+                    >
+                      <SelectTrigger className="h-9 text-xs bg-background/60 font-mono">
+                        <SelectValue placeholder="Select Driver" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">-- Unassigned --</SelectItem>
+                        {driversList.map((dr) => (
+                          <SelectItem key={dr.id} value={dr.id}>
+                            {dr.name} ({dr.employeeId})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                      {/* Conductor Select */}
-                      <div className="space-y-1.5">
-                        <Label htmlFor="conductorSelect" className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          <Users className="size-3.5" /> Linked Conductor
-                        </Label>
-                        <Select
-                          disabled={!canModify}
-                          value={selectedDuty.conductorId || "none"}
-                          onValueChange={(val) => handleFieldChange("conductorId", val === "none" ? null : val)}
-                        >
-                          <SelectTrigger id="conductorSelect" className="h-9 bg-background/50">
-                            <SelectValue placeholder="Unassigned" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Unassigned</SelectItem>
-                            {conductorsList.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>
-                                {c.name} ({c.employeeId})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  )}
-                </section>
+                  {/* Conductor Select */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                      <Users className="size-3 text-warning" /> Primary Conductor
+                    </Label>
+                    <Select
+                      value={selectedDuty.conductorId || "none"}
+                      onValueChange={(val) => handleFieldChange("conductorId", val === "none" ? null : val)}
+                      disabled={!canModify}
+                    >
+                      <SelectTrigger className="h-9 text-xs bg-background/60 font-mono">
+                        <SelectValue placeholder="Select Conductor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">-- Unassigned --</SelectItem>
+                        {conductorsList.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name} ({c.employeeId})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-                {/* Duty Trips Sequenced Timeline */}
-                <section className="panel p-5 space-y-4">
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <h3 className="text-sm font-semibold flex items-center gap-2">
-                      <Clock className="size-4 text-primary shrink-0" /> Assigned Corridors Timeline
+                {/* DUTY TRIPS TIMELINE CANVAS */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <RouteIcon className="size-3.5 text-primary" /> Trip Sequence ({selectedDuty.trips?.length || 0})
                     </h3>
-                    <span className="text-[10px] text-muted-foreground font-mono">
-                      {selectedDuty.trips?.length || 0} Trips Blocked
+                    <span className="text-[11px] text-muted-foreground font-mono">
+                      Total Driving: <strong>{formatMinutesToTime(selectedDuty.endTime - selectedDuty.startTime)}</strong>
                     </span>
                   </div>
 
-                  {selectedDuty.trips?.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-muted-foreground border border-dashed rounded-lg bg-background/20">
-                      No trips assigned to this duty yet. Add trips below.
-                    </div>
-                  ) : (
-                    <div className="space-y-3 relative before:absolute before:left-5 before:top-4 before:bottom-4 before:w-[2px] before:bg-border">
-                      {selectedDuty.trips.map((t: any, index: number) => (
-                        <div key={t.id} className="flex gap-4 items-start relative pl-10">
-                          {/* Sequenced circle marker */}
-                          <div className="absolute left-0 size-10 rounded-full border bg-card flex items-center justify-center text-xs font-bold text-primary shrink-0 shadow-sm z-10">
-                            {t.sequence}
-                          </div>
-
-                          {/* Trip Card details */}
-                          <div className="flex-1 p-3 rounded-lg border bg-background/40 hover:bg-background/80 transition-all flex justify-between items-center gap-4">
-                            <div className="space-y-1">
+                  <div className="space-y-2 border border-border/70 rounded-xl p-3 bg-card/40">
+                    {selectedDuty.trips && selectedDuty.trips.length > 0 ? (
+                      selectedDuty.trips.map((t: any, idx: number) => (
+                        <div
+                          key={t.id}
+                          className="flex items-center justify-between p-2.5 rounded-lg border border-border/60 bg-background/70 hover:border-primary/40 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="size-6 rounded-full bg-primary/10 text-primary font-bold text-xs grid place-items-center font-mono">
+                              {idx + 1}
+                            </span>
+                            <div>
                               <div className="flex items-center gap-2">
-                                <span className="font-bold text-sm text-foreground">{t.tripCode}</span>
-                                <Badge variant="outline" className="text-[9px] uppercase font-bold px-1.5 h-5">
-                                  {t.routeCode}
+                                <span className="font-bold text-xs font-mono">{formatMinutesToTime(t.startTime)}</span>
+                                <ArrowRight className="size-3 text-muted-foreground" />
+                                <span className="font-bold text-xs font-mono">{formatMinutesToTime(t.endTime || t.startTime + 45)}</span>
+                                <Badge variant="secondary" className="text-[10px] font-mono">
+                                  {t.routeCode || "Corridor"}
                                 </Badge>
                               </div>
-                              <p className="text-[10px] text-muted-foreground">
-                                {t.routeName}
+                              <p className="text-[11px] text-muted-foreground mt-0.5">
+                                {t.origin || "Terminal A"} ➔ {t.destination || "Terminal B"}
                               </p>
-                              {/* Display turnaround buffer note if not the last trip */}
-                              {index < selectedDuty.trips.length - 1 && (
-                                <p className="text-[10px] font-medium text-primary mt-1.5 flex items-center gap-1">
-                                  <Clock className="size-3" /> Turnaround:{" "}
-                                  {selectedDuty.trips[index + 1].startTime - t.endTime}m
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-right shrink-0 flex items-center gap-4">
-                              <div>
-                                <p className="font-mono font-bold text-sm">
-                                  {formatMinutesToTime(t.startTime)} - {formatMinutesToTime(t.endTime)}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground mt-0.5">
-                                  {t.endTime - t.startTime}m duration
-                                </p>
-                              </div>
-                              {canModify && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                                  onClick={() => {
-                                    removeTripMutation.mutate({ dutyId: selectedDutyId!, tripId: t.id });
-                                  }}
-                                >
-                                  <X className="size-4" />
-                                </Button>
-                              )}
                             </div>
                           </div>
+
+                          {canModify && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeTripMutation.mutate({ dutyId: selectedDuty.id, tripId: t.id })}
+                              className="size-7 text-destructive hover:bg-destructive/10 rounded-md"
+                            >
+                              <X className="size-3.5" />
+                            </Button>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Add Trip Form Selector */}
-                  {canModify && unassignedTrips.length > 0 && (
-                    <div className="flex gap-3 pt-3 border-t border-dashed items-end">
-                      <div className="flex-1 space-y-1.5">
-                        <Label htmlFor="tripSelectAdd" className="text-xs text-muted-foreground">
-                          Assign Unscheduled Corridor Trip
-                        </Label>
-                        <Select value={selectedTripToAdd} onValueChange={setSelectedTripToAdd}>
-                          <SelectTrigger id="tripSelectAdd" className="h-9 bg-background/50">
-                            <SelectValue placeholder="Select Trip to assign..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {unassignedTrips.map((t) => (
-                              <SelectItem key={t.id} value={t.id}>
-                                {t.tripCode} ({t.routeCode} · {formatMinutesToTime(t.startTime)} - {formatMinutesToTime(t.endTime)})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={!selectedTripToAdd || addTripMutation.isPending}
-                        onClick={() => {
-                          addTripMutation.mutate({ dutyId: selectedDutyId!, tripId: selectedTripToAdd });
-                        }}
-                      >
-                        <FilePlus className="size-4 mr-2" /> Assign Trip
-                      </Button>
-                    </div>
-                  )}
-                </section>
-
-                {/* Unlinked Handovers Crew Segment Management (Only for UNLINKED) */}
-                {selectedDuty.dutyType === "UNLINKED" && (
-                  <section className="panel p-5 space-y-4">
-                    <div className="flex justify-between items-center border-b pb-2">
-                      <h3 className="text-sm font-semibold flex items-center gap-2">
-                        <Unlink className="size-4 text-warning shrink-0" /> Crew Handover Segments
-                      </h3>
-                      {canModify && selectedDuty.crewSegments?.length > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          className="text-destructive h-7 hover:bg-destructive/10"
-                          onClick={() => {
-                            if (confirm("Reset all handover segments?")) {
-                              clearHandoversMutation.mutate(selectedDutyId!);
-                            }
-                          }}
-                        >
-                          Clear Segments
-                        </Button>
-                      )}
-                    </div>
-
-                    {selectedDuty.crewSegments?.length === 0 ? (
-                      <div className="py-8 text-center text-xs text-muted-foreground border border-dashed rounded-lg bg-background/20">
-                        No crew segments set up for this unlinked duty. Add crew below to manage handovers.
-                      </div>
+                      ))
                     ) : (
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        {selectedDuty.crewSegments.map((seg: any) => (
-                          <div key={seg.id} className="p-3 border rounded bg-background/30 flex flex-col justify-between gap-2">
-                            <div className="flex justify-between items-center border-b pb-1.5">
-                              <span className="font-bold text-xs">Segment {seg.sequence}</span>
-                              <Badge variant="outline" className="text-[10px] font-mono h-5">
-                                {formatMinutesToTime(seg.startTime)} - {formatMinutesToTime(seg.endTime)}
-                              </Badge>
-                            </div>
-                            <div className="text-xs text-muted-foreground space-y-1">
-                              <p className="flex items-center gap-1.5">
-                                <Users className="size-3.5 text-primary" /> Driver:{" "}
-                                <span className="font-semibold text-foreground">
-                                  {driversList.find((d) => d.id === seg.driverId)?.name || "Unassigned"}
-                                </span>
-                              </p>
-                              <p className="flex items-center gap-1.5">
-                                <Users className="size-3.5 text-primary" /> Conductor:{" "}
-                                <span className="font-semibold text-foreground">
-                                  {conductorsList.find((c) => c.id === seg.conductorId)?.name || "Unassigned"}
-                                </span>
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                      <div className="py-12 text-center text-xs text-muted-foreground">
+                        <RouteIcon className="size-6 mx-auto mb-1.5 text-muted-foreground/50" />
+                        No trips attached yet. Click <strong>+ Add</strong> on any trip from the unassigned pool on the right.
                       </div>
                     )}
+                  </div>
+                </div>
 
+                {/* CREW HANDOVER SEGMENTS (FOR UNLINKED OR RELIEF) */}
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <Users className="size-3.5 text-warning" /> Relief & Handover Segments ({selectedDuty.crewSegments?.length || 0})
+                    </h3>
                     {canModify && (
-                      <div className="pt-3 border-t border-dashed flex justify-end">
-                        <Button size="sm" variant="outline" onClick={() => setIsHandoverOpen(true)}>
-                          <Plus className="size-4 mr-2" /> Configure Handover Segment
-                        </Button>
-                      </div>
-                    )}
-                  </section>
-                )}
-
-                {/* Real-time Explainable Validation Panel */}
-                <section
-                  className={`panel p-5 border-l-4 ${
-                    validation.isValid ? "border-l-success bg-success/5" : "border-l-destructive bg-destructive/5"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 border-b pb-2 mb-3">
-                    {validation.isValid ? (
-                      <>
-                        <CheckCircle2 className="size-5 text-success shrink-0" />
-                        <h3 className="text-sm font-semibold text-success">Valid Operational Duty Block</h3>
-                      </>
-                    ) : (
-                      <>
-                        <AlertTriangle className="size-5 text-destructive shrink-0" />
-                        <h3 className="text-sm font-semibold text-destructive">
-                          Validation Conflicts Detected ({validation.issues.length})
-                        </h3>
-                      </>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsHandoverOpen(true)}
+                        className="h-7 text-xs"
+                      >
+                        <Plus className="mr-1 size-3" /> Add Handover
+                      </Button>
                     )}
                   </div>
 
-                  {validation.isValid ? (
-                    <p className="text-xs text-success/90 font-medium">
-                      All criteria passed. This duty complies with turnaround buffers, daily work limits, crew rest intervals, and vehicle overlaps.
-                    </p>
-                  ) : (
-                    <ul className="space-y-2 text-xs text-destructive/90 font-medium list-disc list-inside">
-                      {validation.issues.map((issue, idx) => (
-                        <li key={idx} className="leading-relaxed">
-                          {issue}
-                        </li>
+                  {selectedDuty.crewSegments && selectedDuty.crewSegments.length > 0 ? (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {selectedDuty.crewSegments.map((seg: any) => (
+                        <div key={seg.id} className="p-3 rounded-lg border border-border/70 bg-card/60 text-xs space-y-1">
+                          <div className="flex justify-between font-mono text-[11px] text-primary font-bold">
+                            <span>{formatMinutesToTime(seg.startTime)} – {formatMinutesToTime(seg.endTime)}</span>
+                            <Badge variant="outline" className="text-[9px]">Relief</Badge>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Driver: <strong>{seg.driverName || "Assigned"}</strong>
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            Conductor: <strong>{seg.conductorName || "Assigned"}</strong>
+                          </p>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-lg border border-dashed border-border/70 text-center text-[11px] text-muted-foreground bg-background/30">
+                      Standard linked shift — single driver throughout the block.
+                    </div>
                   )}
-                </section>
+                </div>
               </div>
             ) : (
-              <div className="panel p-20 text-center text-xs text-muted-foreground">
-                Select a duty from the left register to build its scheduled timeline.
+              <div className="py-32 text-center text-muted-foreground flex-1 flex flex-col items-center justify-center">
+                <CalendarClock className="size-10 text-muted-foreground/40 mb-3" />
+                <h4 className="text-sm font-semibold text-foreground">No Duty Selected</h4>
+                <p className="text-xs text-muted-foreground mt-1">Select a duty from the roster on the left to edit trips and crew.</p>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT COLUMN: UNASSIGNED TRIPS POOL */}
+          <div className="glass-panel p-3.5 lg:col-span-3 space-y-3 flex flex-col h-[740px]">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Unassigned Pool ({filteredUnassignedTrips.length})
+              </h3>
+              <Badge variant="secondary" className="text-[10px] font-mono">
+                {allTripsList.length} Total
+              </Badge>
+            </div>
+
+            {/* Search Input for Trips Pool */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Filter by time or route..."
+                value={unassignedSearch}
+                onChange={(e) => setUnassignedSearch(e.target.value)}
+                className="pl-7 bg-background/60 h-8 text-[11px] border-border/70"
+              />
+            </div>
+
+            {filteredUnassignedTrips.length === 0 ? (
+              <div className="py-24 text-center text-xs text-muted-foreground flex-1 flex flex-col items-center justify-center p-4">
+                <CheckCircle2 className="size-8 text-emerald-500/60 mb-2" />
+                <p className="font-semibold text-foreground">All Trips Assigned</p>
+                <p className="text-[11px] text-muted-foreground mt-1">Zero unassigned departures in this service wave.</p>
+              </div>
+            ) : (
+              <div className="space-y-2 overflow-y-auto flex-1 pr-1">
+                {filteredUnassignedTrips.map((t) => (
+                  <div
+                    key={t.id}
+                    className="p-2.5 rounded-lg border border-border/70 bg-card/60 hover:border-primary/40 transition-colors flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-xs font-mono text-foreground">{formatMinutesToTime(t.startTime)}</span>
+                        <Badge variant="secondary" className="text-[9px] font-mono px-1 py-0">
+                          {t.routeCode || "Route"}
+                        </Badge>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+                        {t.origin || "Origin"} ➔ {t.destination || "Dest"}
+                      </p>
+                    </div>
+
+                    {selectedDuty && canModify ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => addTripMutation.mutate({ dutyId: selectedDuty.id, tripId: t.id })}
+                        className="h-7 px-2 text-[11px] shrink-0 font-medium hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all"
+                      >
+                        <Plus className="size-3 mr-1" /> Add
+                      </Button>
+                    ) : null}
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* CREATE DUTY DIALOG */}
+      {/* CREATE DUTY MODAL */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[420px]">
           <form onSubmit={handleCreateSubmit}>
             <DialogHeader>
-              <DialogTitle>Create Duty Block</DialogTitle>
-              <DialogDescription>
-                Establish a new operational duty code. Timeline boundaries automatically adjust as trips are assigned.
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <Plus className="size-4 text-primary" />
+                Create New Duty Block
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Initialize an operational duty schedule block for {serviceDate}.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="code" className="text-right">Code</Label>
+
+            <div className="py-4 space-y-3.5">
+              <div className="space-y-1.5">
+                <Label htmlFor="dutyCode" className="text-xs">Duty Identifier / Code</Label>
                 <Input
-                  id="code"
-                  placeholder="e.g. L-105"
+                  id="dutyCode"
+                  type="text"
+                  placeholder="e.g. SLM-DUTY-101"
                   value={formDutyCode}
                   onChange={(e) => setFormDutyCode(e.target.value)}
-                  className="col-span-3 uppercase"
+                  className="font-mono text-xs"
                   required
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="type" className="text-right">Crew Type</Label>
-                <Select value={formDutyType} onValueChange={setFormDutyType}>
-                  <SelectTrigger id="type" className="col-span-3">
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Duty Strategy</Label>
+                <Select value={formDutyType} onValueChange={(val: any) => setFormDutyType(val)}>
+                  <SelectTrigger className="text-xs font-mono">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="LINKED">Linked Crew</SelectItem>
-                    <SelectItem value="UNLINKED">Unlinked Handovers</SelectItem>
+                    <SelectItem value="LINKED">LINKED (Single dedicated crew)</SelectItem>
+                    <SelectItem value="UNLINKED">UNLINKED (Relief handovers permitted)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
+
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)} className="text-xs">
                 Cancel
               </Button>
-              <Button type="submit" disabled={createDutyMutation.isPending}>
-                {createDutyMutation.isPending ? "Creating..." : "Save Duty"}
+              <Button type="submit" disabled={createDutyMutation.isPending} className="bg-primary text-primary-foreground text-xs">
+                {createDutyMutation.isPending ? "Creating..." : "Create Duty"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* ADD CREW HANDOVER SEGMENT DIALOG */}
+      {/* ADD HANDOVER MODAL */}
       <Dialog open={isHandoverOpen} onOpenChange={setIsHandoverOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[420px]">
           <form onSubmit={handleHandoverSubmit}>
             <DialogHeader>
-              <DialogTitle>Configure Handover Crew Segment</DialogTitle>
-              <DialogDescription>
-                Assign driver and conductor for a specific time range of this unlinked duty.
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <Users className="size-4 text-warning" />
+                Add Crew Relief Handover
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Specify time segment and relief crew for duty {selectedDuty?.dutyCode}.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="segDriver" className="text-right text-xs">Driver</Label>
-                <Select value={handoverDriverId} onValueChange={setHandoverDriverId}>
-                  <SelectTrigger id="segDriver" className="col-span-3">
-                    <SelectValue placeholder="Select Driver..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {driversList.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {d.name} ({d.employeeId})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+            <div className="py-4 space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Relief Driver</Label>
+                  <Select value={handoverDriverId} onValueChange={setHandoverDriverId}>
+                    <SelectTrigger className="text-xs font-mono">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {driversList.map((dr) => (
+                        <SelectItem key={dr.id} value={dr.id}>{dr.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Relief Conductor</Label>
+                  <Select value={handoverConductorId} onValueChange={setHandoverConductorId}>
+                    <SelectTrigger className="text-xs font-mono">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {conductorsList.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="segConductor" className="text-right text-xs">Conductor</Label>
-                <Select value={handoverConductorId} onValueChange={setHandoverConductorId}>
-                  <SelectTrigger id="segConductor" className="col-span-3">
-                    <SelectValue placeholder="Select Conductor..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {conductorsList.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name} ({c.employeeId})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="segStart" className="text-right text-xs">Start Time</Label>
-                <Input
-                  id="segStart"
-                  type="time"
-                  value={handoverStartTime}
-                  onChange={(e) => setFormStartTime(e.target.value) || setHandoverStartTime(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="segEnd" className="text-right text-xs">End Time</Label>
-                <Input
-                  id="segEnd"
-                  type="time"
-                  value={handoverEndTime}
-                  onChange={(e) => setHandoverEndTime(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Start Time</Label>
+                  <Input
+                    type="time"
+                    value={handoverStartTime}
+                    onChange={(e) => setHandoverStartTime(e.target.value)}
+                    className="font-mono text-xs"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">End Time</Label>
+                  <Input
+                    type="time"
+                    value={handoverEndTime}
+                    onChange={(e) => setHandoverEndTime(e.target.value)}
+                    className="font-mono text-xs"
+                    required
+                  />
+                </div>
               </div>
             </div>
+
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsHandoverOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setIsHandoverOpen(false)} className="text-xs">
                 Cancel
               </Button>
-              <Button type="submit">Add Crew Segment</Button>
+              <Button type="submit" disabled={handoverMutation.isPending} className="bg-primary text-primary-foreground text-xs">
+                {handoverMutation.isPending ? "Adding..." : "Add Handover"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

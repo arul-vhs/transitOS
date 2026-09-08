@@ -1,5 +1,4 @@
-import { createServerFn } from "@tanstack/react-start";
-import { getWebRequest, setResponseHeaders } from "@tanstack/react-start/server";
+import { getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
@@ -19,24 +18,10 @@ export interface SessionPayload {
 
 import { ROLE_PERMISSIONS, hasPermission } from "../lib/auth-shared";
 
-function parseCookies(cookieHeader: string): Record<string, string> {
-  const list: Record<string, string> = {};
-  if (!cookieHeader) return list;
-  cookieHeader.split(";").forEach((cookie) => {
-    const parts = cookie.split("=");
-    list[parts.shift()!.trim()] = decodeURIComponent(parts.join("="));
-  });
-  return list;
-}
-
 export function getSessionFromRequest(): SessionPayload | null {
-  const request = getWebRequest();
-  if (!request) return null;
-  const cookieHeader = request.headers.get("cookie") || "";
-  const cookies = parseCookies(cookieHeader);
-  const token = cookies[COOKIE_NAME];
-  if (!token) return null;
   try {
+    const token = getCookie(COOKIE_NAME);
+    if (!token) return null;
     return jwt.verify(token, SECRET) as SessionPayload;
   } catch {
     return null;
@@ -58,7 +43,8 @@ export async function getCurrentUser() {
     }
   });
 
-  if (!user || user.tenant.status !== "active") {
+  const tenantStatus = (user.tenant as any)?.status;
+  if (!user || (tenantStatus && tenantStatus !== "active")) {
     return null;
   }
 
@@ -88,9 +74,10 @@ export async function requireAuth() {
 /**
  * Enforces permission verification for the authenticated user.
  */
-export async function requirePermission(permission: string) {
+export async function requirePermission(roleOrPermission: string, permission?: string) {
   const currentUser = await requireAuth();
-  if (!hasPermission(currentUser.role, permission)) {
+  const perm = permission || roleOrPermission;
+  if (!hasPermission(currentUser.role, perm)) {
     throw new Error("Forbidden");
   }
   return currentUser;
@@ -132,7 +119,8 @@ export async function loginFnImpl(credentials: { email: string; password?: strin
   }
 
   // 2. Check tenant status
-  if (user.tenant.status !== "active") {
+  const tenantStatus = (user.tenant as any)?.status;
+  if (tenantStatus && tenantStatus !== "active") {
     await db.insert(auditLogs).values({
       tenantId: user.tenantId,
       userId: user.id,
@@ -174,8 +162,12 @@ export async function loginFnImpl(credentials: { email: string; password?: strin
 
   // 6. Set HTTP-Only Cookie
   const isProd = process.env.NODE_ENV === "production";
-  setResponseHeaders({
-    "Set-Cookie": `${COOKIE_NAME}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=86400${isProd ? "; Secure" : ""}`
+  setCookie(COOKIE_NAME, token, {
+    httpOnly: true,
+    path: "/",
+    sameSite: "lax",
+    maxAge: 86400,
+    secure: isProd,
   });
 
   return {
@@ -203,8 +195,10 @@ export async function logoutFnImpl() {
   }
 
   // Invalidate Session Cookie
-  setResponseHeaders({
-    "Set-Cookie": `${COOKIE_NAME}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+  deleteCookie(COOKIE_NAME, {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
   });
 
   return { success: true };
