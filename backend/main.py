@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from datetime import timedelta, datetime
 
@@ -28,7 +29,13 @@ app = FastAPI(
     description="Bus Scheduling and Route Management System",
     version="1.0.0"
 )
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # =========================
 # DATABASE CONNECTION
@@ -2008,4 +2015,196 @@ def get_route_map_data(route_id: int, db: Session = Depends(get_db)):
         "end_location": route.end_location,
         "stops": map_stops,
         "coordinates": coordinates
+    }
+@app.get("/dashboard/{organization_id}")
+def get_dashboard(organization_id: int, db: Session = Depends(get_db)):
+
+    # Check organization
+    organization = db.query(models.Organization).filter(
+        models.Organization.id == organization_id
+    ).first()
+
+    if not organization:
+        raise HTTPException(
+            status_code=404,
+            detail="Organization not found"
+        )
+
+    # -------------------------
+    # BUS STATISTICS
+    # -------------------------
+
+    total_buses = db.query(models.Bus).filter(
+        models.Bus.organization_id == organization_id
+    ).count()
+
+    available_buses = db.query(models.Bus).filter(
+        models.Bus.organization_id == organization_id,
+        models.Bus.status == "AVAILABLE"
+    ).count()
+
+    # -------------------------
+    # CREW STATISTICS
+    # -------------------------
+
+    total_crew = db.query(models.Crew).filter(
+        models.Crew.organization_id == organization_id
+    ).count()
+
+    available_crew = db.query(models.Crew).filter(
+        models.Crew.organization_id == organization_id,
+        models.Crew.status == "AVAILABLE"
+    ).count()
+
+    # -------------------------
+    # ROUTE STATISTICS
+    # -------------------------
+
+    total_routes = db.query(models.Route).filter(
+        models.Route.organization_id == organization_id
+    ).count()
+
+    active_routes = db.query(models.Route).filter(
+        models.Route.organization_id == organization_id,
+        models.Route.status == "ACTIVE"
+    ).count()
+
+    # -------------------------
+    # TRIP STATISTICS
+    # -------------------------
+
+    total_trips = db.query(models.Trip).filter(
+        models.Trip.organization_id == organization_id
+    ).count()
+
+    scheduled_trips = db.query(models.Trip).filter(
+        models.Trip.organization_id == organization_id,
+        models.Trip.status == "SCHEDULED"
+    ).count()
+
+    # -------------------------
+    # SCHEDULE STATISTICS
+    # -------------------------
+
+    total_schedules = db.query(models.Schedule).filter(
+        models.Schedule.organization_id == organization_id
+    ).count()
+
+    automatic_schedules = db.query(models.Schedule).filter(
+        models.Schedule.organization_id == organization_id,
+        models.Schedule.duty_type == "AUTO"
+    ).count()
+
+    manual_schedules = total_schedules - automatic_schedules
+
+    # -------------------------
+    # DUTY STATISTICS
+    # -------------------------
+
+    total_duties = db.query(models.Duty).filter(
+        models.Duty.organization_id == organization_id
+    ).count()
+
+    linked_duties = db.query(models.Duty).filter(
+        models.Duty.organization_id == organization_id,
+        models.Duty.duty_type == "LINKED"
+    ).count()
+
+    unlinked_duties = db.query(models.Duty).filter(
+        models.Duty.organization_id == organization_id,
+        models.Duty.duty_type == "UNLINKED"
+    ).count()
+
+    # -------------------------
+    # CONFLICT STATISTICS
+    # -------------------------
+
+    schedules = db.query(models.Schedule).filter(
+        models.Schedule.organization_id == organization_id
+    ).all()
+
+    duties = db.query(models.Duty).filter(
+        models.Duty.organization_id == organization_id
+    ).all()
+
+    conflicts = detect_conflicts(schedules, duties)
+
+    total_conflicts = len(conflicts)
+
+    # -------------------------
+    # ROUTE OVERLAP STATISTICS
+    # -------------------------
+
+    routes = db.query(models.Route).filter(
+        models.Route.organization_id == organization_id
+    ).all()
+
+    route_overlap_pairs = 0
+
+    for i in range(len(routes)):
+        route1_stop_ids = {
+            rs.stop_id
+            for rs in routes[i].route_stops
+        }
+
+        for j in range(i + 1, len(routes)):
+            route2_stop_ids = {
+                rs.stop_id
+                for rs in routes[j].route_stops
+            }
+
+            common_stops = route1_stop_ids.intersection(
+                route2_stop_ids
+            )
+
+            if len(common_stops) >= 2:
+                route_overlap_pairs += 1
+
+    # -------------------------
+    # RESPONSE
+    # -------------------------
+
+    return {
+        "success": True,
+        "organization_id": organization_id,
+
+        "buses": {
+            "total": total_buses,
+            "available": available_buses
+        },
+
+        "crew": {
+            "total": total_crew,
+            "available": available_crew
+        },
+
+        "routes": {
+            "total": total_routes,
+            "active": active_routes
+        },
+
+        "trips": {
+            "total": total_trips,
+            "scheduled": scheduled_trips
+        },
+
+        "schedules": {
+            "total": total_schedules,
+            "automatic": automatic_schedules,
+            "manual": manual_schedules
+        },
+
+        "duties": {
+            "total": total_duties,
+            "linked": linked_duties,
+            "unlinked": unlinked_duties
+        },
+
+        "conflicts": {
+            "total": total_conflicts
+        },
+
+        "route_overlaps": {
+            "total": route_overlap_pairs
+        }
     }
