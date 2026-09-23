@@ -56,7 +56,7 @@ export async function getCurrentUser() {
     tenantId: user.tenantId,
     tenantName: user.tenant.name,
     tenantSlug: user.tenant.slug,
-    depotName: "Salem Central Depot", // Default depot associated for the demo tenant
+    depotName: "Meyyanur Depot", // Default depot associated for the demo tenant
   };
 }
 

@@ -135,7 +135,7 @@ function BusesPage() {
   const [formFleetNum, setFormFleetNum] = useState("");
   const [formBusType, setFormBusType] = useState("Standard Single Decker");
   const [formCapacity, setFormCapacity] = useState("40");
-  const [formDepot, setFormDepot] = useState("Salem Central Depot");
+  const [formDepot, setFormDepot] = useState("Meyyanur Depot");
   const [formStatus, setFormStatus] = useState("available");
   const [formAvailableFrom, setFormAvailableFrom] = useState("05:30");
 
@@ -209,7 +209,7 @@ function BusesPage() {
     setFormFleetNum("");
     setFormBusType("Standard Single Decker");
     setFormCapacity("40");
-    setFormDepot("Salem Central Depot");
+    setFormDepot("Meyyanur Depot");
     setFormStatus("available");
     setFormAvailableFrom("05:30");
   };
@@ -372,7 +372,10 @@ function BusesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Depots</SelectItem>
-                  <SelectItem value="Salem Central Depot">Salem Central Depot</SelectItem>
+                  <SelectItem value="Meyyanur Depot">Meyyanur Depot</SelectItem>
+                  <SelectItem value="Johnsonpet Depot">Johnsonpet Depot</SelectItem>
+                  <SelectItem value="Hasthampatti Depot">Hasthampatti Depot</SelectItem>
+                  <SelectItem value="Steel Plant Depot">Steel Plant Depot</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -538,7 +541,10 @@ function BusesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Salem Central Depot">Salem Central Depot</SelectItem>
+                    <SelectItem value="Meyyanur Depot">Meyyanur Depot</SelectItem>
+                    <SelectItem value="Johnsonpet Depot">Johnsonpet Depot</SelectItem>
+                    <SelectItem value="Hasthampatti Depot">Hasthampatti Depot</SelectItem>
+                    <SelectItem value="Steel Plant Depot">Steel Plant Depot</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -644,7 +650,10 @@ function BusesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Salem Central Depot">Salem Central Depot</SelectItem>
+                    <SelectItem value="Meyyanur Depot">Meyyanur Depot</SelectItem>
+                    <SelectItem value="Johnsonpet Depot">Johnsonpet Depot</SelectItem>
+                    <SelectItem value="Hasthampatti Depot">Hasthampatti Depot</SelectItem>
+                    <SelectItem value="Steel Plant Depot">Steel Plant Depot</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

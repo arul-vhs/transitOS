@@ -125,19 +125,19 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       {
         name: "description",
         content:
-          "Operations overview for Salem Central Depot: fleet, crew, routes and automated schedule generation.",
+          "Operations overview for Salem City corridors: fleet, crew, routes and automated schedule generation.",
       },
       { name: "author", content: "TransitOS" },
       { property: "og:title", content: "TransitOS Dashboard — Salem Transport Corporation" },
       {
         property: "og:description",
-        content: "Operations overview for Salem Central Depot: fleet, crew, routes and automated schedule generation.",
+        content: "Operations overview for Salem City corridors: fleet, crew, routes and automated schedule generation.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "TransitOS Dashboard — Salem Transport Corporation" },
-      { name: "twitter:description", content: "Operations overview for Salem Central Depot: fleet, crew, routes and automated schedule generation." },
+      { name: "twitter:description", content: "Operations overview for Salem City corridors: fleet, crew, routes and automated schedule generation." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d041b90887e7a711faa065e0fda47a56/id-preview-cd6ee54a--58367c15-2ef6-4ecd-a290-483f899f251d.lovable.app-1786603811558.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d041b90887e7a711faa065e0fda47a56/id-preview-cd6ee54a--58367c15-2ef6-4ecd-a290-483f899f251d.lovable.app-1786603811558.png" },
     ],
@@ -147,6 +147,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         href: appCss,
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/logo.svg", type: "image/svg+xml" },
+      { rel: "manifest", href: "/site.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {

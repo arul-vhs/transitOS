@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -31,6 +31,8 @@ import {
   UserCog,
   Check,
   Sliders,
+  Route as RouteIcon,
+  Map,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -69,7 +71,7 @@ import {
   clearHandoverSegments,
   validateDuty,
 } from "@/lib/scheduling-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatMinutesToTime } from "@/lib/utils";
 
 export const Route = createFileRoute("/operations/duties")({
   beforeLoad: ({ context }) => {
@@ -80,19 +82,13 @@ export const Route = createFileRoute("/operations/duties")({
   head: () => ({
     meta: [
       { title: "Duty Builder & Editor — TransitOS" },
-      { name: "description", content: "Linked and unlinked duty blocks with crew handovers and real-time compliance analyzer." },
+      { name: "description", content: "Assemble, validate, and dispatch vehicle duties and crew shifts." },
     ],
   }),
   component: DutiesPage,
 });
 
 const DEFAULT_DATE = "25 Aug 2026";
-
-function formatMinutesToTime(totalMin: number): string {
-  const hh = Math.floor(totalMin / 60);
-  const mm = totalMin % 60;
-  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-}
 
 function parseTimeToMinutes(timeStr: string): number {
   const [hStr, mStr] = timeStr.split(":");
@@ -348,16 +344,30 @@ function DutiesPage() {
       title="Duty Builder & Editor"
       subtitle="Interactive duty composition studio, crew handover timelines, and Motor Vehicle Act compliance analyzer."
       actions={
-        canModify ? (
-          <Button
-            size="sm"
-            onClick={() => setIsCreateOpen(true)}
-            className="bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20 text-xs hover:scale-[1.02] transition-all"
-          >
-            <Plus className="mr-1.5 size-4" />
-            Create Duty Block
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
+            <Link to="/scheduling/optimizer">
+              <Sparkles className="mr-1.5 size-3.5 text-primary" />
+              Schedule Optimizer
+            </Link>
           </Button>
-        ) : undefined
+          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
+            <Link to="/network/routes">
+              <Map className="mr-1.5 size-3.5 text-primary" />
+              Route Network
+            </Link>
+          </Button>
+          {canModify && (
+            <Button
+              size="sm"
+              onClick={() => setIsCreateOpen(true)}
+              className="bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20 text-xs hover:scale-[1.02] transition-all"
+            >
+              <Plus className="mr-1.5 size-4" />
+              Create Duty Block
+            </Button>
+          )}
+        </div>
       }
     >
       <div className="space-y-6">

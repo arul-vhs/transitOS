@@ -32,7 +32,8 @@ function FleetAnalyticsPage() {
   // Query
   const { data: fleetStats = [], isLoading } = useQuery({
     queryKey: ["fleet-analytics-data", depotFilter],
-    queryFn: () => getFleetAnalytics({ depot: depotFilter === "all" ? undefined : depotFilter }),
+    queryFn: () =>
+      getFleetAnalytics(depotFilter === "all" ? undefined : { depot: depotFilter }),
   });
 
   const filteredStats = fleetStats.filter(

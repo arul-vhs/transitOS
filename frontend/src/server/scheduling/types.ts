@@ -91,6 +91,11 @@ export interface ProposedDuty {
     tripCode: string;
     sequence: number;
     handoverRequired: boolean;
+    startTime?: number;
+    endTime?: number;
+    routeCode?: string;
+    origin?: string;
+    destination?: string;
   }[];
   crewSegments: {
     driverId: string;

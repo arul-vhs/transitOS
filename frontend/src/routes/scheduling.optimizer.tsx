@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
   AlertTriangle,
@@ -24,6 +24,9 @@ import {
   ShieldCheck,
   Check,
   Gauge,
+  Route as RouteIcon,
+  CalendarClock,
+  Map,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -61,7 +64,7 @@ import { getBuses, getDrivers, getConductors } from "@/lib/fleet-crew";
 import { getTrips, getDuties } from "@/lib/scheduling-fns";
 import { generateOptimizedSchedule, publishSchedule } from "@/lib/optimization-fns";
 import type { OptimizerResult } from "@/server/scheduling/types";
-import { cn } from "@/lib/utils";
+import { cn, formatMinutesToTime } from "@/lib/utils";
 
 export const Route = createFileRoute("/scheduling/optimizer")({
   beforeLoad: ({ context }) => {
@@ -82,12 +85,6 @@ export const Route = createFileRoute("/scheduling/optimizer")({
 });
 
 const DEFAULT_DATE = "25 Aug 2026";
-
-function formatMinutesToTime(totalMin: number): string {
-  const hh = Math.floor(totalMin / 60);
-  const mm = totalMin % 60;
-  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-}
 
 const OPT_STAGES = [
   "Analyzing timetable corridors & departure headway...",
@@ -116,6 +113,23 @@ function OptimizerPage() {
   const [runId, setRunId] = useState<string | null>(null);
   const [proposal, setProposal] = useState<OptimizerResult | null>(null);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [activeGanttView, setActiveGanttView] = useState<"proposal" | "live">("proposal");
+  const [selectedRouteFilter, setSelectedRouteFilter] = useState<string>("all");
+
+  // Restore persisted optimization proposal if user previously ran it
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("transitOS_active_proposal");
+      if (saved && !proposal) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.proposal) {
+          setProposal(parsed.proposal);
+          setRunId(parsed.runId || null);
+          setActiveGanttView("proposal");
+        }
+      }
+    } catch {}
+  }, []);
 
   // 1. Fetch current database baseline parameters
   const { data: currentTrips = [] } = useQuery({
@@ -158,8 +172,15 @@ function OptimizerPage() {
     onSuccess: (data) => {
       setRunId(data.runId);
       setProposal(data.result);
+      setActiveGanttView("proposal");
       setIsSolving(false);
       setStageIndex(-1);
+      try {
+        sessionStorage.setItem(
+          "transitOS_active_proposal",
+          JSON.stringify({ proposal: data.result, runId: data.runId })
+        );
+      } catch {}
       toast.success("Schedule optimization run completed successfully.");
     },
     onError: (err: any) => {
@@ -175,10 +196,14 @@ function OptimizerPage() {
       queryClient.invalidateQueries({ queryKey: ["duties"] });
       queryClient.invalidateQueries({ queryKey: ["trips"] });
       queryClient.invalidateQueries({ queryKey: ["today-duties"] });
+      queryClient.invalidateQueries({ queryKey: ["current-duties-opt"] });
       toast.success("Optimized schedule published to live operations!");
       setPublishDialogOpen(false);
       setProposal(null);
       setRunId(null);
+      try {
+        sessionStorage.removeItem("transitOS_active_proposal");
+      } catch {}
     },
     onError: (err: any) => {
       toast.error(err.message || "Failed to publish schedule proposal");
@@ -236,10 +261,24 @@ function OptimizerPage() {
       title="Schedule Optimizer"
       subtitle="Constraint satisfaction scheduling with multi-tenant isolation, labor compliance & explainability."
       actions={
-        <Badge variant="outline" className="hidden sm:flex items-center gap-1.5 font-mono text-xs py-1 px-2.5 bg-primary/5 text-primary border-primary/20">
-          <Cpu className="size-3.5" />
-          <span>MILP Solver Ready</span>
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
+            <Link to="/operations/duties">
+              <CalendarClock className="mr-1.5 size-3.5 text-primary" />
+              Duty Builder
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
+            <Link to="/network/routes">
+              <Map className="mr-1.5 size-3.5 text-primary" />
+              Route Network
+            </Link>
+          </Button>
+          <Badge variant="outline" className="hidden sm:flex items-center gap-1.5 font-mono text-xs py-1 px-2.5 bg-primary/5 text-primary border-primary/20">
+            <Cpu className="size-3.5" />
+            <span>MILP Solver Ready</span>
+          </Badge>
+        </div>
       }
     >
       <div className="space-y-6">
@@ -575,24 +614,105 @@ function OptimizerPage() {
                 </div>
               </section>
             </div>
+          </div>
+        )}
 
-            {/* GANTT TIMELINE PREVIEW */}
+        {/* ALWAYS-VISIBLE DUTY SCHEDULE GANTT MATRIX */}
+        {(() => {
+          const isViewingProposal = Boolean(proposal && activeGanttView === "proposal");
+          const dutiesToDisplay: any[] = isViewingProposal ? (proposal?.duties || []) : currentDuties;
+          
+          // Extract unique route codes from duties for filter dropdown
+          const corridorSet = new Set<string>();
+          currentTrips.forEach((t: any) => {
+            if (t.routeCode) corridorSet.add(t.routeCode);
+          });
+          const availableCorridors = Array.from(corridorSet).sort();
+
+          const filteredDuties = dutiesToDisplay.filter((d: any) => {
+            if (selectedRouteFilter === "all") return true;
+            return d.trips?.some((t: any) => {
+              const tripDetails = currentTrips.find((ct: any) => ct.id === t.tripId || ct.id === t.id);
+              const code = t.routeCode || tripDetails?.routeCode;
+              return code === selectedRouteFilter;
+            });
+          });
+
+          return (
             <section className="glass-panel p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-border/60 pb-3">
-                <div>
-                  <h3 className="text-sm font-bold tracking-tight text-foreground">Duty Schedule Gantt Matrix</h3>
-                  <p className="text-xs text-muted-foreground">Visual dispatch timeline of optimized vehicle and crew duties</p>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold tracking-tight text-foreground">Duty Schedule Gantt Matrix</h3>
+                    <Badge
+                      variant={isViewingProposal ? "default" : "secondary"}
+                      className="font-mono text-[10px]"
+                    >
+                      {isViewingProposal ? "Optimized Proposal" : "Active Operational Schedule"}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Visual dispatch timeline of vehicle duties and crew assignments across Salem corridors
+                  </p>
                 </div>
-                <Badge variant="outline" className="font-mono text-xs">
-                  {proposal.duties.length} Duties Generated
-                </Badge>
+
+                <div className="flex items-center gap-2.5">
+                  {/* Route Corridor Filter */}
+                  <Select value={selectedRouteFilter} onValueChange={setSelectedRouteFilter}>
+                    <SelectTrigger className="h-8 text-xs font-mono bg-background/60 w-36">
+                      <SelectValue placeholder="All Corridors" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Corridors</SelectItem>
+                      {availableCorridors.map((c) => (
+                        <SelectItem key={c} value={c} className="font-mono text-xs">
+                          Route {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Toggle between Proposal and Live if proposal exists */}
+                  {proposal && (
+                    <div className="flex rounded-lg border border-border/80 p-0.5 bg-muted/40 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setActiveGanttView("proposal")}
+                        className={cn(
+                          "px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer",
+                          activeGanttView === "proposal"
+                            ? "bg-primary text-primary-foreground shadow-xs"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        Proposal ({proposal.duties.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveGanttView("live")}
+                        className={cn(
+                          "px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer",
+                          activeGanttView === "live"
+                            ? "bg-primary text-primary-foreground shadow-xs"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        Live Schedule ({currentDuties.length})
+                      </button>
+                    </div>
+                  )}
+
+                  <Badge variant="outline" className="font-mono text-xs">
+                    {filteredDuties.length} Duties Displayed
+                  </Badge>
+                </div>
               </div>
 
               <div className="overflow-x-auto pb-2">
                 <div className="min-w-[900px] border border-border/70 rounded-xl bg-card/40 divide-y divide-border/50">
                   {/* Timeline hours header */}
                   <div className="flex text-[11px] font-bold text-muted-foreground font-mono bg-secondary/30 p-2.5 rounded-t-xl">
-                    <div className="w-36 shrink-0 border-r border-border/60 pr-3">Duty / Assigned Bus</div>
+                    <div className="w-40 shrink-0 border-r border-border/60 pr-3">Duty / Assigned Bus</div>
                     <div className="flex-1 grid grid-cols-8 pl-4">
                       {["06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00"].map((h) => (
                         <div key={h} className="text-center font-mono">{h}</div>
@@ -601,51 +721,71 @@ function OptimizerPage() {
                   </div>
 
                   {/* Duties Rows */}
-                  {proposal.duties.map((d) => {
-                    const busObj = busesList.find((b) => b.id === d.busId);
-                    const busLabel = busObj ? busObj.registrationNumber : (d.busId || "Unassigned");
-                    const driverObj = driversList.find((dr) => dr.id === d.driverId);
+                  {filteredDuties.length === 0 ? (
+                    <div className="py-12 text-center text-xs text-muted-foreground">
+                      No duties match the selected corridor filter.
+                    </div>
+                  ) : (
+                    filteredDuties.map((d: any) => {
+                      const busObj = busesList.find((b: any) => b.id === d.busId);
+                      const busLabel = d.busRegNumber || (busObj ? busObj.registrationNumber : (d.busId || "Unassigned"));
+                      const driverObj = driversList.find((dr: any) => dr.id === d.driverId);
+                      const driverLabel = d.driverName || (driverObj ? driverObj.name : null);
 
-                    return (
-                      <div key={d.dutyCode} className="flex p-3 items-center hover:bg-muted/40 transition-colors">
-                        <div className="w-36 shrink-0 border-r border-border/60 pr-3">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-xs text-foreground font-mono">{d.dutyCode}</span>
-                            <Badge variant="outline" className="text-[9px] px-1 py-0 font-mono">
-                              {d.dutyType}
-                            </Badge>
-                          </div>
-                          <span className="text-[10px] text-primary font-mono block mt-0.5 truncate">{busLabel}</span>
-                          {driverObj ? (
-                            <span className="text-[10px] text-muted-foreground truncate block">{driverObj.name}</span>
-                          ) : null}
-                        </div>
-
-                        {/* Trip Blocks Bar */}
-                        <div className="flex-1 pl-4 flex items-center gap-2">
-                          {d.trips && d.trips.length > 0 ? (
-                            d.trips.map((t: any, idx: number) => (
-                              <div
-                                key={idx}
-                                className="rounded-md bg-gradient-to-r from-primary/20 to-primary/35 border border-primary/40 px-2.5 py-1 text-[11px] font-mono font-medium text-foreground flex items-center gap-1.5 shadow-2xs hover:border-primary transition-all"
+                      return (
+                        <div key={d.dutyCode} className="flex p-3 items-center hover:bg-muted/40 transition-colors">
+                          <div className="w-40 shrink-0 border-r border-border/60 pr-3">
+                            <div className="flex items-center gap-1.5">
+                              <Link
+                                to="/operations/duties"
+                                className="font-bold text-xs text-foreground font-mono hover:text-primary transition-colors underline decoration-dotted"
                               >
-                                <BusIcon className="size-3 text-primary shrink-0" />
-                                <span>{formatMinutesToTime(t.startTime)}</span>
-                                <span className="text-[10px] text-muted-foreground">({t.routeCode || "Corridor"})</span>
-                              </div>
-                            ))
-                          ) : (
-                            <span className="text-xs text-muted-foreground italic">No trips attached</span>
-                          )}
+                                {d.dutyCode}
+                              </Link>
+                              <Badge variant="outline" className="text-[9px] px-1 py-0 font-mono">
+                                {d.dutyType}
+                              </Badge>
+                            </div>
+                            <span className="text-[10px] text-primary font-mono block mt-0.5 truncate">{busLabel}</span>
+                            {driverLabel ? (
+                              <span className="text-[10px] text-muted-foreground truncate block">{driverLabel}</span>
+                            ) : null}
+                          </div>
+
+                          {/* Trip Blocks Bar */}
+                          <div className="flex-1 pl-4 flex items-center gap-2 overflow-x-auto">
+                            {d.trips && d.trips.length > 0 ? (
+                              d.trips.map((t: any, idx: number) => {
+                                const tripDetails = currentTrips.find(
+                                  (ct: any) => ct.id === t.tripId || ct.id === t.id
+                                );
+                                const startTime = t.startTime ?? tripDetails?.startTime;
+                                const routeCode = t.routeCode || tripDetails?.routeCode || "Corridor";
+                                return (
+                                  <Link
+                                    key={idx}
+                                    to="/network/routes"
+                                    className="rounded-md bg-gradient-to-r from-primary/20 to-primary/35 border border-primary/40 px-2.5 py-1 text-[11px] font-mono font-medium text-foreground flex items-center gap-1.5 shadow-2xs hover:border-primary hover:scale-[1.02] transition-all cursor-pointer shrink-0"
+                                  >
+                                    <BusIcon className="size-3 text-primary shrink-0" />
+                                    <span>{formatMinutesToTime(startTime)}</span>
+                                    <span className="text-[10px] text-muted-foreground font-bold">({routeCode})</span>
+                                  </Link>
+                                );
+                              })
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">No trips attached</span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </section>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* CONFIRMATION PUBLISH DIALOG */}

@@ -438,6 +438,7 @@ export const auditLogs = pgTable("audit_logs", {
   userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
   email: varchar("email", { length: 255 }),
   action: varchar("action", { length: 50 }).notNull(),
+  details: text("details"),
   timestamp: timestamp("timestamp").notNull().defaultNow(),
 }, (table) => [
   index("audit_logs_tenant_id_idx").on(table.tenantId),

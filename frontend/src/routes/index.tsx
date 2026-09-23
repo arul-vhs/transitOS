@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BUSES, CONDUCTORS, CORPORATION, DEPOT, DRIVERS, ROUTES, SCHEDULE_DATE } from "@/lib/transit/data";
 import { getBuses, getCrewAvailability } from "@/lib/fleet-crew";
+import { getRoutes } from "@/lib/routes-gis-fns";
+import { getTrips } from "@/lib/scheduling-fns";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -15,12 +17,12 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Operations overview for Salem Central Depot: fleet, crew, routes and automated schedule generation.",
+          "Operations overview for Salem City corridors: fleet, crew, routes and automated schedule generation.",
       },
       { property: "og:title", content: "TransitOS Dashboard — Salem Transport Corporation" },
       {
         property: "og:description",
-        content: "Operations overview for Salem Central Depot: fleet, crew, routes and automated schedule generation.",
+        content: "Operations overview for Salem City corridors: fleet, crew, routes and automated schedule generation.",
       },
     ],
   }),
@@ -61,6 +63,16 @@ function Dashboard() {
     queryFn: () => getCrewAvailability(),
   });
 
+  const { data: routesList = [] } = useQuery({
+    queryKey: ["routes-dashboard"],
+    queryFn: () => getRoutes(),
+  });
+
+  const { data: tripsList = [] } = useQuery({
+    queryKey: ["trips-dashboard"],
+    queryFn: () => getTrips({ serviceDate: SCHEDULE_DATE }),
+  });
+
   return (
     <AppShell
       title="Operations Dashboard"
@@ -73,10 +85,10 @@ function Dashboard() {
     >
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Tile icon={Bus} label="Fleet" value={buses.length || BUSES.length} hint="buses at depot" />
-          <Tile icon={Users} label="Crew" value={crewList.length || (DRIVERS.length + CONDUCTORS.length)} hint="drivers & conductors" />
-          <Tile icon={Map} label="Routes" value={ROUTES.length} hint="active corridors" />
-          <Tile icon={Zap} label="Planned Trips" value={36} hint="for the service day" />
+          <Tile icon={Bus} label="Fleet" value={buses.length || BUSES.length} hint="buses across depots" to="/fleet/buses" />
+          <Tile icon={Users} label="Crew" value={crewList.length || (DRIVERS.length + CONDUCTORS.length)} hint="drivers & conductors" to="/crew/drivers" />
+          <Tile icon={Map} label="Routes" value={routesList.length || ROUTES.length} hint="active corridors" to="/network/routes" />
+          <Tile icon={Zap} label="Planned Trips" value={tripsList.length || 40} hint="for the service day" to="/operations/trips" />
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -97,12 +109,15 @@ function Dashboard() {
           <div>
             <h2 className="text-sm font-semibold">Demo modules</h2>
             <p className="text-sm text-muted-foreground">
-              Schedule Optimizer and Route Network are fully functional in this build.
+              Schedule Optimizer, Duty Builder, and Route Network are fully functional in this build.
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" size="sm">
               <Link to="/network/routes">Route Network</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/operations/duties">Duty Builder</Link>
             </Button>
             <Button asChild size="sm">
               <Link to="/scheduling/optimizer">Schedule Optimizer</Link>
@@ -119,20 +134,28 @@ function Tile({
   label,
   value,
   hint,
+  to,
 }: {
   icon: typeof Bus;
   label: string;
   value: number;
   hint: string;
+  to: string;
 }) {
   return (
-    <div className="panel p-4">
+    <Link
+      to={to}
+      className="panel p-4 block hover:border-primary/50 hover:shadow-md hover:scale-[1.02] transition-all group cursor-pointer"
+    >
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-        <Icon className="size-4 text-muted-foreground" />
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">{label}</p>
+        <div className="flex items-center gap-1">
+          <Icon className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          <ArrowRight className="size-3 text-muted-foreground/40 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+        </div>
       </div>
       <p className="mt-2 font-mono text-3xl font-semibold">{value}</p>
       <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-    </div>
+    </Link>
   );
 }

@@ -49,6 +49,7 @@ import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
 import { getRoutes } from "@/lib/routes-gis-fns";
 import { getTrips, createTrip, cancelTrip, generateTrips } from "@/lib/scheduling-fns";
+import { formatMinutesToTime } from "@/lib/utils";
 
 export const Route = createFileRoute("/operations/trips")({
   beforeLoad: ({ context }) => {
@@ -66,12 +67,6 @@ export const Route = createFileRoute("/operations/trips")({
 });
 
 const DEFAULT_DATE = "25 Aug 2026";
-
-function formatMinutesToTime(totalMin: number): string {
-  const hh = Math.floor(totalMin / 60);
-  const mm = totalMin % 60;
-  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-}
 
 function parseTimeToMinutes(timeStr: string): number {
   const [hStr, mStr] = timeStr.split(":");

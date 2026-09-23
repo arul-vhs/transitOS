@@ -84,7 +84,7 @@ const NAV: NavGroup[] = [
 ];
 
 function isNavVisible(role: string, to: string): boolean {
-  if (role === "PLATFORM_ADMIN" || role === "ORGANIZATION_ADMIN") return true;
+  if (!role || role === "PLATFORM_ADMIN" || role === "ORGANIZATION_ADMIN") return true;
 
   switch (to) {
     case "/":
@@ -94,25 +94,25 @@ function isNavVisible(role: string, to: string): boolean {
     case "/operations/duties":
     case "/scheduling/optimizer":
     case "/operations/incidents":
-      return ["SCHEDULER", "DEPOT_MANAGER"].includes(role);
+      return ["SCHEDULER", "DEPOT_MANAGER", "ROUTE_PLANNER", "MANAGEMENT"].includes(role);
     case "/fleet/buses":
-      return ["SCHEDULER", "DEPOT_MANAGER"].includes(role);
+      return ["SCHEDULER", "DEPOT_MANAGER", "ROUTE_PLANNER", "MANAGEMENT"].includes(role);
     case "/fleet/maintenance":
-      return ["DEPOT_MANAGER"].includes(role);
+      return ["DEPOT_MANAGER", "SCHEDULER"].includes(role);
     case "/crew/drivers":
     case "/crew/conductors":
     case "/crew/availability":
-      return ["SCHEDULER", "DEPOT_MANAGER"].includes(role);
+      return ["SCHEDULER", "DEPOT_MANAGER", "ROUTE_PLANNER", "MANAGEMENT"].includes(role);
     case "/network/routes":
       return ["SCHEDULER", "ROUTE_PLANNER", "DEPOT_MANAGER", "MANAGEMENT"].includes(role);
     case "/network/planner":
-      return ["ROUTE_PLANNER"].includes(role);
+      return ["ROUTE_PLANNER", "SCHEDULER", "DEPOT_MANAGER"].includes(role);
     case "/analytics":
-      return ["SCHEDULER", "ROUTE_PLANNER", "MANAGEMENT"].includes(role);
+      return ["SCHEDULER", "ROUTE_PLANNER", "MANAGEMENT", "DEPOT_MANAGER"].includes(role);
     case "/settings":
       return ["ORGANIZATION_ADMIN", "PLATFORM_ADMIN"].includes(role);
     default:
-      return false;
+      return true;
   }
 }
 
@@ -158,7 +158,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 </p>
               ) : null}
               {visibleItems.map((item) => {
-                const active = pathname === item.to;
+                const active = item.to === "/" ? pathname === "/" : pathname === item.to || pathname.startsWith(item.to + "/");
                 return (
                   <Link
                     key={item.to}

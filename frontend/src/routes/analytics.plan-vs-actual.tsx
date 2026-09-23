@@ -56,14 +56,14 @@ function PlanVsActualPage() {
       }),
   });
 
-  const { data: routesList = [] } = useQuery({
+  const { data: routesList = [] } = useQuery<any[]>({
     queryKey: ["routes-filters"],
-    queryFn: () => getRoutes(),
+    queryFn: () => getRoutes() as any,
   });
 
-  const { data: busesList = [] } = useQuery({
+  const { data: busesList = [] } = useQuery<any[]>({
     queryKey: ["buses-filters"],
-    queryFn: () => getBuses(),
+    queryFn: () => getBuses() as any,
   });
 
   // CSV export mutation

@@ -32,7 +32,7 @@ import { Progress } from "@/components/ui/progress";
 import { hasPermission } from "@/lib/auth-shared";
 import { getTrips, getDuties, validateDuty } from "@/lib/scheduling-fns";
 import { getIncidents } from "@/lib/rescheduling-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatMinutesToTime } from "@/lib/utils";
 
 export const Route = createFileRoute("/operations/today")({
   beforeLoad: ({ context }) => {
@@ -50,12 +50,6 @@ export const Route = createFileRoute("/operations/today")({
 });
 
 const SERVICE_DATE = "25 Aug 2026";
-
-function formatMinutesToTime(totalMin: number): string {
-  const hh = Math.floor(totalMin / 60);
-  const mm = totalMin % 60;
-  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-}
 
 function OperationsTodayPage() {
   const [filterTab, setFilterTab] = useState<"all" | "active" | "issues">("all");

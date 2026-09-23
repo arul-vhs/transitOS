@@ -118,7 +118,7 @@ export const updateBus = async (
         };
       }
 ) => {
-  return await _updateBus(toServerFnArgs(payload)!);
+  return await _updateBus(toServerFnArgs(payload)! as any);
 };
 
 const _updateBusStatus = createServerFn({ method: "POST" })
@@ -273,7 +273,7 @@ export const updateCrewMember = async (
         };
       }
 ) => {
-  return await _updateCrewMember(toServerFnArgs(payload)!);
+  return await _updateCrewMember(toServerFnArgs(payload)! as any);
 };
 
 const _updateCrewStatus = createServerFn({ method: "POST" })

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -19,6 +19,8 @@ import {
   ListOrdered,
   Activity,
   AlertTriangle,
+  Route as RouteIcon,
+  Sparkles,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -65,6 +67,7 @@ import {
   reorderStops,
   analyzeRouteOverlap,
 } from "@/lib/routes-gis-fns";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/network/routes")({
   beforeLoad: ({ context }) => {
@@ -117,18 +120,18 @@ function RoutesPage() {
   // Form states (Stop)
   const [stopName, setStopName] = useState("");
   const [stopSeq, setStopSeq] = useState("");
-  const [stopLat, setStopLat] = useState("11.6643");
-  const [stopLng, setStopLng] = useState("78.1460");
+  const [stopLat, setStopLat] = useState("11.6673");
+  const [stopLng, setStopLng] = useState("78.1424");
 
   // 1. Fetch Routes List
-  const { data: routesList = [], isLoading } = useQuery({
+  const { data: routesList = [], isLoading } = useQuery<any[]>({
     queryKey: ["routes", statusFilter, directionFilter, search],
     queryFn: () =>
       getRoutes({
         status: statusFilter,
         direction: directionFilter,
         search,
-      }),
+      }) as any,
   });
 
   // Set default selected route on initial load if none selected
@@ -139,16 +142,17 @@ function RoutesPage() {
   }, [routesList, selectedRouteId]);
 
   // 2. Fetch Selected Route Details
-  const { data: selectedRouteDetails } = useQuery({
+  const { data: selectedRouteDetails } = useQuery<any>({
     queryKey: ["route", selectedRouteId],
-    queryFn: () => getRoute(selectedRouteId!),
+    queryFn: () => getRoute(selectedRouteId!) as any,
     enabled: !!selectedRouteId,
+    placeholderData: (previousData) => previousData,
   });
 
   // 3. Fetch Overlap Analysis for Selected Route
-  const { data: overlapResults = [], refetch: runOverlapCheck } = useQuery({
+  const { data: overlapResults = [], refetch: runOverlapCheck } = useQuery<any[]>({
     queryKey: ["route-overlap-analysis", selectedRouteId],
-    queryFn: () => analyzeRouteOverlap(selectedRouteDetails?.geometryGeojson),
+    queryFn: () => analyzeRouteOverlap(selectedRouteDetails?.geometryGeojson) as any,
     enabled: !!selectedRouteDetails?.geometryGeojson,
   });
 
@@ -172,8 +176,19 @@ function RoutesPage() {
   useEffect(() => {
     if (!L || !mapRef.current) return;
 
-    if (!mapInstanceRef.current) {
-      const map = L.map(mapRef.current).setView([11.6643, 78.1460], 13);
+    let map = mapInstanceRef.current;
+    // Check if map doesn't exist or its container was remounted
+    if (!map || map.getContainer() !== mapRef.current) {
+      if (map) {
+        try {
+          map.remove();
+        } catch {}
+        mapInstanceRef.current = null;
+      }
+      if (mapRef.current) {
+        delete (mapRef.current as any)._leaflet_id;
+      }
+      map = L.map(mapRef.current).setView([11.6673, 78.1424], 13);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
       }).addTo(map);
@@ -182,23 +197,32 @@ function RoutesPage() {
       markerGroupRef.current = L.featureGroup().addTo(map);
     }
 
-    const map = mapInstanceRef.current;
+    if (!polylineGroupRef.current || !markerGroupRef.current) {
+      polylineGroupRef.current = L.featureGroup().addTo(map);
+      markerGroupRef.current = L.featureGroup().addTo(map);
+    }
+
     polylineGroupRef.current.clearLayers();
     markerGroupRef.current.clearLayers();
 
     // 1. Draw all routes
     routesList.forEach((r: any) => {
       if (r.geometryGeojson?.coordinates?.length > 1) {
-        const latlngs = r.geometryGeojson.coordinates.map((c: any) => [c[1], c[0]]);
-        const active = r.id === selectedRouteId;
-        const polyline = L.polyline(latlngs, {
-          color: r.color || "#3B82F6",
-          weight: active ? 6 : 3,
-          opacity: active ? 1 : 0.4,
-        });
+        const latlngs = r.geometryGeojson.coordinates
+          .filter((c: any) => Array.isArray(c) && !isNaN(Number(c[0])) && !isNaN(Number(c[1])))
+          .map((c: any) => [Number(c[1]), Number(c[0])]);
 
-        polyline.bindPopup(`<b>${r.code}</b><br/>${r.name}`);
-        polyline.addTo(polylineGroupRef.current);
+        if (latlngs.length > 1) {
+          const active = r.id === selectedRouteId;
+          const polyline = L.polyline(latlngs, {
+            color: r.color || "#3B82F6",
+            weight: active ? 6 : 3,
+            opacity: active ? 1 : 0.4,
+          });
+
+          polyline.bindPopup(`<b>${r.code}</b><br/>${r.name}`);
+          polyline.addTo(polylineGroupRef.current);
+        }
       }
     });
 
@@ -208,7 +232,6 @@ function RoutesPage() {
         const lat = Number(stop.latitude);
         const lng = Number(stop.longitude);
         if (!isNaN(lat) && !isNaN(lng)) {
-          // Custom SVG icon that is styled and support dragend
           const markerIcon = L.divIcon({
             html: `<div style="background-color: ${selectedRouteDetails.color || "#3B82F6"}; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; color: white; font-size: 8px; font-weight: bold;">${stop.sequence}</div>`,
             className: "custom-stop-marker",
@@ -249,19 +272,37 @@ function RoutesPage() {
       });
 
       // Fit bounds to selected route
-      if (selectedRouteDetails.geometryGeojson?.coordinates?.length > 0) {
-        const bounds = L.latLngBounds(
-          selectedRouteDetails.geometryGeojson.coordinates.map((c: any) => [c[1], c[0]])
-        );
-        map.fitBounds(bounds, { padding: [50, 50] });
+      if (selectedRouteDetails.geometryGeojson?.coordinates?.length > 1) {
+        try {
+          const latlngs = selectedRouteDetails.geometryGeojson.coordinates
+            .filter((c: any) => Array.isArray(c) && !isNaN(Number(c[0])) && !isNaN(Number(c[1])))
+            .map((c: any) => [Number(c[1]), Number(c[0])]);
+          if (latlngs.length > 0) {
+            const bounds = L.latLngBounds(latlngs);
+            if (bounds.isValid()) {
+              map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+            }
+          }
+        } catch (err) {
+          console.warn("fitBounds warning:", err);
+        }
       }
     }
-  }, [L, routesList, selectedRouteId, selectedRouteDetails, canManage]);
+
+    // Always invalidate size in next tick
+    const timer = setTimeout(() => {
+      try {
+        mapInstanceRef.current?.invalidateSize();
+      } catch {}
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [L, routesList, selectedRouteId, selectedRouteDetails, canManage, activeTab]);
 
   // Mutations
   const createRouteMutation = useMutation({
     mutationFn: createRoute,
-    onSuccess: (newR) => {
+    onSuccess: (newR: any) => {
       queryClient.invalidateQueries({ queryKey: ["routes"] });
       setSelectedRouteId(newR.id);
       toast.success("Route created successfully");
@@ -425,8 +466,8 @@ function RoutesPage() {
       geometryGeojson: {
         type: "LineString",
         coordinates: [
-          [78.1460, 11.6643], // Salem Central default start
-          [78.1580, 11.6780], // Hasthampatti end
+          [78.1424, 11.6673], // MGR Central Bus Stand default start
+          [78.1573, 11.6795], // Hasthampatti Roundana end
         ],
       },
     });
@@ -485,18 +526,32 @@ function RoutesPage() {
       title="Route Network"
       subtitle="Operational corridor registries, coordinate stop sequencing, and geographic maps."
       actions={
-        canManage ? (
-          <Button
-            size="sm"
-            onClick={() => {
-              resetForm();
-              setIsCreateOpen(true);
-            }}
-          >
-            <Plus className="mr-2 size-4" />
-            Create Route
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
+            <Link to="/network/planner">
+              <RouteIcon className="mr-1.5 size-3.5 text-primary" />
+              Route Planner
+            </Link>
           </Button>
-        ) : undefined
+          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
+            <Link to="/scheduling/optimizer">
+              <Sparkles className="mr-1.5 size-3.5 text-primary" />
+              Schedule Optimizer
+            </Link>
+          </Button>
+          {canManage && (
+            <Button
+              size="sm"
+              onClick={() => {
+                resetForm();
+                setIsCreateOpen(true);
+              }}
+            >
+              <Plus className="mr-2 size-4" />
+              Create Route
+            </Button>
+          )}
+        </div>
       }
     >
       <div className="space-y-6">
@@ -692,7 +747,7 @@ function RoutesPage() {
                   </TabsList>
 
                   {/* Map Tab */}
-                  <TabsContent value="map" className="mt-4">
+                  <TabsContent value="map" forceMount className={cn("mt-4", activeTab !== "map" && "hidden")}>
                     <section className="panel overflow-hidden">
                       <div className="bg-secondary/40 px-4 py-2 text-xs text-muted-foreground flex justify-between items-center">
                         <span>Salem OpenStreetMap grid</span>
@@ -1127,7 +1182,7 @@ function RoutesPage() {
                   id="stopLat"
                   value={stopLat}
                   onChange={(e) => setStopLat(e.target.value)}
-                  placeholder="11.6643"
+                  placeholder="11.6673"
                   className="col-span-3 font-mono"
                   required
                 />
@@ -1138,7 +1193,7 @@ function RoutesPage() {
                   id="stopLng"
                   value={stopLng}
                   onChange={(e) => setStopLng(e.target.value)}
-                  placeholder="78.1460"
+                  placeholder="78.1424"
                   className="col-span-3 font-mono"
                   required
                 />

@@ -156,6 +156,35 @@ function LoginPage() {
               )}
             </Button>
           </form>
+
+          {/* Quick Demo Logins Section */}
+          <div className="mt-6 pt-5 border-t border-border/60">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider text-center mb-3">
+              Quick Demo Logins (password: password123)
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "System Admin", email: "admin@salemtransport.demo" },
+                { label: "Scheduler", email: "scheduler@salemtransport.demo" },
+                { label: "Depot Manager", email: "depot@salemtransport.demo" },
+                { label: "Route Planner", email: "planner@salemtransport.demo" },
+              ].map((account) => (
+                <button
+                  key={account.email}
+                  type="button"
+                  onClick={() => {
+                    setEmail(account.email);
+                    setPassword("password123");
+                    toast.info(`Filled ${account.label} credentials`);
+                  }}
+                  className="rounded-lg border border-border/80 bg-background/50 hover:bg-muted/70 hover:border-primary/40 px-2.5 py-1.5 text-left text-xs transition-colors flex flex-col cursor-pointer"
+                >
+                  <span className="font-semibold text-foreground text-[11px]">{account.label}</span>
+                  <span className="font-mono text-[9px] text-muted-foreground truncate">{account.email}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="text-center text-xs text-muted-foreground">

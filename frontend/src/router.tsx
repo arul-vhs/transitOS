@@ -12,7 +12,7 @@ export const getRouter = () => {
     defaultPreloadStaleTime: 0,
     dehydrate: () => {
       return {
-        queryClientState: dehydrate(queryClient),
+        queryClientState: dehydrate(queryClient) as any,
       };
     },
     hydrate: (dehydrated: any) => {

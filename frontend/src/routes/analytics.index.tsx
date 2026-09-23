@@ -358,7 +358,7 @@ function AnalyticsDashboardPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Building2 className="size-4 text-primary" /> Salem Central Depot
+                  <Building2 className="size-4 text-primary" /> Meyyanur Central Depot
                 </h3>
                 <Badge variant="outline" className="text-[9px] font-mono">Hub</Badge>
               </div>
@@ -376,7 +376,7 @@ function AnalyticsDashboardPage() {
                 ))
               ) : (
                 <div className="py-1.5 flex justify-between font-mono">
-                  <span>Salem Central Depot</span>
+                  <span>Meyyanur Central Depot</span>
                   <span className="font-bold text-foreground">Util: 88%</span>
                 </div>
               )}

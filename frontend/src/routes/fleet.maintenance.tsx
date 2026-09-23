@@ -93,10 +93,11 @@ function MaintenancePage() {
   // Status mutation
   const statusMutation = useMutation({
     mutationFn: updateBusStatus,
-    onSuccess: (_, variables) => {
+    onSuccess: (_, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ["buses-maintenance"] });
       queryClient.invalidateQueries({ queryKey: ["buses"] });
-      if (variables.status === "maintenance") {
+      const status = variables?.status || variables?.data?.status;
+      if (status === "maintenance") {
         toast.success("Bus successfully sent to maintenance docking.");
         setIsScheduleOpen(false);
       } else {

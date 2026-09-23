@@ -62,6 +62,10 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
     scheduleMap.set(resourceId, list);
   };
 
+  const routeMap = new Map<string, string>();
+  input.routes.forEach((r) => routeMap.set(r.id, r.code));
+  const getRouteCode = (routeId: string) => routeMap.get(routeId) || "Corridor";
+
   // Solve sequentially using a priority-driven heuristic
   for (const trip of sortedTrips) {
     const cand = candidatesMap.get(trip.id);
@@ -163,6 +167,11 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
               tripCode: trip.tripCode,
               sequence: duty.trips.length + 1,
               handoverRequired: false,
+              startTime: trip.startTime,
+              endTime: trip.endTime,
+              routeCode: getRouteCode(trip.routeId),
+              origin: trip.origin,
+              destination: trip.destination,
             });
             duty.endTime = trip.endTime;
 
@@ -201,6 +210,11 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
               tripCode: trip.tripCode,
               sequence: duty.trips.length + 1,
               handoverRequired: false,
+              startTime: trip.startTime,
+              endTime: trip.endTime,
+              routeCode: getRouteCode(trip.routeId),
+              origin: trip.origin,
+              destination: trip.destination,
             });
             duty.endTime = trip.endTime;
 
@@ -270,6 +284,11 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
               tripCode: trip.tripCode,
               sequence: 1,
               handoverRequired: false,
+              startTime: trip.startTime,
+              endTime: trip.endTime,
+              routeCode: getRouteCode(trip.routeId),
+              origin: trip.origin,
+              destination: trip.destination,
             },
           ],
           crewSegments: [

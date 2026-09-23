@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ import {
   Activity,
   MousePointerClick,
   Info,
+  Sparkles,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -30,6 +31,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { hasPermission } from "@/lib/auth-shared";
 import { getRoutes, createRoute, createStop, analyzeRouteOverlap } from "@/lib/routes-gis-fns";
 
@@ -81,9 +90,9 @@ function RoutePlannerPage() {
   const [selectedCoordIndex, setSelectedCoordIndex] = useState<number | null>(null);
 
   // Fetch Existing Active Routes for Map Reference & Overlap
-  const { data: activeRoutes = [] } = useQuery({
+  const { data: activeRoutes = [] } = useQuery<any[]>({
     queryKey: ["active-routes-planner"],
-    queryFn: () => getRoutes({ status: "active" }),
+    queryFn: () => getRoutes({ status: "active" }) as any,
   });
 
   // Overlap Analysis Mutation (runs on coordinate changes or button click)
@@ -150,7 +159,7 @@ function RoutePlannerPage() {
     if (!L || !mapRef.current) return;
 
     if (!mapInstanceRef.current) {
-      const map = L.map(mapRef.current).setView([11.6643, 78.1460], 13);
+      const map = L.map(mapRef.current).setView([11.6673, 78.1424], 13);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
       }).addTo(map);
@@ -279,7 +288,7 @@ function RoutePlannerPage() {
       if (drawnCoords.length < 2) throw new Error("Please draw at least 2 points on the map");
 
       // 1. Create Route
-      const newRoute = await createRoute({
+      const newRoute: any = await createRoute({
         code,
         name,
         origin: origin || (localStops[0]?.name) || "Salem Origin",
@@ -376,6 +385,22 @@ function RoutePlannerPage() {
     <AppShell
       title="Route Planner"
       subtitle="Interactive corridor sketching, stop sequencing and topological overlap calculations."
+      actions={
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
+            <Link to="/network/routes">
+              <Map className="mr-1.5 size-3.5 text-primary" />
+              Route Network
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
+            <Link to="/scheduling/optimizer">
+              <Sparkles className="mr-1.5 size-3.5 text-primary" />
+              Schedule Optimizer
+            </Link>
+          </Button>
+        </div>
+      }
     >
       <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
         {/* Left Column: Form & Analytics */}
@@ -504,7 +529,7 @@ function RoutePlannerPage() {
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   <Waypoints className="size-4 text-primary" /> Route Overlap Analysis
                 </h3>
-                <Button size="xs" onClick={() => analyzeMutation.mutate()} disabled={analyzeMutation.isPending}>
+                <Button size="sm" onClick={() => analyzeMutation.mutate()} disabled={analyzeMutation.isPending}>
                   {analyzeMutation.isPending ? "Analyzing..." : "Analyze Overlap"}
                 </Button>
               </div>
@@ -573,7 +598,7 @@ function RoutePlannerPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Button
-                  size="xs"
+                  size="sm"
                   variant={isDrawing ? "destructive" : "default"}
                   onClick={() => setIsDrawing(!isDrawing)}
                 >
@@ -624,9 +649,9 @@ function RoutePlannerPage() {
                               <Badge variant="secondary" className="text-[9px] uppercase font-bold py-0.5">Stop Node</Badge>
                             ) : (
                               <Button
-                                size="xs"
+                                size="sm"
                                 variant="outline"
-                                className="h-5 py-0 px-1 text-[9px]"
+                                className="h-6 py-0 px-2 text-[10px]"
                                 onClick={() => setSelectedCoordIndex(idx)}
                               >
                                 Mark as Stop

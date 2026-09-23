@@ -354,7 +354,10 @@ function DriversPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Depots</SelectItem>
-                  <SelectItem value="Salem Central Depot">Salem Central Depot</SelectItem>
+                  <SelectItem value="Meyyanur Depot">Meyyanur Depot</SelectItem>
+                  <SelectItem value="Johnsonpet Depot">Johnsonpet Depot</SelectItem>
+                  <SelectItem value="Hasthampatti Depot">Hasthampatti Depot</SelectItem>
+                  <SelectItem value="Steel Plant Depot">Steel Plant Depot</SelectItem>
                 </SelectContent>
               </Select>
             </div>
