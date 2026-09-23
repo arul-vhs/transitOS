@@ -13,7 +13,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/server/db/seed.ts",
-    "deploy": "nitro deploy --prebuilt"
+    "deploy": "nitro deploy --prebuilt",
+    "deploy:pages": "npm run build && nitro deploy --prebuilt",
+    "deploy:worker": "npm run build && npx wrangler deploy"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
