@@ -48,44 +48,44 @@ type NavItem = { label: string; to: string; icon: typeof Bus; badge?: string; ba
 type NavGroup = { title: string; items: NavItem[] };
 
 const NAV: NavGroup[] = [
-  { title: "Command Center", items: [{ label: "Dashboard", to: "/", icon: Gauge }] },
+  { title: "Command Center", items: [{ label: "Executive Dashboard", to: "/", icon: Gauge }] },
   {
-    title: "Operations & Dispatch",
+    title: "Daily Operations",
     items: [
-      { label: "Today's Operations", to: "/operations/today", icon: CalendarClock, badge: "Live", badgeColor: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30" },
-      { label: "Trip Timetable", to: "/operations/trips", icon: RouteIcon },
-      { label: "Duty Builder", to: "/operations/duties", icon: CalendarClock },
-      { label: "Schedule Optimizer", to: "/scheduling/optimizer", icon: Sparkles, badge: "AI", badgeColor: "bg-primary/20 text-primary border-primary/30" },
-      { label: "Disruption Manager", to: "/operations/incidents", icon: AlertTriangle, badge: "Radar", badgeColor: "bg-destructive/15 text-destructive border-destructive/30" },
+      { label: "Live Fleet Tracking", to: "/operations/today", icon: CalendarClock, badge: "Live", badgeColor: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30" },
+      { label: "Timetable & Departures", to: "/operations/trips", icon: RouteIcon },
+      { label: "Driver Shifts (Duties)", to: "/operations/duties", icon: CalendarClock },
+      { label: "AI Auto-Scheduler", to: "/scheduling/optimizer", icon: Sparkles, badge: "AI", badgeColor: "bg-primary/20 text-primary border-primary/30" },
+      { label: "Disruption Radar", to: "/operations/incidents", icon: AlertTriangle, badge: "Radar", badgeColor: "bg-destructive/15 text-destructive border-destructive/30" },
     ],
   },
   {
-    title: "Fleet Management",
+    title: "Buses & Vehicles",
     items: [
-      { label: "Vehicle Registry", to: "/fleet/buses", icon: Bus },
+      { label: "Bus Fleet & Health", to: "/fleet/buses", icon: Bus },
       { label: "Maintenance Bays", to: "/fleet/maintenance", icon: Wrench },
     ],
   },
   {
-    title: "Crew & Rostering",
+    title: "Drivers & Crew",
     items: [
-      { label: "Driver Roster", to: "/crew/drivers", icon: UserCog },
-      { label: "Conductor Roster", to: "/crew/conductors", icon: Users },
-      { label: "Availability Timeline", to: "/crew/availability", icon: CalendarClock },
+      { label: "Drivers & Licenses", to: "/crew/drivers", icon: UserCog },
+      { label: "Conductors", to: "/crew/conductors", icon: Users },
+      { label: "Crew Availability", to: "/crew/availability", icon: CalendarClock },
     ],
   },
   {
-    title: "Corridors & GIS",
+    title: "Routes & Stops",
     items: [
-      { label: "Route Network", to: "/network/routes", icon: Map },
-      { label: "Route Planner", to: "/network/planner", icon: RouteIcon },
+      { label: "Routes & Stops Map", to: "/network/routes", icon: Map },
+      { label: "Route Builder", to: "/network/planner", icon: RouteIcon },
     ],
   },
   {
-    title: "Analytics & System",
+    title: "System Insights",
     items: [
       { label: "Analytics & Telemetry", to: "/analytics", icon: BarChart3 },
-      { label: "System Settings", to: "/settings", icon: Settings },
+      { label: "Settings & Access", to: "/settings", icon: Settings },
     ],
   },
 ];
@@ -132,9 +132,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground select-none">
       {/* Brand Header */}
-      <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-4.5 bg-sidebar/80 backdrop-blur">
-        <div className="relative flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/25">
-          <Bus className="size-5.5" />
+      <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-4.5 bg-sidebar/90 backdrop-blur-md">
+        <div className="relative flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 text-white shadow-lg shadow-indigo-500/30">
+          <Bus className="size-5.5 text-white" />
           <span className="absolute -bottom-0.5 -right-0.5 flex size-2.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500"></span>
@@ -142,8 +142,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="text-base font-bold tracking-tight text-sidebar-foreground">TransitOS</span>
-            <span className="rounded bg-sidebar-primary/20 px-1.5 py-0.2 text-[10px] font-mono font-semibold text-sidebar-primary uppercase">v2.4</span>
+            <span className="text-base font-extrabold tracking-tight text-sidebar-foreground">TransitOS</span>
+            <span className="rounded-full bg-primary/20 px-1.5 py-0.2 text-[9px] font-mono font-bold text-primary uppercase border border-primary/30">PRO</span>
           </div>
           <p className="text-[11px] font-medium text-sidebar-foreground/60 truncate" title={user?.tenantName}>
             {user?.tenantName || "Salem Transport Corp."}
@@ -273,6 +273,10 @@ export function AppShell({
                 <Badge variant="secondary" className="hidden sm:inline-flex text-[10px] font-mono font-semibold uppercase tracking-wider bg-primary/10 text-primary border-primary/20">
                   Salem Central
                 </Badge>
+                <span className="hidden md:inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  24 Buses Active
+                </span>
               </div>
               {subtitle ? (
                 <p className="mt-0.5 text-xs text-muted-foreground truncate">{subtitle}</p>

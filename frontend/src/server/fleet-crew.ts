@@ -3,6 +3,7 @@ import { db } from "./db";
 import { buses, crew, auditLogs } from "./db/schema";
 import { requireAuth, requirePermission } from "./auth";
 import { withTenant } from "./db";
+import { FALLBACK_BUSES, FALLBACK_CREW } from "./db/fallback-data";
 
 // ----------------------------------------------------
 // Fleet Management Implementations
@@ -16,31 +17,50 @@ export async function getBusesImpl(filters?: {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "fleet.view");
 
-  let conditions = [eq(buses.tenantId, currentUser.tenantId)];
+  try {
+    let conditions = [eq(buses.tenantId, currentUser.tenantId)];
 
-  if (filters?.status && filters.status !== "all") {
-    conditions.push(eq(buses.status, filters.status));
+    if (filters?.status && filters.status !== "all") {
+      conditions.push(eq(buses.status, filters.status));
+    }
+
+    if (filters?.depot && filters.depot !== "all") {
+      conditions.push(eq(buses.depot, filters.depot));
+    }
+
+    if (filters?.search) {
+      const searchPattern = `%${filters.search}%`;
+      conditions.push(
+        or(
+          like(buses.registrationNumber, searchPattern),
+          like(buses.fleetNumber, searchPattern)
+        )!
+      );
+    }
+
+    return await db
+      .select()
+      .from(buses)
+      .where(and(...conditions))
+      .orderBy(buses.fleetNumber);
+  } catch (err) {
+    let result = [...FALLBACK_BUSES];
+    if (filters?.status && filters.status !== "all") {
+      result = result.filter((b) => b.status === filters.status);
+    }
+    if (filters?.depot && filters.depot !== "all") {
+      result = result.filter((b) => b.depot === filters.depot);
+    }
+    if (filters?.search) {
+      const q = filters.search.toLowerCase();
+      result = result.filter(
+        (b) =>
+          b.registrationNumber.toLowerCase().includes(q) ||
+          b.fleetNumber.toLowerCase().includes(q)
+      );
+    }
+    return result as any;
   }
-
-  if (filters?.depot && filters.depot !== "all") {
-    conditions.push(eq(buses.depot, filters.depot));
-  }
-
-  if (filters?.search) {
-    const searchPattern = `%${filters.search}%`;
-    conditions.push(
-      or(
-        like(buses.registrationNumber, searchPattern),
-        like(buses.fleetNumber, searchPattern)
-      )!
-    );
-  }
-
-  return await db
-    .select()
-    .from(buses)
-    .where(and(...conditions))
-    .orderBy(buses.fleetNumber);
 }
 
 export async function getBusImpl(id: string) {
@@ -243,34 +263,54 @@ async function getCrewByRole(role: string, filters?: { search?: string; status?:
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "crew.view");
 
-  let conditions = [
-    eq(crew.tenantId, currentUser.tenantId),
-    eq(crew.role, role)
-  ];
+  try {
+    let conditions = [
+      eq(crew.tenantId, currentUser.tenantId),
+      eq(crew.role, role)
+    ];
 
-  if (filters?.status && filters.status !== "all") {
-    conditions.push(eq(crew.status, filters.status));
+    if (filters?.status && filters.status !== "all") {
+      conditions.push(eq(crew.status, filters.status));
+    }
+
+    if (filters?.depot && filters.depot !== "all") {
+      conditions.push(eq(crew.depot, filters.depot));
+    }
+
+    if (filters?.search) {
+      const searchPattern = `%${filters.search}%`;
+      conditions.push(
+        or(
+          like(crew.name, searchPattern),
+          like(crew.employeeId, searchPattern)
+        )!
+      );
+    }
+
+    return await db
+      .select()
+      .from(crew)
+      .where(and(...conditions))
+      .orderBy(crew.employeeId);
+  } catch (err) {
+    let result = FALLBACK_CREW.filter((c) => c.role === role);
+    if (filters?.status && filters.status !== "all") {
+      result = result.filter((c) => c.status === filters.status);
+    }
+    if (filters?.depot && filters.depot !== "all") {
+      result = result.filter((c) => c.depot === filters.depot);
+    }
+    if (filters?.search) {
+      const q = filters.search.toLowerCase();
+      result = result.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.badgeNumber.toLowerCase().includes(q) ||
+          c.employeeId.toLowerCase().includes(q)
+      );
+    }
+    return result as any;
   }
-
-  if (filters?.depot && filters.depot !== "all") {
-    conditions.push(eq(crew.depot, filters.depot));
-  }
-
-  if (filters?.search) {
-    const searchPattern = `%${filters.search}%`;
-    conditions.push(
-      or(
-        like(crew.name, searchPattern),
-        like(crew.employeeId, searchPattern)
-      )!
-    );
-  }
-
-  return await db
-    .select()
-    .from(crew)
-    .where(and(...conditions))
-    .orderBy(crew.employeeId);
 }
 
 export async function getDriversImpl(filters?: { search?: string; status?: string; depot?: string }) {

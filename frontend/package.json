@@ -13,6 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/server/db/seed.ts",
+    "db:cloud:sync": "tsx scripts/cloud-sync.ts",
     "deploy": "nitro deploy --prebuilt",
     "deploy:pages": "npm run build && nitro deploy --prebuilt",
     "deploy:worker": "npm run build && npx wrangler deploy"

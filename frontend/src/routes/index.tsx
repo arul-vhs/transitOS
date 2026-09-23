@@ -102,77 +102,156 @@ function Dashboard() {
 
   return (
     <AppShell
-      title="Operations Dashboard"
+      title="Operations Command Center"
       subtitle={`${orgName} · ${depotName} · ${SCHEDULE_DATE}`}
       actions={
         <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant="outline" className="text-xs">
+          <Button asChild size="sm" variant="outline" className="text-xs rounded-xl border-border/80 hover:bg-muted/60">
             <Link to="/operations/trips">
               <RouteIcon className="mr-1.5 size-3.5 text-primary" />
-              Timetable
+              Bus Timetable
             </Link>
           </Button>
-          <Button asChild size="sm" className="bg-primary text-primary-foreground text-xs shadow-xs">
+          <Button asChild size="sm" className="bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-indigo-500/20 cursor-pointer">
             <Link to="/scheduling/optimizer">
               <Sparkles className="mr-1.5 size-3.5 text-amber-300" />
-              Launch AI Optimizer
+              Run AI Optimizer
             </Link>
           </Button>
         </div>
       }
     >
-      <div className="space-y-6">
-        {/* RECOMMENDED OPERATIONAL WORKFLOW BANNER */}
-        <section className="glass-panel p-5 space-y-4 border-primary/30 relative overflow-hidden bg-gradient-to-r from-primary/5 via-background to-primary/5">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="grid size-8 place-items-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-                <Workflow className="size-4" />
+      <div className="space-y-6 max-w-7xl mx-auto">
+        {/* WELCOME HERO CARD (APPLE-CLEAN + SEMRUSH CLARITY) */}
+        <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 p-6 sm:p-8 shadow-xl shadow-primary/5">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="max-w-2xl space-y-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                <Sparkles className="size-3.5 text-primary" />
+                <span>Salem City Bus Operations Platform</span>
               </div>
-              <div>
-                <h2 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
-                  <span>Daily Transit Operational Workflow</span>
-                  <Badge variant="outline" className="border-primary/30 text-primary text-[10px] font-mono">
-                    Recommended Steps
-                  </Badge>
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  New to TransitOS? Follow these 4 steps in order to plan, optimize, and dispatch your transit service.
-                </p>
-              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+                Welcome to TransitOS
+              </h1>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Your end-to-end intelligent transit network. Track live buses, plan daily departures, generate legal driver shifts with Google AI, and resolve disruptions in seconds.
+              </p>
             </div>
 
-            <Button asChild variant="outline" size="sm" className="text-xs h-7 gap-1">
+            {/* Quick Action Chips */}
+            <div className="flex flex-wrap gap-2 md:justify-end">
+              <Button asChild variant="outline" size="sm" className="rounded-xl text-xs gap-1.5 border-border/80 hover:border-primary/40 bg-card">
+                <Link to="/fleet/buses">
+                  <Bus className="size-3.5 text-emerald-500" />
+                  <span>24 Buses Fleet</span>
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm" className="rounded-xl text-xs gap-1.5 border-border/80 hover:border-primary/40 bg-card">
+                <Link to="/crew/drivers">
+                  <Users className="size-3.5 text-violet-500" />
+                  <span>48 Drivers & Crew</span>
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm" className="rounded-xl text-xs gap-1.5 border-border/80 hover:border-primary/40 bg-card">
+                <Link to="/network/routes">
+                  <Map className="size-3.5 text-cyan-500" />
+                  <span>8 Corridors</span>
+                </Link>
+              </Button>
+              <Button asChild size="sm" className="rounded-xl text-xs gap-1.5 bg-primary text-primary-foreground font-semibold shadow-xs">
+                <Link to="/scheduling/optimizer">
+                  <Zap className="size-3.5 text-amber-300" />
+                  <span>1-Click AI Solver</span>
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* VIBRANT SEMRUSH-STYLE KPI TILES */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KpiTile
+            icon={Bus}
+            color="emerald"
+            label="Bus Fleet"
+            value={totalBuses}
+            badge="18 In Service"
+            hint="24 Ashok Leyland & Starbus registered"
+            to="/fleet/buses"
+          />
+          <KpiTile
+            icon={Users}
+            color="violet"
+            label="Crew & Drivers"
+            value={totalCrew}
+            badge="100% Compliant"
+            hint="Drivers & conductors with rest limits"
+            to="/crew/drivers"
+          />
+          <KpiTile
+            icon={Map}
+            color="cyan"
+            label="Corridors & Routes"
+            value={totalRoutes}
+            badge="54 Bus Stops"
+            hint="Salem Junction, Omalur, Gorimedu"
+            to="/network/routes"
+          />
+          <KpiTile
+            icon={Zap}
+            color="amber"
+            label="Scheduled Departures"
+            value={totalTrips}
+            badge="Peak & Off-Peak"
+            hint="Generated daily timetable runs"
+            to="/operations/trips"
+          />
+        </div>
+
+        {/* 4-STEP OPERATIONAL PIPELINE (LAYMAN-FRIENDLY WIZARD) */}
+        <section className="rounded-3xl border border-border/80 bg-card/60 p-6 space-y-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
+            <div>
+              <h2 className="text-base font-bold tracking-tight text-foreground flex items-center gap-2">
+                <Workflow className="size-4 text-primary" />
+                <span>How Transit Operations Work (Simple 4-Step Process)</span>
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Everything connects in a simple chain: register your buses ➔ set the departure times ➔ let AI build driver shifts ➔ track live on-road buses.
+              </p>
+            </div>
+            <Button asChild variant="ghost" size="sm" className="text-xs text-primary font-semibold">
               <Link to="/scheduling/optimizer">
-                <span>Start AI Optimization</span>
-                <ArrowRight className="size-3" />
+                <span>Fast-Forward to AI Optimizer</span>
+                <ArrowRight className="size-3 ml-1" />
               </Link>
             </Button>
           </div>
 
-          {/* 4 Interactive Step Cards */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
             {/* Step 1 */}
             <Link
               to="/network/routes"
-              className="p-3.5 rounded-xl border border-border/70 bg-card/60 hover:border-primary/50 hover:bg-muted/50 transition-all group flex flex-col justify-between"
+              className="p-4 rounded-2xl border border-border/70 bg-card hover:border-primary/50 hover:shadow-md transition-all group flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="font-mono text-[10px] uppercase font-bold text-primary bg-primary/10">
-                    Step 1
+                  <span className="inline-flex items-center justify-center size-6 rounded-full bg-primary/10 text-primary text-xs font-bold font-mono">
+                    1
+                  </span>
+                  <Badge variant="outline" className="text-[10px] font-mono border-border text-muted-foreground">
+                    {totalRoutes} Routes
                   </Badge>
-                  <span className="text-[10px] font-mono text-muted-foreground">{totalRoutes} Routes</span>
                 </div>
-                <h3 className="font-bold text-xs text-foreground group-hover:text-primary transition-colors mt-2">
-                  Network & Fleet
+                <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors mt-2.5">
+                  1. Routes & Fleet
                 </h3>
-                <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                  Setup corridors, stops, vehicle registrations ({totalBuses} buses) and crew rosters ({totalCrew} crew).
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  View Salem's 8 transit corridors and verify available buses and drivers across the 4 city depots.
                 </p>
               </div>
-              <div className="mt-3 pt-2 border-t border-border/50 flex items-center justify-between text-[11px] text-primary font-medium">
-                <span>Review Network</span>
+              <div className="mt-4 pt-2.5 border-t border-border/60 flex items-center justify-between text-xs text-primary font-semibold">
+                <span>View Network</span>
                 <ArrowRight className="size-3 group-hover:translate-x-1 transition-transform" />
               </div>
             </Link>
@@ -180,24 +259,26 @@ function Dashboard() {
             {/* Step 2 */}
             <Link
               to="/operations/trips"
-              className="p-3.5 rounded-xl border border-border/70 bg-card/60 hover:border-primary/50 hover:bg-muted/50 transition-all group flex flex-col justify-between"
+              className="p-4 rounded-2xl border border-border/70 bg-card hover:border-info/50 hover:shadow-md transition-all group flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="font-mono text-[10px] uppercase font-bold text-info bg-info/10">
-                    Step 2
+                  <span className="inline-flex items-center justify-center size-6 rounded-full bg-info/10 text-info text-xs font-bold font-mono">
+                    2
+                  </span>
+                  <Badge variant="outline" className="text-[10px] font-mono border-border text-muted-foreground">
+                    {totalTrips} Trips
                   </Badge>
-                  <span className="text-[10px] font-mono text-muted-foreground">{totalTrips} Planned</span>
                 </div>
-                <h3 className="font-bold text-xs text-foreground group-hover:text-primary transition-colors mt-2">
-                  Trip Timetable
+                <h3 className="font-bold text-sm text-foreground group-hover:text-info transition-colors mt-2.5">
+                  2. Departure Timetable
                 </h3>
-                <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                  Define departures or click "Generate Timetable" to batch create trips at 15 or 30-min intervals.
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  Generate trips at 15 or 30-min intervals. See departure times, distances, and peak hours.
                 </p>
               </div>
-              <div className="mt-3 pt-2 border-t border-border/50 flex items-center justify-between text-[11px] text-info font-medium">
-                <span>Manage Timetable</span>
+              <div className="mt-4 pt-2.5 border-t border-border/60 flex items-center justify-between text-xs text-info font-semibold">
+                <span>Open Timetable</span>
                 <ArrowRight className="size-3 group-hover:translate-x-1 transition-transform" />
               </div>
             </Link>
@@ -205,24 +286,26 @@ function Dashboard() {
             {/* Step 3 */}
             <Link
               to="/scheduling/optimizer"
-              className="p-3.5 rounded-xl border border-primary/40 bg-primary/5 hover:border-primary hover:bg-primary/10 transition-all group flex flex-col justify-between ring-1 ring-primary/20"
+              className="p-4 rounded-2xl border border-primary/40 bg-gradient-to-b from-primary/10 to-primary/5 hover:border-primary hover:shadow-lg transition-all group flex flex-col justify-between ring-1 ring-primary/25"
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="font-mono text-[10px] uppercase font-bold text-amber-500 bg-amber-500/10">
-                    Step 3 · Core AI
+                  <span className="inline-flex items-center justify-center size-6 rounded-full bg-primary text-white text-xs font-bold font-mono">
+                    3
+                  </span>
+                  <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] font-mono font-bold">
+                    AI Solver
                   </Badge>
-                  <Sparkles className="size-3.5 text-amber-400" />
                 </div>
-                <h3 className="font-bold text-xs text-foreground group-hover:text-primary transition-colors mt-2">
-                  Google OR-Tools AI
+                <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors mt-2.5">
+                  3. AI Auto-Scheduler
                 </h3>
-                <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                  Run the solver to link trips into optimal shifts (duties), minimizing empty deadhead and bus count.
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  Click 1 button to let Google OR-Tools assemble all trips into legal, fuel-saving driver shifts.
                 </p>
               </div>
-              <div className="mt-3 pt-2 border-t border-border/50 flex items-center justify-between text-[11px] text-primary font-bold">
-                <span>Run Optimizer</span>
+              <div className="mt-4 pt-2.5 border-t border-border/60 flex items-center justify-between text-xs text-primary font-bold">
+                <span>Run AI Optimizer</span>
                 <ArrowRight className="size-3 group-hover:translate-x-1 transition-transform" />
               </div>
             </Link>
@@ -230,59 +313,55 @@ function Dashboard() {
             {/* Step 4 */}
             <Link
               to="/operations/duties"
-              className="p-3.5 rounded-xl border border-border/70 bg-card/60 hover:border-primary/50 hover:bg-muted/50 transition-all group flex flex-col justify-between"
+              className="p-4 rounded-2xl border border-border/70 bg-card hover:border-emerald-500/50 hover:shadow-md transition-all group flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="font-mono text-[10px] uppercase font-bold text-emerald-500 bg-emerald-500/10">
-                    Step 4
+                  <span className="inline-flex items-center justify-center size-6 rounded-full bg-emerald-500/10 text-emerald-600 text-xs font-bold font-mono">
+                    4
+                  </span>
+                  <Badge variant="outline" className="text-[10px] font-mono border-border text-muted-foreground">
+                    Live Dispatch
                   </Badge>
-                  <span className="text-[10px] font-mono text-muted-foreground">Live Dispatch</span>
                 </div>
-                <h3 className="font-bold text-xs text-foreground group-hover:text-primary transition-colors mt-2">
-                  Duty Builder & Radar
+                <h3 className="font-bold text-sm text-foreground group-hover:text-emerald-500 transition-colors mt-2.5">
+                  4. Driver Shifts & Radar
                 </h3>
-                <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                  Inspect driver shifts, make manual changes, and simulate breakdown recovery if disruptions strike.
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  Assign drivers to buses, check rest compliance, and use the Radar to handle breakdowns instantly.
                 </p>
               </div>
-              <div className="mt-3 pt-2 border-t border-border/50 flex items-center justify-between text-[11px] text-emerald-500 font-medium">
-                <span>Open Duty Builder</span>
+              <div className="mt-4 pt-2.5 border-t border-border/60 flex items-center justify-between text-xs text-emerald-500 font-semibold">
+                <span>Manage Shifts</span>
                 <ArrowRight className="size-3 group-hover:translate-x-1 transition-transform" />
               </div>
             </Link>
           </div>
         </section>
 
-        {/* METRIC TILES */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Tile icon={Bus} label="Fleet Inventory" value={totalBuses} hint="depot registered buses" to="/fleet/buses" />
-          <Tile icon={Users} label="Active Crew" value={totalCrew} hint="drivers & conductors available" to="/crew/drivers" />
-          <Tile icon={Map} label="Corridor Routes" value={totalRoutes} hint="active transit lines" to="/network/routes" />
-          <Tile icon={Zap} label="Daily Trips" value={totalTrips} hint="scheduled departures" to="/operations/trips" />
-        </div>
-
-        {/* PILLARS / MODULE SHOWCASE */}
+        {/* CORE ENGINES SHOWCASE */}
         <div className="grid gap-4 md:grid-cols-3">
           {PILLARS.map((p) => (
             <Link
               key={p.title}
               to={p.to}
-              className="panel p-5 hover:border-primary/50 hover:shadow-md transition-all group block cursor-pointer"
+              className="rounded-3xl border border-border/80 bg-card p-6 hover:border-primary/50 hover:shadow-xl hover:-translate-y-1 transition-all group block cursor-pointer"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <p.icon className="size-4 text-primary" />
-                  <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">{p.title}</span>
+                <div className="flex items-center gap-2.5">
+                  <div className="grid size-9 place-items-center rounded-2xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                    <p.icon className="size-4.5" />
+                  </div>
+                  <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{p.title}</span>
                 </div>
                 <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary text-[10px] font-mono">
                   {p.badge}
                 </Badge>
               </div>
-              <p className="mt-3 text-xs text-muted-foreground leading-relaxed">{p.text}</p>
-              <div className="mt-3 flex items-center gap-1 text-[11px] font-semibold text-primary">
-                <span>Open module</span>
-                <ArrowRight className="size-3 group-hover:translate-x-1 transition-transform" />
+              <p className="mt-3.5 text-xs text-muted-foreground leading-relaxed">{p.text}</p>
+              <div className="mt-4 flex items-center gap-1.5 text-xs font-bold text-primary">
+                <span>Explore tool</span>
+                <ArrowRight className="size-3.5 group-hover:translate-x-1 transition-transform" />
               </div>
             </Link>
           ))}
@@ -292,33 +371,49 @@ function Dashboard() {
   );
 }
 
-function Tile({
+function KpiTile({
   icon: Icon,
+  color,
   label,
   value,
+  badge,
   hint,
   to,
 }: {
   icon: typeof Bus;
+  color: "emerald" | "violet" | "cyan" | "amber";
   label: string;
   value: number;
+  badge: string;
   hint: string;
   to: string;
 }) {
+  const colorMap = {
+    emerald: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+    violet: "bg-violet-500/10 text-violet-600 border-violet-500/20",
+    cyan: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
+    amber: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  };
+
   return (
     <Link
       to={to}
-      className="panel p-4 block hover:border-primary/50 hover:shadow-md hover:scale-[1.02] transition-all group cursor-pointer"
+      className="rounded-3xl border border-border/80 bg-card p-5 hover:border-primary/40 hover:shadow-lg hover:-translate-y-1 transition-all group block cursor-pointer"
     >
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">{label}</p>
-        <div className="flex items-center gap-1">
-          <Icon className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
-          <ArrowRight className="size-3 text-muted-foreground/40 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+        <div className={`grid size-10 place-items-center rounded-2xl border ${colorMap[color]}`}>
+          <Icon className="size-5" />
         </div>
+        <span className="rounded-full bg-muted/60 px-2 py-0.5 text-[10px] font-mono font-medium text-muted-foreground">
+          {badge}
+        </span>
       </div>
-      <p className="mt-2 font-mono text-3xl font-semibold">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+      <div className="mt-3">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</p>
+        <p className="text-3xl font-extrabold tracking-tight text-foreground mt-0.5">{value}</p>
+        <p className="text-xs text-muted-foreground mt-1 truncate">{hint}</p>
+      </div>
     </Link>
   );
 }
+

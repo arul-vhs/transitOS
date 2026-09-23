@@ -304,35 +304,60 @@ function BusesPage() {
       }
     >
       <div className="space-y-6">
-        {/* 1. Metrics Grid */}
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
-          <div className="panel p-4 flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Buses</p>
-            <p className="text-2xl font-bold mt-2 text-foreground">{totalBuses}</p>
+        {/* 1. Metrics Grid (Apple-Style Glass Cards with Semrush Accents) */}
+        <div className="grid gap-3.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+          <div className="rounded-2xl border border-border/80 bg-card p-4 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Total Fleet</span>
+              <Bus className="size-4 text-primary" />
+            </div>
+            <p className="text-3xl font-extrabold tracking-tight mt-2 text-foreground">{totalBuses}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Salem City Fleet</p>
           </div>
-          <div className="panel p-4 border-l-4 border-l-success flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Available</p>
-            <p className="text-2xl font-bold mt-2 text-success">{availableBuses}</p>
+
+          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Available</span>
+              <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            </div>
+            <p className="text-3xl font-extrabold tracking-tight mt-2 text-emerald-600 dark:text-emerald-400">{availableBuses}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Ready to dispatch</p>
           </div>
-          <div className="panel p-4 border-l-4 border-l-info flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Assigned</p>
-            <p className="text-2xl font-bold mt-2 text-info">{assignedBuses}</p>
+
+          <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">In Service</span>
+              <span className="size-2 rounded-full bg-cyan-500"></span>
+            </div>
+            <p className="text-3xl font-extrabold tracking-tight mt-2 text-cyan-600 dark:text-cyan-400">{inServiceBuses + assignedBuses}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">On road or assigned</p>
           </div>
-          <div className="panel p-4 border-l-4 border-l-primary flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">In Service</p>
-            <p className="text-2xl font-bold mt-2 text-primary">{inServiceBuses}</p>
+
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Maintenance</span>
+              <Wrench className="size-4 text-amber-500" />
+            </div>
+            <p className="text-3xl font-extrabold tracking-tight mt-2 text-amber-600 dark:text-amber-400">{maintenanceBuses}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">In workshop bays</p>
           </div>
-          <div className="panel p-4 border-l-4 border-l-warning flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Maintenance</p>
-            <p className="text-2xl font-bold mt-2 text-warning">{maintenanceBuses}</p>
+
+          <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider">Breakdown</span>
+              <AlertTriangle className="size-4 text-rose-500" />
+            </div>
+            <p className="text-3xl font-extrabold tracking-tight mt-2 text-rose-600 dark:text-rose-400">{breakdownBuses}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Needs recovery</p>
           </div>
-          <div className="panel p-4 border-l-4 border-l-destructive flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Breakdown</p>
-            <p className="text-2xl font-bold mt-2 text-destructive">{breakdownBuses}</p>
-          </div>
-          <div className="panel p-4 border-l-4 border-l-muted flex flex-col justify-between">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Out of Service</p>
-            <p className="text-2xl font-bold mt-2 text-muted-foreground">{outOfServiceBuses}</p>
+
+          <div className="rounded-2xl border border-border/70 bg-muted/30 p-4 flex flex-col justify-between shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Standby</span>
+              <span className="size-2 rounded-full bg-muted-foreground"></span>
+            </div>
+            <p className="text-3xl font-extrabold tracking-tight mt-2 text-muted-foreground">{outOfServiceBuses}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Depot reserve</p>
           </div>
         </div>
 
