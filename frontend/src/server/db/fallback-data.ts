@@ -69,10 +69,18 @@ export interface FallbackTrip {
   tenantId: string;
   routeId: string;
   tripNumber: string;
+  tripCode: string;
   direction: string;
   startMinutes: number;
   endMinutes: number;
+  startTime: number;
+  endTime: number;
+  durationMin: number;
+  distanceKm: string;
+  origin: string;
+  destination: string;
   status: string;
+  serviceDate: string;
   isSpecialService: boolean;
   route?: FallbackRoute;
   createdAt: string;
@@ -172,20 +180,35 @@ export const FALLBACK_ROUTES: FallbackRoute[] = (rawData.routes || []).map((r: a
   };
 });
 
-export const FALLBACK_TRIPS: FallbackTrip[] = (rawData.trips || []).map((t: any) => ({
-  id: t.id,
-  tenantId: t.tenant_id,
-  routeId: t.route_id,
-  tripNumber: t.trip_number,
-  direction: t.direction,
-  startMinutes: t.start_minutes,
-  endMinutes: t.end_minutes,
-  status: t.status,
-  isSpecialService: t.is_special_service,
-  route: FALLBACK_ROUTES.find((r) => r.id === t.route_id),
-  createdAt: t.created_at,
-  updatedAt: t.updated_at,
-}));
+export const FALLBACK_TRIPS: FallbackTrip[] = (rawData.trips || []).map((t: any) => {
+  const route = FALLBACK_ROUTES.find((r) => r.id === t.route_id);
+  const startTime = t.start_time ?? t.start_minutes ?? 360;
+  const endTime = t.end_time ?? t.end_minutes ?? (startTime + 30);
+  const tripCode = t.trip_code || t.trip_number || `TR-${t.id?.slice(0, 6)}`;
+
+  return {
+    id: t.id,
+    tenantId: t.tenant_id,
+    routeId: t.route_id,
+    tripNumber: tripCode,
+    tripCode,
+    direction: t.direction || "OUTBOUND",
+    startMinutes: startTime,
+    endMinutes: endTime,
+    startTime,
+    endTime,
+    durationMin: t.duration_min ?? (endTime - startTime),
+    distanceKm: t.distance_km || route?.distanceKm || "10.00",
+    origin: t.origin || route?.origin || "Salem Central",
+    destination: t.destination || route?.destination || "Destination Terminus",
+    status: t.status || "scheduled",
+    serviceDate: t.service_date || "25 Aug 2026",
+    isSpecialService: !!t.is_special_service,
+    route,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at,
+  };
+});
 
 const rawDutyTrips = rawData.duty_trips || [];
 

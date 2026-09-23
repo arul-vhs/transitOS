@@ -18,11 +18,31 @@ export interface SessionPayload {
 
 import { ROLE_PERMISSIONS, hasPermission } from "../lib/auth-shared";
 
+export const REAL_TENANT_ID = "6fcb73df-750e-4fe5-b0cb-456b119dcd64";
+
+export const OLD_USER_ID_MAP: Record<string, string> = {
+  "usr-demo-admin": "59c3c165-8fcd-4490-b126-c286ffa64700",
+  "usr-demo-scheduler": "dc693473-27dd-4c95-b892-9afd2d41db1b",
+  "usr-demo-planner": "1ceced7c-eb42-4cd3-9e25-ab8515ed03a1",
+  "usr-demo-depot": "6a271598-b1a5-4978-8cc8-75d10a2490c5",
+  "usr-demo-management": "361ca0b7-74c9-4809-9965-7e7b77999d09",
+  "usr-demo-platform": "e7ef4c67-51ea-4288-a845-d5b0f3f1f00b",
+};
+
 export function getSessionFromRequest(): SessionPayload | null {
   try {
     const token = getCookie(COOKIE_NAME);
     if (!token) return null;
-    return jwt.verify(token, SECRET) as SessionPayload;
+    const session = jwt.verify(token, SECRET) as SessionPayload;
+    if (session) {
+      if (!session.tenantId || session.tenantId === "ten-salem-transport" || session.tenantId.length < 30) {
+        session.tenantId = REAL_TENANT_ID;
+      }
+      if (session.userId && OLD_USER_ID_MAP[session.userId]) {
+        session.userId = OLD_USER_ID_MAP[session.userId];
+      }
+    }
+    return session;
   } catch {
     return null;
   }
@@ -30,61 +50,61 @@ export function getSessionFromRequest(): SessionPayload | null {
 
 const DEMO_ACCOUNTS: Record<string, { id: string; email: string; name: string; role: string; tenantId: string; tenantName: string; tenantSlug: string; depotName: string }> = {
   "admin@salemtransport.demo": {
-    id: "usr-demo-admin",
+    id: "59c3c165-8fcd-4490-b126-c286ffa64700",
     email: "admin@salemtransport.demo",
     name: "System Admin",
     role: "ORGANIZATION_ADMIN",
-    tenantId: "ten-salem-transport",
+    tenantId: REAL_TENANT_ID,
     tenantName: "Salem Transport Corporation",
     tenantSlug: "salem-transport",
     depotName: "Meyyanur Depot",
   },
   "scheduler@salemtransport.demo": {
-    id: "usr-demo-scheduler",
+    id: "dc693473-27dd-4c95-b892-9afd2d41db1b",
     email: "scheduler@salemtransport.demo",
     name: "Chief Scheduler",
     role: "SCHEDULER",
-    tenantId: "ten-salem-transport",
+    tenantId: REAL_TENANT_ID,
     tenantName: "Salem Transport Corporation",
     tenantSlug: "salem-transport",
     depotName: "Meyyanur Depot",
   },
   "planner@salemtransport.demo": {
-    id: "usr-demo-planner",
+    id: "1ceced7c-eb42-4cd3-9e25-ab8515ed03a1",
     email: "planner@salemtransport.demo",
     name: "Roster Planner",
     role: "ROUTE_PLANNER",
-    tenantId: "ten-salem-transport",
+    tenantId: REAL_TENANT_ID,
     tenantName: "Salem Transport Corporation",
     tenantSlug: "salem-transport",
     depotName: "Meyyanur Depot",
   },
   "depot@salemtransport.demo": {
-    id: "usr-demo-depot",
+    id: "6a271598-b1a5-4978-8cc8-75d10a2490c5",
     email: "depot@salemtransport.demo",
     name: "Depot Manager",
     role: "DEPOT_MANAGER",
-    tenantId: "ten-salem-transport",
+    tenantId: REAL_TENANT_ID,
     tenantName: "Salem Transport Corporation",
     tenantSlug: "salem-transport",
     depotName: "Meyyanur Depot",
   },
   "management@salemtransport.demo": {
-    id: "usr-demo-management",
+    id: "361ca0b7-74c9-4809-9965-7e7b77999d09",
     email: "management@salemtransport.demo",
     name: "Management Executive",
     role: "MANAGEMENT",
-    tenantId: "ten-salem-transport",
+    tenantId: REAL_TENANT_ID,
     tenantName: "Salem Transport Corporation",
     tenantSlug: "salem-transport",
     depotName: "Meyyanur Depot",
   },
   "platform@salemtransport.demo": {
-    id: "usr-demo-platform",
+    id: "e7ef4c67-51ea-4288-a845-d5b0f3f1f00b",
     email: "platform@salemtransport.demo",
     name: "Platform Admin",
     role: "PLATFORM_ADMIN",
-    tenantId: "ten-salem-transport",
+    tenantId: REAL_TENANT_ID,
     tenantName: "Salem Transport Corporation",
     tenantSlug: "salem-transport",
     depotName: "Meyyanur Depot",
@@ -98,10 +118,15 @@ export async function getCurrentUser() {
   const session = getSessionFromRequest();
   if (!session) return null;
 
+  const cleanTenantId = (!session.tenantId || session.tenantId === "ten-salem-transport" || session.tenantId.length < 30)
+    ? REAL_TENANT_ID
+    : session.tenantId;
+  const cleanUserId = OLD_USER_ID_MAP[session.userId] || session.userId;
+
   try {
     // Retrieve fresh user and tenant data from database if reachable
     const user = await db.query.users.findFirst({
-      where: eq(users.id, session.userId),
+      where: eq(users.id, cleanUserId),
       with: {
         tenant: true
       }
@@ -130,16 +155,16 @@ export async function getCurrentUser() {
 
   // Resilient fallback using session payload and demo directory
   const demo = Object.values(DEMO_ACCOUNTS).find(
-    (u) => u.id === session.userId || u.email.toLowerCase() === session.email?.toLowerCase()
+    (u) => u.id === cleanUserId || u.email.toLowerCase() === session.email?.toLowerCase()
   );
   if (demo) return demo;
 
   return {
-    id: session.userId,
+    id: cleanUserId,
     email: session.email,
     name: session.name,
     role: session.role,
-    tenantId: session.tenantId,
+    tenantId: cleanTenantId,
     tenantName: "Salem Transport Corporation",
     tenantSlug: "salem-transport",
     depotName: "Meyyanur Depot",
