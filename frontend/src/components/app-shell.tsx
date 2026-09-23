@@ -17,10 +17,17 @@ import {
   AlertTriangle,
   Radio,
   Sparkles,
+  HelpCircle,
+  BookOpen,
+  Lightbulb,
+  Compass,
+  Workflow,
+  ExternalLink,
+  ShieldCheck,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -222,6 +229,7 @@ export function AppShell({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const router = useRouter();
   const context = Route.useRouteContext();
   const user = context?.user;
@@ -272,8 +280,163 @@ export function AppShell({
             </div>
 
             {/* Header Right Actions */}
-            <div className="flex shrink-0 items-center gap-3">
+            <div className="flex shrink-0 items-center gap-2.5">
               {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+
+              {/* Global Quick Guide & Help Trigger */}
+              <Sheet open={helpOpen} onOpenChange={setHelpOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-xs font-semibold cursor-pointer shadow-2xs"
+                    title="Open TransitOS Operations Guide & Glossary"
+                  >
+                    <HelpCircle className="size-3.5 text-primary" />
+                    <span className="hidden md:inline">Quick Guide</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto p-6 space-y-6">
+                  <SheetHeader className="text-left space-y-2 border-b border-border/70 pb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="grid size-8 place-items-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+                        <BookOpen className="size-4" />
+                      </div>
+                      <div>
+                        <SheetTitle className="text-base font-bold text-foreground">TransitOS Operations Guide</SheetTitle>
+                        <SheetDescription className="text-xs text-muted-foreground">
+                          Understand how transit features connect and what every operational term means.
+                        </SheetDescription>
+                      </div>
+                    </div>
+                  </SheetHeader>
+
+                  {/* Section 1: 5-Step Operational Lifecycle */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+                      <Workflow className="size-4" />
+                      <span>The 5-Step Operational Flow</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Follow this recommended path to take your depot from raw timetable data to live on-time dispatch:
+                    </p>
+
+                    <div className="space-y-2.5">
+                      {[
+                        {
+                          step: "1",
+                          title: "Corridors & Fleet",
+                          desc: "Register routes, stops, bus inventory, and driver rosters with legal rest limits.",
+                          to: "/network/routes",
+                          badge: "Setup",
+                        },
+                        {
+                          step: "2",
+                          title: "Trip Timetable",
+                          desc: "Define scheduled departures. Use 'Generate Timetable' to create trips at 15/30-min intervals.",
+                          to: "/operations/trips",
+                          badge: "Planning",
+                        },
+                        {
+                          step: "3",
+                          title: "AI Schedule Optimizer",
+                          desc: "Run Google OR-Tools to mathematically chain trips into optimal shifts (duties) and bus assignments.",
+                          to: "/scheduling/optimizer",
+                          badge: "AI Optimization",
+                        },
+                        {
+                          step: "4",
+                          title: "Duty Dispatch & Today",
+                          desc: "Review crew shifts, fine-tune manual assignments, and monitor live vehicles on duty.",
+                          to: "/operations/duties",
+                          badge: "Dispatch",
+                        },
+                        {
+                          step: "5",
+                          title: "Disruption Radar",
+                          desc: "When a bus breaks down or delays occur, generate instant recovery options with zero guesswork.",
+                          to: "/operations/incidents",
+                          badge: "Recovery",
+                        },
+                      ].map((item) => (
+                        <Link
+                          key={item.step}
+                          to={item.to}
+                          onClick={() => setHelpOpen(false)}
+                          className="group flex items-start gap-3 p-3 rounded-xl border border-border/70 bg-card/60 hover:border-primary/50 hover:bg-muted/50 transition-all cursor-pointer"
+                        >
+                          <div className="size-6 rounded-full bg-primary/10 text-primary font-bold text-xs grid place-items-center shrink-0 font-mono group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                            {item.step}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">{item.title}</p>
+                              <Badge variant="outline" className="text-[9px] font-mono px-1 py-0 text-muted-foreground border-border/80">
+                                {item.badge}
+                              </Badge>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{item.desc}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Section 2: Transit Terms Simplified */}
+                  <div className="space-y-3 pt-2 border-t border-border/70">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+                      <Lightbulb className="size-4" />
+                      <span>Transit Terms Simplified</span>
+                    </div>
+
+                    <div className="grid gap-2 text-xs">
+                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/30">
+                        <span className="font-bold text-foreground">Trip: </span>
+                        <span className="text-muted-foreground">A single one-way bus journey between an origin and destination at a fixed time.</span>
+                      </div>
+                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/30">
+                        <span className="font-bold text-foreground">Duty (Shift): </span>
+                        <span className="text-muted-foreground">A full work shift for a crew member or bus, packaging multiple trips and required rest pauses.</span>
+                      </div>
+                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/30">
+                        <span className="font-bold text-foreground">Deadhead: </span>
+                        <span className="text-muted-foreground">Driving an empty bus from depot to the first stop. The AI optimizer minimizes this to save fuel.</span>
+                      </div>
+                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/30">
+                        <span className="font-bold text-foreground">Continuous Driving: </span>
+                        <span className="text-muted-foreground">Motor Vehicle Act rule limiting a driver to 240 mins (4 hrs) maximum continuous driving before a break.</span>
+                      </div>
+                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/30">
+                        <span className="font-bold text-foreground">Spreadover: </span>
+                        <span className="text-muted-foreground">Total elapsed time from driver clock-in to clock-out, including split-shift idle periods.</span>
+                      </div>
+                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/30">
+                        <span className="font-bold text-foreground">Linked vs Unlinked: </span>
+                        <span className="text-muted-foreground">Linked pairs a driver with one bus all day. Unlinked allows relief drivers to swap buses at major terminals.</span>
+                      </div>
+                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/30">
+                        <span className="font-bold text-foreground">Google OR-Tools: </span>
+                        <span className="text-muted-foreground">An open-source mathematical solver by Google that finds the highest-quality schedule out of millions of combinations.</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 3: Quick Jump Shortcuts */}
+                  <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <ShieldCheck className="size-4 text-emerald-500" /> Multi-Tenant ISO Secure
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setHelpOpen(false)}
+                      className="text-xs h-7 text-primary hover:text-primary hover:bg-primary/10"
+                    >
+                      Close Guide
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
 
               {user && user.name && user.role ? (
                 <DropdownMenu>
