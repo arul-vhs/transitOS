@@ -9,17 +9,19 @@ if (typeof window !== "undefined") {
 
 const connectionString = process.env.DATABASE_URL;
 
-if (!connectionString && process.env.NODE_ENV === "production") {
-  throw new Error("DATABASE_URL environment variable is required in production!");
-}
-
 // Fallback to local postgres for development/seeding if env is empty
 const dbUrl = connectionString || "postgres://postgres:1234@localhost:5432/transitos";
 
-// Create pg client pool
-const pool = new pg.Pool({
-  connectionString: dbUrl,
-});
+// Create pg client pool with timeout so edge environments do not block if db is absent
+let pool: pg.Pool;
+try {
+  pool = new pg.Pool({
+    connectionString: dbUrl,
+    connectionTimeoutMillis: 2000,
+  });
+} catch {
+  pool = new pg.Pool({ connectionTimeoutMillis: 2000 });
+}
 
 export const db = drizzle(pool, { schema });
 
