@@ -33,6 +33,7 @@ import {
   Sliders,
   Route as RouteIcon,
   Map,
+  Workflow,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -426,15 +427,41 @@ function DutiesPage() {
           </div>
         </div>
 
+        {/* 3-STEP VISUAL WORKFLOW BANNER */}
+        <div className="rounded-xl border border-primary/20 bg-gradient-to-r from-primary/10 via-background to-primary/5 p-3.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <div className="grid size-7 place-items-center rounded-lg bg-primary/15 text-primary">
+              <Workflow className="size-4" />
+            </div>
+            <div>
+              <span className="font-bold text-foreground">How Duty Builder Works: </span>
+              <span className="text-muted-foreground">Follow the 3 numbered columns below to assemble driver shifts and attach trips.</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-[11px] font-medium bg-card/60 px-3 py-1.5 rounded-lg border border-border/60">
+            <span className="font-bold text-primary">Step 1:</span> Choose Duty
+            <ArrowRight className="size-3 text-muted-foreground" />
+            <span className="font-bold text-primary">Step 2:</span> Assign Resources
+            <ArrowRight className="size-3 text-muted-foreground" />
+            <span className="font-bold text-primary">Step 3:</span> Add Trips
+          </div>
+        </div>
+
         {/* 3-COLUMN WORKSPACE: DUTY LIST | VISUAL CANVAS | UNASSIGNED POOL */}
         <div className="grid gap-6 lg:grid-cols-12">
           {/* LEFT COLUMN: DUTIES ROSTER */}
           <div className="glass-panel p-3.5 lg:col-span-3 space-y-3 flex flex-col h-[740px]">
-            <div className="flex items-center justify-between px-1">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Duties List ({filteredDuties.length})
-              </h3>
-              <Badge variant="secondary" className="text-[10px] font-mono">
+            <div className="flex items-center justify-between px-1 border-b border-border/50 pb-2">
+              <div className="flex items-center gap-1.5">
+                <Badge variant="secondary" className="font-mono text-[9px] font-bold text-primary bg-primary/15 px-1 py-0">
+                  Step 1
+                </Badge>
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                  Select Duty ({filteredDuties.length})
+                </h3>
+              </div>
+              <Badge variant="outline" className="text-[10px] font-mono border-border/80">
                 {serviceDate}
               </Badge>
             </div>
@@ -524,6 +551,14 @@ function DutiesPage() {
                 {/* Duty Header & Quick Actions */}
                 <div className="flex items-start justify-between border-b border-border/70 pb-4">
                   <div>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Badge variant="secondary" className="font-mono text-[9px] font-bold text-primary bg-primary/15 px-1 py-0">
+                        Step 2
+                      </Badge>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        Assign Vehicle & Crew Resources
+                      </span>
+                    </div>
                     <div className="flex items-center gap-2.5">
                       <h2 className="text-xl font-bold tracking-tight text-foreground font-mono">{selectedDuty.dutyCode}</h2>
                       <Badge
@@ -776,21 +811,35 @@ function DutiesPage() {
                 </div>
               </div>
             ) : (
-              <div className="py-32 text-center text-muted-foreground flex-1 flex flex-col items-center justify-center">
-                <CalendarClock className="size-10 text-muted-foreground/40 mb-3" />
-                <h4 className="text-sm font-semibold text-foreground">No Duty Selected</h4>
-                <p className="text-xs text-muted-foreground mt-1">Select a duty from the roster on the left to edit trips and crew.</p>
+              <div className="py-28 text-center text-muted-foreground flex-1 flex flex-col items-center justify-center p-6 space-y-3">
+                <div className="size-14 rounded-2xl bg-primary/10 text-primary grid place-items-center mb-1 border border-primary/20">
+                  <CalendarClock className="size-7" />
+                </div>
+                <h4 className="text-base font-bold text-foreground">Step 2: Select a Duty Block</h4>
+                <p className="text-xs text-muted-foreground max-w-sm leading-relaxed">
+                  Click any duty from <strong>Step 1</strong> on the left, or create a new shift to assign buses, drivers, and attach departures.
+                </p>
+                {canModify && (
+                  <Button size="sm" onClick={() => setIsCreateOpen(true)} className="text-xs mt-2 bg-primary text-primary-foreground gap-1.5 shadow-sm">
+                    <Plus className="size-3.5" /> Create New Duty Block
+                  </Button>
+                )}
               </div>
             )}
           </div>
 
           {/* RIGHT COLUMN: UNASSIGNED TRIPS POOL */}
           <div className="glass-panel p-3.5 lg:col-span-3 space-y-3 flex flex-col h-[740px]">
-            <div className="flex items-center justify-between px-1">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Unassigned Pool ({filteredUnassignedTrips.length})
-              </h3>
-              <Badge variant="secondary" className="text-[10px] font-mono">
+            <div className="flex items-center justify-between px-1 border-b border-border/50 pb-2">
+              <div className="flex items-center gap-1.5">
+                <Badge variant="secondary" className="font-mono text-[9px] font-bold text-warning bg-warning/15 px-1 py-0">
+                  Step 3
+                </Badge>
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                  Add Trips ({filteredUnassignedTrips.length})
+                </h3>
+              </div>
+              <Badge variant="outline" className="text-[10px] font-mono border-border/80">
                 {allTripsList.length} Total
               </Badge>
             </div>

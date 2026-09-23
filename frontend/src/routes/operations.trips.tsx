@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -15,6 +15,10 @@ import {
   Ban,
   Calendar,
   Clock,
+  Lightbulb,
+  ArrowRight,
+  Info,
+  CheckCircle2,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -84,6 +88,7 @@ function TripsPage() {
   const [routeId, setRouteId] = useState("all");
   const [status, setStatus] = useState("all");
   const [direction, setDirection] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Dialog States
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -213,9 +218,60 @@ function TripsPage() {
       }
     >
       <div className="space-y-6">
+        {/* Context Guidance Card */}
+        <div className="rounded-xl border border-primary/25 bg-gradient-to-r from-primary/10 via-background to-primary/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-start gap-3">
+            <div className="grid size-8 place-items-center rounded-lg bg-primary/15 text-primary shrink-0 mt-0.5">
+              <Lightbulb className="size-4" />
+            </div>
+            <div className="text-xs">
+              <p className="font-bold text-foreground flex items-center gap-1.5">
+                <span>Timetable Management Guide</span>
+                <Badge variant="outline" className="text-[9px] font-mono border-primary/30 text-primary">
+                  Step 2 of 4
+                </Badge>
+              </p>
+              <p className="text-muted-foreground mt-0.5 leading-relaxed">
+                A <strong>Trip</strong> is a single one-way bus journey at a scheduled departure time. Once trips are listed here, open the <strong>AI Schedule Optimizer</strong> to group them into driver shifts (duties) and bus rosters with zero legal rest violations.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {canModify && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsGeneratorOpen(true)}
+                className="text-xs h-8 border-primary/30 text-primary bg-primary/5 hover:bg-primary/15"
+              >
+                <Sparkles className="mr-1.5 size-3.5" />
+                Generate Timetable
+              </Button>
+            )}
+            <Button asChild size="sm" className="text-xs h-8 gap-1.5 bg-primary text-primary-foreground">
+              <Link to="/scheduling/optimizer">
+                <span>Run AI Optimizer</span>
+                <ArrowRight className="size-3" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+
         {/* 1. Filter Bar */}
         <div className="panel p-4 flex flex-wrap gap-4 items-center justify-between">
           <div className="flex flex-1 flex-wrap gap-3 items-center min-w-[280px]">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[180px] max-w-xs">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search trip code or corridor..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 bg-background/50 h-9 text-xs"
+              />
+            </div>
+
             {/* Service Date Input */}
             <div className="flex items-center gap-2">
               <Calendar className="size-4 text-muted-foreground shrink-0" />
@@ -224,7 +280,7 @@ function TripsPage() {
                 placeholder="25 Aug 2026"
                 value={serviceDate}
                 onChange={(e) => setServiceDate(e.target.value)}
-                className="w-[140px] bg-background/50 h-9 text-sm"
+                className="w-[140px] bg-background/50 h-9 text-xs font-mono"
               />
             </div>
 
@@ -232,7 +288,7 @@ function TripsPage() {
             <div className="flex items-center gap-2">
               <Compass className="size-4 text-muted-foreground shrink-0" />
               <Select value={routeId} onValueChange={setRouteId}>
-                <SelectTrigger className="w-[180px] bg-background/50">
+                <SelectTrigger className="w-[180px] bg-background/50 h-9 text-xs">
                   <SelectValue placeholder="All Routes" />
                 </SelectTrigger>
                 <SelectContent>
@@ -250,7 +306,7 @@ function TripsPage() {
             <div className="flex items-center gap-2">
               <Filter className="size-4 text-muted-foreground shrink-0" />
               <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="w-[130px] bg-background/50">
+                <SelectTrigger className="w-[130px] bg-background/50 h-9 text-xs">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -266,7 +322,7 @@ function TripsPage() {
             {/* Direction Select */}
             <div className="flex items-center gap-2">
               <Select value={direction} onValueChange={setDirection}>
-                <SelectTrigger className="w-[140px] bg-background/50">
+                <SelectTrigger className="w-[130px] bg-background/50 h-9 text-xs">
                   <SelectValue placeholder="Direction" />
                 </SelectTrigger>
                 <SelectContent>
@@ -277,6 +333,18 @@ function TripsPage() {
               </Select>
             </div>
           </div>
+
+          <Badge variant="outline" className="font-mono text-xs border-primary/30 text-primary">
+            {tripsList.filter((t) => {
+              if (!searchQuery.trim()) return true;
+              const q = searchQuery.toLowerCase();
+              return (
+                t.tripCode?.toLowerCase().includes(q) ||
+                t.routeCode?.toLowerCase().includes(q) ||
+                t.routeName?.toLowerCase().includes(q)
+              );
+            }).length} Trips Displayed
+          </Badge>
         </div>
 
         {/* 2. Main Trips Table */}
@@ -304,7 +372,17 @@ function TripsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tripsList.map((t) => (
+                {tripsList
+                  .filter((t) => {
+                    if (!searchQuery.trim()) return true;
+                    const q = searchQuery.toLowerCase();
+                    return (
+                      t.tripCode?.toLowerCase().includes(q) ||
+                      t.routeCode?.toLowerCase().includes(q) ||
+                      t.routeName?.toLowerCase().includes(q)
+                    );
+                  })
+                  .map((t) => (
                   <TableRow key={t.id} className={t.status === "cancelled" ? "opacity-60 bg-muted/5" : ""}>
                     <TableCell className="font-mono font-bold text-primary">{t.tripCode}</TableCell>
                     <TableCell className="font-semibold text-xs">{t.routeCode}</TableCell>
@@ -497,6 +575,39 @@ function TripsPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Live Calculation Preview Box */}
+              {(() => {
+                const startM = parseTimeToMinutes(genStartTime);
+                const endM = parseTimeToMinutes(genEndTime);
+                const freqM = Math.max(5, Number(genFrequency) || 30);
+                const estTrips = startM < endM ? Math.floor((endM - startM) / freqM) + 1 : 0;
+                const durationHours = startM < endM ? ((endM - startM) / 60).toFixed(1) : "0";
+                const selectedRouteObj = routesList.find((r) => r.id === genRouteId);
+
+                return (
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between text-primary font-bold">
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="size-3.5 text-primary" />
+                        <span>Generator Live Preview</span>
+                      </span>
+                      <Badge variant="outline" className="font-mono text-[10px] border-primary/40 text-primary bg-primary/10">
+                        ~{estTrips} Trips to Create
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      Corridor: <strong className="text-foreground">{selectedRouteObj ? `${selectedRouteObj.code} (${selectedRouteObj.name})` : "Selected Route"}</strong> ({genDirection})
+                    </p>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      Frequency: Every <strong className="text-foreground">{freqM} minutes</strong> across a <strong className="text-foreground">{durationHours} hr</strong> service window ({genStartTime} to {genEndTime}).
+                    </p>
+                    <p className="text-[10px] text-primary/80 italic pt-1 border-t border-primary/20">
+                      💡 Tip: Peak traffic headway is typically 15-20 min; off-peak is 30-45 min.
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsGeneratorOpen(false)}>

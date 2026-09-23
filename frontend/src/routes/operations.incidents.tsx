@@ -244,21 +244,55 @@ function IncidentsPage() {
         )
       }
     >
-      <div className="grid gap-6 lg:grid-cols-12">
-        {/* Left Column: Incidents Ticker list */}
-        <div className="lg:col-span-4 space-y-4">
-          <section className="glass-panel p-4 space-y-3 flex flex-col h-[740px]">
-            <div className="flex items-center justify-between border-b border-border/60 pb-2.5 px-1">
-              <div className="flex items-center gap-2">
-                <Radio className="size-4 text-destructive animate-pulse" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Active Incidents ({incidentsList.length})
-                </h3>
-              </div>
-              <Badge variant="outline" className="text-[10px] font-mono">
-                {DEFAULT_DATE}
-              </Badge>
+      <div className="space-y-6">
+        {/* 2-STEP DISRUPTION RECOVERY BANNER */}
+        <div className="rounded-xl border border-destructive/25 bg-gradient-to-r from-destructive/10 via-background to-primary/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-2xs">
+          <div className="flex items-start gap-3">
+            <div className="grid size-8 place-items-center rounded-lg bg-destructive/15 text-destructive shrink-0 mt-0.5">
+              <AlertTriangle className="size-4" />
             </div>
+            <div>
+              <p className="font-bold text-foreground flex items-center gap-1.5">
+                <span>Disruption Recovery Workflow</span>
+                <Badge variant="outline" className="text-[9px] font-mono border-destructive/40 text-destructive bg-destructive/10">
+                  Incident Radar
+                </Badge>
+              </p>
+              <p className="text-muted-foreground mt-0.5 leading-relaxed">
+                <strong>Step 1:</strong> Log or select an active breakdown. ➔ <strong>Step 2:</strong> TransitOS evaluates cascade impacts across all downline trips and computes automated recovery options (short-turns, vehicle swaps, or deadhead injection).
+              </p>
+            </div>
+          </div>
+
+          {canGenerate && (
+            <Button
+              onClick={() => setShowReportDialog(true)}
+              size="sm"
+              className="shrink-0 bg-destructive text-destructive-foreground font-semibold shadow-md shadow-destructive/20 text-xs hover:scale-[1.02] transition-all gap-1.5"
+            >
+              <Plus className="size-3.5" />
+              <span>Report Disruption</span>
+            </Button>
+          )}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-12">
+          {/* Left Column: Incidents Ticker list */}
+          <div className="lg:col-span-4 space-y-4">
+            <section className="glass-panel p-4 space-y-3 flex flex-col h-[740px]">
+              <div className="flex items-center justify-between border-b border-border/60 pb-2.5 px-1">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="font-mono text-[9px] font-bold text-destructive bg-destructive/15 px-1 py-0">
+                    Step 1
+                  </Badge>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                    Active Disruptions ({incidentsList.length})
+                  </h3>
+                </div>
+                <Badge variant="outline" className="text-[10px] font-mono">
+                  {DEFAULT_DATE}
+                </Badge>
+              </div>
 
             {listLoading ? (
               <div className="py-20 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2 flex-1">
@@ -480,8 +514,15 @@ function IncidentsPage() {
                 <section className="glass-panel p-5 space-y-4">
                   <div className="flex items-center justify-between border-b border-border/60 pb-3">
                     <div>
-                      <h3 className="text-sm font-bold tracking-tight text-foreground">Algorithmic Recovery Options</h3>
-                      <p className="text-xs text-muted-foreground">Side-by-side comparison of candidate reschedule plans</p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="font-mono text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 px-1 py-0">
+                          Step 2
+                        </Badge>
+                        <h3 className="text-sm font-bold tracking-tight text-foreground">Algorithmic Recovery Options</h3>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Compare options and click <strong>Approve & Dispatch</strong> to apply the selected solution live.
+                      </p>
                     </div>
                     <Badge variant="outline" className="font-mono text-xs text-primary border-primary/30">
                       {proposals.length} Proposals Generated
@@ -497,23 +538,33 @@ function IncidentsPage() {
                           className={cn(
                             "p-4 rounded-xl border flex flex-col justify-between relative transition-all duration-150",
                             isRecommended
-                              ? "border-emerald-500/50 bg-emerald-500/5 shadow-md shadow-emerald-500/5"
-                              : "border-border/70 bg-card/60"
+                              ? "border-emerald-500/50 bg-emerald-500/5 shadow-md shadow-emerald-500/5 ring-1 ring-emerald-500/30"
+                              : "border-border/70 bg-card/60 hover:border-border"
                           )}
                         >
-                          {isRecommended && (
-                            <Badge className="absolute top-2.5 right-2.5 bg-emerald-500 text-white hover:bg-emerald-500 text-[9px] font-mono font-bold px-1.5 py-0">
-                              Recommended
-                            </Badge>
-                          )}
                           <div className="space-y-3">
-                            <div>
-                              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
-                                Strategy Option {prop.proposalNumber}
-                              </p>
-                              <p className="text-xl font-bold font-mono mt-1 text-primary">
-                                Score: {prop.objectiveScore}
-                              </p>
+                            <div className="flex items-start justify-between gap-1">
+                              <div>
+                                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
+                                  Option {prop.proposalNumber}
+                                </p>
+                                <p className="text-lg font-bold font-mono mt-0.5 text-primary">
+                                  Score: {prop.objectiveScore}
+                                </p>
+                              </div>
+                              {isRecommended ? (
+                                <Badge className="bg-emerald-600 text-white hover:bg-emerald-600 text-[9px] font-mono font-bold px-1.5 py-0.5">
+                                  Recommended
+                                </Badge>
+                              ) : prop.cancellations === 0 ? (
+                                <Badge variant="outline" className="text-[9px] font-mono text-emerald-600 border-emerald-500/40 px-1 py-0">
+                                  0 Cancellations
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[9px] font-mono text-muted-foreground px-1 py-0">
+                                  Alternative
+                                </Badge>
+                              )}
                             </div>
 
                             <div className="space-y-1.5 text-xs border-y border-border/60 py-2.5 my-2 font-mono">
@@ -523,7 +574,9 @@ function IncidentsPage() {
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">Cancellations:</span>
-                                <span className="font-bold text-destructive">{prop.cancellations}</span>
+                                <span className={cn("font-bold", prop.cancellations > 0 ? "text-destructive" : "text-emerald-500")}>
+                                  {prop.cancellations}
+                                </span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">Relief Handovers:</span>
@@ -539,7 +592,7 @@ function IncidentsPage() {
                               </div>
                             </div>
 
-                            <p className="text-[11px] text-muted-foreground leading-relaxed italic">
+                            <p className="text-[11px] text-muted-foreground leading-relaxed italic bg-muted/30 p-2 rounded-lg border border-border/50">
                               "{prop.explanation}"
                             </p>
                           </div>
@@ -550,7 +603,7 @@ function IncidentsPage() {
                                 onClick={() => approveProposalMutation.mutate({ proposalId: prop.id })}
                                 disabled={approveProposalMutation.isPending}
                                 className={cn(
-                                  "w-full text-xs font-semibold h-8.5",
+                                  "w-full text-xs font-semibold h-8.5 cursor-pointer",
                                   isRecommended ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-500/20" : ""
                                 )}
                                 variant={isRecommended ? "default" : "outline"}
@@ -573,6 +626,7 @@ function IncidentsPage() {
           )}
         </div>
       </div>
+    </div>
 
       {/* REPORT DISRUPTION MODAL */}
       <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>

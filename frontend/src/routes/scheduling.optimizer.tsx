@@ -282,18 +282,60 @@ function OptimizerPage() {
       }
     >
       <div className="space-y-6">
+        {/* 3-STEP WIZARD PROGRESS HEADER */}
+        <section className="glass-panel p-4 border-primary/25 bg-gradient-to-r from-primary/10 via-background to-primary/5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="grid size-8 place-items-center rounded-xl bg-primary/15 text-primary border border-primary/20">
+                <Sparkles className="size-4 text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
+                  <span>Google OR-Tools AI Schedule Optimizer</span>
+                  <Badge variant="outline" className="border-primary/30 text-primary text-[10px] font-mono">
+                    3-Step Process
+                  </Badge>
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Follow this automated pipeline to generate legally compliant, cost-optimized bus and crew shifts.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs">
+              <div className={cn("px-2.5 py-1 rounded-lg border text-[11px] font-semibold flex items-center gap-1.5", !proposal && !isSolving ? "border-primary bg-primary/15 text-primary font-bold shadow-xs" : "border-border/60 text-muted-foreground")}>
+                <span className="size-4 rounded-full bg-primary/20 grid place-items-center text-[10px] font-mono">1</span>
+                <span>Configure Strategy</span>
+              </div>
+              <ArrowRight className="size-3 text-muted-foreground/60" />
+              <div className={cn("px-2.5 py-1 rounded-lg border text-[11px] font-semibold flex items-center gap-1.5", isSolving ? "border-primary bg-primary/15 text-primary font-bold animate-pulse" : "border-border/60 text-muted-foreground")}>
+                <span className="size-4 rounded-full bg-primary/20 grid place-items-center text-[10px] font-mono">2</span>
+                <span>Run Solver Engine</span>
+              </div>
+              <ArrowRight className="size-3 text-muted-foreground/60" />
+              <div className={cn("px-2.5 py-1 rounded-lg border text-[11px] font-semibold flex items-center gap-1.5", proposal ? "border-success bg-success/15 text-success font-bold" : "border-border/60 text-muted-foreground")}>
+                <span className="size-4 rounded-full bg-success/20 grid place-items-center text-[10px] font-mono">3</span>
+                <span>Review & Publish</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* TOP COMMAND SECTION */}
         <div className="grid gap-6 lg:grid-cols-12">
           {/* RUN CONFIGURATION CARD */}
-          <section className="glass-panel p-5 lg:col-span-4 space-y-4 relative overflow-hidden">
+          <section className="glass-panel p-5 lg:col-span-5 space-y-4 relative overflow-hidden">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <div className="flex items-center gap-2">
                 <div className="grid size-7 place-items-center rounded-lg bg-primary/10 text-primary">
-                  <Sparkles className="size-4" />
+                  <Settings className="size-4" />
                 </div>
-                <h3 className="text-sm font-bold tracking-tight text-foreground">Solver Configuration</h3>
+                <div>
+                  <h3 className="text-sm font-bold tracking-tight text-foreground">Step 1: Solver Configuration</h3>
+                  <p className="text-[11px] text-muted-foreground">Select date & optimization strategy</p>
+                </div>
               </div>
-              <Badge variant="secondary" className="font-mono text-[10px] uppercase">
+              <Badge variant="secondary" className="font-mono text-[10px] uppercase font-bold text-primary bg-primary/10">
                 {mode}
               </Badge>
             </div>
@@ -308,53 +350,79 @@ function OptimizerPage() {
                   type="text"
                   value={serviceDate}
                   onChange={(e) => setServiceDate(e.target.value)}
-                  className="bg-background/60 font-mono text-sm h-9 border-border/80"
+                  className="bg-background/60 font-mono text-xs h-9 border-border/80"
                   placeholder="25 Aug 2026"
                 />
               </div>
 
-              {/* Mode Selector Radio-style Buttons */}
-              <div className="space-y-1.5">
+              {/* Mode Selector Radio-style Buttons with Detailed Descriptions */}
+              <div className="space-y-2">
                 <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
                   <Layers className="size-3.5 text-primary" /> Duty Strategy Mode
                 </Label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid gap-2">
                   {[
-                    { id: "HYBRID", label: "Hybrid", desc: "Peak linked, off-peak relief" },
-                    { id: "LINKED", label: "Linked", desc: "Fixed bus + crew" },
-                    { id: "UNLINKED", label: "Unlinked", desc: "Flexible handovers" },
+                    {
+                      id: "HYBRID",
+                      label: "Hybrid Strategy (Recommended)",
+                      desc: "Keeps drivers with their bus during rush hours, allows lunch/relief handovers during off-peak lull.",
+                      badge: "Balanced & Popular",
+                    },
+                    {
+                      id: "LINKED",
+                      label: "Linked Strategy (Simple)",
+                      desc: "One driver remains on one bus for their entire shift. Simplest crew management, needs more buses.",
+                      badge: "1 Driver = 1 Bus",
+                    },
+                    {
+                      id: "UNLINKED",
+                      label: "Unlinked Strategy (Max Fleet Efficiency)",
+                      desc: "Drivers swap buses at major terminals. Minimizes idle buses and deadhead fuel to the absolute minimum.",
+                      badge: "Flexible Swaps",
+                    },
                   ].map((item) => (
                     <button
                       key={item.id}
                       type="button"
                       onClick={() => setMode(item.id as any)}
                       className={cn(
-                        "flex flex-col items-center justify-center p-2.5 rounded-lg border text-center transition-all duration-150 cursor-pointer",
+                        "flex flex-col text-left p-2.5 rounded-lg border transition-all duration-150 cursor-pointer",
                         mode === item.id
-                          ? "border-primary bg-primary/10 text-primary font-bold shadow-xs ring-1 ring-primary/30"
+                          ? "border-primary bg-primary/10 text-foreground font-medium shadow-xs ring-1 ring-primary/30"
                           : "border-border/70 bg-background/50 hover:bg-muted/60 text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      <span className="text-xs font-semibold">{item.label}</span>
-                      <span className="text-[9px] text-muted-foreground leading-tight mt-0.5">{item.desc.split(" ")[0]}</span>
+                      <div className="flex items-center justify-between">
+                        <span className={cn("text-xs font-bold", mode === item.id ? "text-primary" : "text-foreground")}>
+                          {item.label}
+                        </span>
+                        <Badge variant="outline" className="text-[9px] font-mono px-1 py-0">
+                          {item.badge}
+                        </Badge>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground mt-1 leading-snug">{item.desc}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Constraint rules list */}
+              {/* Constraint rules list with plain English */}
               <div className="rounded-lg bg-secondary/30 border border-border/60 p-3 space-y-1.5 text-[11px] text-muted-foreground">
-                <div className="flex items-center justify-between">
+                <div className="font-semibold text-foreground text-xs pb-1 border-b border-border/40 flex items-center justify-between">
+                  <span>Enforced Transit Rules:</span>
+                  <span className="text-[10px] text-primary font-mono font-normal">Motor Vehicle Act</span>
+                </div>
+                <div className="flex items-center justify-between pt-0.5">
                   <span>Max Continuous Driving:</span>
-                  <span className="font-mono font-semibold text-foreground">240 min (4h)</span>
+                  <span className="font-mono font-semibold text-foreground">240 min (4 hrs)</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Min Terminal Turnaround:</span>
-                  <span className="font-mono font-semibold text-foreground">15 min</span>
+                  <span className="font-mono font-semibold text-foreground">15 min buffer</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Mandatory Shift Rest:</span>
-                  <span className="font-mono font-semibold text-foreground">480 min (8h)</span>
+                  <span className="font-mono font-semibold text-foreground">480 min (8 hrs)</span>
                 </div>
               </div>
 
@@ -371,7 +439,7 @@ function OptimizerPage() {
                 ) : (
                   <>
                     <Zap className="mr-2 size-4 text-amber-300" />
-                    Run Schedule Optimizer
+                    Step 2: Run Google OR-Tools AI Solver
                   </>
                 )}
               </Button>
@@ -379,7 +447,7 @@ function OptimizerPage() {
           </section>
 
           {/* ACTIVE REGISTRY TELEMETRY */}
-          <section className="glass-panel p-5 lg:col-span-8 flex flex-col justify-between space-y-4">
+          <section className="glass-panel p-5 lg:col-span-7 flex flex-col justify-between space-y-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <div className="flex items-center gap-2">
                 <div className="grid size-7 place-items-center rounded-lg bg-emerald-500/10 text-emerald-500">
@@ -447,12 +515,12 @@ function OptimizerPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex items-center justify-between text-xs">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-2 text-primary font-medium">
-                <Info className="size-4 shrink-0" />
-                <span>Current baseline has <strong>{baselineUnassigned}</strong> unassigned trips across <strong>{baselineDuties}</strong> existing duties.</span>
+                <Sparkles className="size-4 shrink-0 text-amber-400" />
+                <span>Current baseline: <strong>{baselineUnassigned}</strong> unassigned trips across <strong>{baselineDuties}</strong> existing duties.</span>
               </div>
-              <Badge variant="outline" className="font-mono text-[10px] border-primary/30 text-primary">
+              <Badge variant="outline" className="font-mono text-[10px] border-primary/30 text-primary self-start sm:self-auto">
                 {baselineBuses} Buses Active
               </Badge>
             </div>
@@ -466,7 +534,7 @@ function OptimizerPage() {
               <div className="flex items-center gap-3">
                 <div className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                 <div>
-                  <h4 className="text-sm font-bold text-foreground">Optimization Engine Active</h4>
+                  <h4 className="text-sm font-bold text-foreground">Google OR-Tools CP-SAT Solver Active</h4>
                   <p className="text-xs text-primary font-medium font-mono">{OPT_STAGES[stageIndex] || "Executing solver..."}</p>
                 </div>
               </div>
@@ -481,6 +549,36 @@ function OptimizerPage() {
         {/* 3. OPTIMIZER PROPOSAL OUTPUT */}
         {proposal && (
           <div className="space-y-6">
+            {/* EXECUTIVE PROPOSAL SUMMARY BANNER */}
+            <div className="glass-panel p-5 rounded-2xl border-l-4 border-l-primary bg-gradient-to-r from-primary/10 via-background to-success/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-md">
+              <div className="flex items-start gap-3.5">
+                <div className="grid size-10 place-items-center rounded-xl bg-success/15 text-success border border-success/30 shrink-0 mt-0.5">
+                  <CheckCircle2 className="size-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-foreground">Step 3: Optimization Results Proposal</h3>
+                    <Badge variant="outline" className="font-mono text-[10px] uppercase font-bold text-success border-success/30 bg-success/10">
+                      Solution Feasible
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-2xl leading-relaxed">
+                    Google OR-Tools analyzed all departures and generated <strong>{proposal.dutiesCreated} optimal duties</strong> using only <strong>{proposal.busesUsed} buses</strong>. All continuous driving limits (&lt;240 mins) and mandatory 8-hour rest breaks are fully verified.
+                  </p>
+                </div>
+              </div>
+
+              {canPublish ? (
+                <Button
+                  onClick={() => setPublishDialogOpen(true)}
+                  className="shrink-0 bg-primary text-primary-foreground text-xs font-bold shadow-md shadow-primary/25 hover:scale-[1.02] transition-all h-9 px-4 gap-1.5"
+                >
+                  <Check className="size-4" />
+                  <span>Review & Publish Schedule</span>
+                </Button>
+              ) : null}
+            </div>
+
             {/* KPI METRIC CARDS */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
               <div className="glass-card p-4 rounded-xl border-l-4 border-l-success flex flex-col justify-between">
