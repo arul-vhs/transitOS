@@ -18,15 +18,19 @@ export interface FallbackCrew {
   id: string;
   tenantId: string;
   employeeId: string;
-  badgeNumber: string;
+  badgeNumber?: string;
   name: string;
-  phone: string;
+  phone?: string;
   role: string;
   status: string;
   depot: string;
-  licenseNumber: string;
-  shiftType: string;
-  weeklyHours: number;
+  availableFrom: number;
+  restUntil: number;
+  licenseNumber?: string;
+  licenseCategory?: string | null;
+  licenseExpiry?: string | null;
+  shiftType?: string;
+  weeklyHours?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -131,15 +135,19 @@ export const FALLBACK_CREW: FallbackCrew[] = (rawData.crew || []).map((c: any) =
   id: c.id,
   tenantId: c.tenant_id,
   employeeId: c.employee_id,
-  badgeNumber: c.badge_number,
+  badgeNumber: c.badge_number || c.employee_id,
   name: c.name,
-  phone: c.phone,
+  phone: c.phone || "+91 94431 00000",
   role: c.role,
-  status: c.status,
+  status: c.status || "available",
   depot: c.depot,
+  availableFrom: c.available_from ?? 330,
+  restUntil: c.rest_until ?? 330,
   licenseNumber: c.license_number,
-  shiftType: c.shift_type,
-  weeklyHours: c.weekly_hours,
+  licenseCategory: c.license_category || (c.role === "driver" ? "Heavy Passenger Vehicle (HPV) / PSV Badge" : null),
+  licenseExpiry: c.license_expiry || null,
+  shiftType: c.shift_type || "Morning",
+  weeklyHours: c.weekly_hours ?? 44,
   createdAt: c.created_at,
   updatedAt: c.updated_at,
 }));

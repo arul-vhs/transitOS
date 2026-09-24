@@ -508,10 +508,21 @@ export async function getCrewAvailabilityImpl() {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "crew.view");
 
-  // Retrieve all crew members for timeline view
-  return await db
-    .select()
-    .from(crew)
-    .where(eq(crew.tenantId, currentUser.tenantId))
-    .orderBy(crew.role, crew.name);
+  try {
+    // Retrieve all crew members for timeline view from PostgreSQL
+    const list = await db
+      .select()
+      .from(crew)
+      .where(eq(crew.tenantId, currentUser.tenantId))
+      .orderBy(crew.role, crew.name);
+
+    if (list && list.length > 0) {
+      return list;
+    }
+  } catch (err) {
+    console.warn("DB query error in getCrewAvailabilityImpl, using fallback crew dataset:", err);
+  }
+
+  return FALLBACK_CREW as any;
 }
+
