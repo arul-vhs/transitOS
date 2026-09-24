@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SimulationRouteImport } from './routes/simulation'
 import { Route as AnalyticsIndexRouteImport } from './routes/analytics.index'
 import { Route as AnalyticsCrewRouteImport } from './routes/analytics.crew'
 import { Route as AnalyticsFleetRouteImport } from './routes/analytics.fleet'
@@ -50,6 +51,11 @@ const LoginRoute = LoginRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SimulationRoute = SimulationRouteImport.update({
+  id: '/simulation',
+  path: '/simulation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnalyticsIndexRoute = AnalyticsIndexRouteImport.update({
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/analytics': typeof AnalyticsRouteWithChildren
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/simulation': typeof SimulationRoute
   '/analytics/crew': typeof AnalyticsCrewRoute
   '/analytics/fleet': typeof AnalyticsFleetRoute
   '/analytics/incidents': typeof AnalyticsIncidentsRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/simulation': typeof SimulationRoute
   '/analytics/crew': typeof AnalyticsCrewRoute
   '/analytics/fleet': typeof AnalyticsFleetRoute
   '/analytics/incidents': typeof AnalyticsIncidentsRoute
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   '/analytics': typeof AnalyticsRouteWithChildren
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/simulation': typeof SimulationRoute
   '/analytics/crew': typeof AnalyticsCrewRoute
   '/analytics/fleet': typeof AnalyticsFleetRoute
   '/analytics/incidents': typeof AnalyticsIncidentsRoute
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/login'
     | '/settings'
+    | '/simulation'
     | '/analytics/crew'
     | '/analytics/fleet'
     | '/analytics/incidents'
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/settings'
+    | '/simulation'
     | '/analytics/crew'
     | '/analytics/fleet'
     | '/analytics/incidents'
@@ -269,6 +280,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/login'
     | '/settings'
+    | '/simulation'
     | '/analytics/crew'
     | '/analytics/fleet'
     | '/analytics/incidents'
@@ -294,6 +306,7 @@ export interface RootRouteChildren {
   AnalyticsRoute: typeof AnalyticsRouteWithChildren
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
+  SimulationRoute: typeof SimulationRoute
   CrewAvailabilityRoute: typeof CrewAvailabilityRoute
   CrewConductorsRoute: typeof CrewConductorsRoute
   CrewDriversRoute: typeof CrewDriversRoute
@@ -336,6 +349,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/simulation': {
+      id: '/simulation'
+      path: '/simulation'
+      fullPath: '/simulation'
+      preLoaderRoute: typeof SimulationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analytics/': {
@@ -494,6 +514,7 @@ const rootRouteChildren: RootRouteChildren = {
   AnalyticsRoute: AnalyticsRouteWithChildren,
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
+  SimulationRoute: SimulationRoute,
   CrewAvailabilityRoute: CrewAvailabilityRoute,
   CrewConductorsRoute: CrewConductorsRoute,
   CrewDriversRoute: CrewDriversRoute,

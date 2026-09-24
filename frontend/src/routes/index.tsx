@@ -106,6 +106,12 @@ function Dashboard() {
       subtitle={`${orgName} · ${depotName} · ${SCHEDULE_DATE}`}
       actions={
         <div className="flex items-center gap-2">
+          <Button asChild size="sm" variant="outline" className="text-xs rounded-xl border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/5 hover:bg-indigo-500/15">
+            <Link to="/simulation">
+              <PlayCircle className="mr-1.5 size-3.5 text-indigo-500 animate-pulse" />
+              Live Simulator
+            </Link>
+          </Button>
           <Button asChild size="sm" variant="outline" className="text-xs rounded-xl border-border/80 hover:bg-muted/60">
             <Link to="/operations/trips">
               <RouteIcon className="mr-1.5 size-3.5 text-primary" />
@@ -140,6 +146,12 @@ function Dashboard() {
 
             {/* Quick Action Chips */}
             <div className="flex flex-wrap gap-2 md:justify-end">
+              <Button asChild size="sm" className="rounded-xl text-xs gap-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold shadow-md shadow-indigo-500/25">
+                <Link to="/simulation">
+                  <PlayCircle className="size-3.5" />
+                  <span>Launch Simulator</span>
+                </Link>
+              </Button>
               <Button asChild variant="outline" size="sm" className="rounded-xl text-xs gap-1.5 border-border/80 hover:border-primary/40 bg-card">
                 <Link to="/fleet/buses">
                   <Bus className="size-3.5 text-emerald-500" />
@@ -162,6 +174,44 @@ function Dashboard() {
                 <Link to="/scheduling/optimizer">
                   <Zap className="size-3.5 text-amber-300" />
                   <span>1-Click AI Solver</span>
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* INTERACTIVE SIMULATION DECK FEATURE BANNER */}
+        <div className="relative overflow-hidden rounded-3xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/20 via-purple-950/10 to-card p-6 shadow-xl shadow-indigo-500/5">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="space-y-2 max-w-3xl">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className="bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-500/30 text-[10px] font-mono font-bold uppercase tracking-wider">
+                  <PlayCircle className="mr-1 size-3 animate-pulse" />
+                  Interactive Simulation Deck
+                </Badge>
+                <Badge variant="outline" className="text-[10px] font-mono border-border text-muted-foreground">
+                  Time Scrubber 05:30 - 23:00
+                </Badge>
+                <Badge variant="outline" className="text-[10px] font-mono border-border text-muted-foreground">
+                  Live Disruption Injector
+                </Badge>
+                <Badge variant="outline" className="text-[10px] font-mono border-border text-muted-foreground">
+                  Speed 1x to 60x
+                </Badge>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+                Understand TransitOS in Action with Live Simulation
+              </h2>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                Watch 7 buses drive Salem corridors in real time. Scrub through dawn launch to night shift, test what happens when an engine breaks down at Five Roads, trigger instant standby bus auto-recovery, and see Google OR-Tools AI optimization live.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <Button asChild size="lg" className="rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold shadow-lg shadow-indigo-500/30">
+                <Link to="/simulation">
+                  <PlayCircle className="mr-2 size-4.5" />
+                  <span>Launch Simulation Deck</span>
+                  <ArrowRight className="ml-2 size-4" />
                 </Link>
               </Button>
             </div>

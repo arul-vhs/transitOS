@@ -24,6 +24,7 @@ import {
   Workflow,
   ExternalLink,
   ShieldCheck,
+  PlayCircle,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
@@ -48,7 +49,13 @@ type NavItem = { label: string; to: string; icon: typeof Bus; badge?: string; ba
 type NavGroup = { title: string; items: NavItem[] };
 
 const NAV: NavGroup[] = [
-  { title: "Command Center", items: [{ label: "Executive Dashboard", to: "/", icon: Gauge }] },
+  {
+    title: "Command Center",
+    items: [
+      { label: "Executive Dashboard", to: "/", icon: Gauge },
+      { label: "Live Simulation Deck", to: "/simulation", icon: PlayCircle, badge: "Sim", badgeColor: "bg-indigo-500/20 text-indigo-500 border-indigo-500/30" },
+    ],
+  },
   {
     title: "Daily Operations",
     items: [
@@ -95,6 +102,7 @@ function isNavVisible(role: string, to: string): boolean {
 
   switch (to) {
     case "/":
+    case "/simulation":
       return true;
     case "/operations/today":
     case "/operations/trips":
@@ -287,6 +295,20 @@ export function AppShell({
             <div className="flex shrink-0 items-center gap-2.5">
               {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
 
+              {/* Live Simulator Quick Launch */}
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/5 hover:bg-indigo-500/15 hover:border-indigo-500/50 text-xs font-semibold cursor-pointer shadow-2xs"
+                title="Launch Live Simulation Deck"
+              >
+                <Link to="/simulation">
+                  <PlayCircle className="size-3.5 text-indigo-500 animate-pulse" />
+                  <span className="hidden sm:inline">Simulator</span>
+                </Link>
+              </Button>
+
               {/* Global Quick Guide & Help Trigger */}
               <Sheet open={helpOpen} onOpenChange={setHelpOpen}>
                 <SheetTrigger asChild>
@@ -314,6 +336,28 @@ export function AppShell({
                       </div>
                     </div>
                   </SheetHeader>
+
+                  {/* Interactive Simulation Callout */}
+                  <div className="rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent p-3.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="flex size-2 rounded-full bg-indigo-500 animate-ping" />
+                        <span className="text-xs font-bold text-foreground">Interactive Simulation Deck</span>
+                      </div>
+                      <Badge className="bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-500/30 text-[10px]">
+                        Live Demo
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Want to see how everything works in real time? Scrub the 24h clock, watch buses drive Salem corridors, inject breakdowns, and test automated recovery.
+                    </p>
+                    <Button asChild size="sm" className="w-full h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm">
+                      <Link to="/simulation" onClick={() => setHelpOpen(false)}>
+                        <PlayCircle className="size-3.5 mr-1.5" />
+                        Launch Live Simulation
+                      </Link>
+                    </Button>
+                  </div>
 
                   {/* Section 1: 5-Step Operational Lifecycle */}
                   <div className="space-y-3">
