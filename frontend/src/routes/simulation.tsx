@@ -146,7 +146,11 @@ interface SimBus {
   currentPosition: [number, number];
   nextStop: string;
   varianceMinutes: number;
-  progressAlongRoute: number; // 0.0 to 1.0
+  progressAlongRoute: number; // 0.0 to 1.0 along current leg
+  direction: "outbound" | "return"; // outbound: Start ➔ Destination; return: Destination ➔ Start
+  origin: string;
+  destination: string;
+  completedTrips: number;
 }
 
 const INITIAL_FLEET: SimBus[] = [
@@ -170,6 +174,10 @@ const INITIAL_FLEET: SimBus[] = [
     nextStop: "Four Roads",
     varianceMinutes: 0,
     progressAlongRoute: 0.25,
+    direction: "outbound",
+    origin: "Town Bus Stand",
+    destination: "Salem Junction",
+    completedTrips: 2,
   },
   {
     id: "b2",
@@ -191,6 +199,10 @@ const INITIAL_FLEET: SimBus[] = [
     nextStop: "Gorimedu (Arts College)",
     varianceMinutes: 1,
     progressAlongRoute: 0.50,
+    direction: "outbound",
+    origin: "Town Bus Stand",
+    destination: "Yercaud Foothills",
+    completedTrips: 1,
   },
   {
     id: "b3",
@@ -209,9 +221,13 @@ const INITIAL_FLEET: SimBus[] = [
     fuelBatteryPct: 69,
     status: "on-route",
     currentPosition: [11.6705, 78.1437],
-    nextStop: "Five Roads",
+    nextStop: "Four Roads",
     varianceMinutes: -1,
-    progressAlongRoute: 0.60,
+    progressAlongRoute: 0.40,
+    direction: "return", // Returning from Salem Junction back to Town Bus Stand!
+    origin: "Salem Junction",
+    destination: "Town Bus Stand",
+    completedTrips: 3,
   },
   {
     id: "b4",
@@ -233,6 +249,10 @@ const INITIAL_FLEET: SimBus[] = [
     nextStop: "Dadagapatti",
     varianceMinutes: 0,
     progressAlongRoute: 0.40,
+    direction: "outbound",
+    origin: "Town Bus Stand",
+    destination: "Kondalampatti",
+    completedTrips: 2,
   },
   {
     id: "b5",
@@ -251,9 +271,13 @@ const INITIAL_FLEET: SimBus[] = [
     fuelBatteryPct: 81,
     status: "on-route",
     currentPosition: [11.6780, 78.1020],
-    nextStop: "Steel Plant",
+    nextStop: "Salem Junction",
     varianceMinutes: 0,
-    progressAlongRoute: 0.85,
+    progressAlongRoute: 0.45,
+    direction: "return", // Returning from Steel Plant back to MGR Central!
+    origin: "Steel Plant",
+    destination: "MGR Central Bus Stand",
+    completedTrips: 2,
   },
   {
     id: "b6",
@@ -272,9 +296,13 @@ const INITIAL_FLEET: SimBus[] = [
     fuelBatteryPct: 85,
     status: "on-route",
     currentPosition: [11.7180, 78.0780],
-    nextStop: "Omalur Toll Gate",
+    nextStop: "Omalur Toll",
     varianceMinutes: 2,
     progressAlongRoute: 0.65,
+    direction: "outbound",
+    origin: "Town Bus Stand",
+    destination: "Omalur Town",
+    completedTrips: 1,
   },
   {
     id: "b7",
@@ -296,6 +324,10 @@ const INITIAL_FLEET: SimBus[] = [
     nextStop: "Depot Standby Bay 3",
     varianceMinutes: 0,
     progressAlongRoute: 0.0,
+    direction: "outbound",
+    origin: "Meyyanur Depot",
+    destination: "Standby Bay",
+    completedTrips: 0,
   },
 ];
 
@@ -305,11 +337,12 @@ function getInterpolatedPosition(coords: number[][], progress: number): [number,
   if (coords.length === 1) return [coords[0][0], coords[0][1]];
 
   const totalSegments = coords.length - 1;
-  const scaledProgress = (progress % 1.0) * totalSegments;
+  const clampedProgress = Math.min(1.0, Math.max(0.0, progress));
+  const scaledProgress = clampedProgress * totalSegments;
   const index = Math.floor(scaledProgress);
   const frac = scaledProgress - index;
 
-  const p1 = coords[index];
+  const p1 = coords[Math.min(index, coords.length - 1)];
   const p2 = coords[Math.min(index + 1, coords.length - 1)];
 
   const lat = p1[0] + (p2[0] - p1[0]) * frac;
@@ -329,9 +362,9 @@ function SimulationPage() {
 
   // Radio Dispatch / Event Ticker Logs
   const [eventLogs, setEventLogs] = useState<Array<{ id: string; time: string; text: string; type: "info" | "alert" | "success" | "recovery" }>>([
-    { id: "1", time: "08:15 AM", text: "Dispatch check: 6 vehicles active, 1 standby bus at Meyyanur Depot.", type: "info" },
-    { id: "2", time: "08:22 AM", text: "Driver Murugesan K. (SLM-MY-101) passed Four Roads with 0 departure variance.", type: "success" },
-    { id: "3", time: "08:28 AM", text: "Grid Headway: Route 1 frequency maintained at 15-minute intervals.", type: "info" },
+    { id: "1", time: "08:15 AM", text: "Dispatch check: 6 vehicles active on Salem corridors, 1 standby bus at Meyyanur Depot.", type: "info" },
+    { id: "2", time: "08:22 AM", text: "Driver Murugesan K. (SLM-MY-101) outbound to Salem Junction passed Four Roads with 0 departure variance.", type: "success" },
+    { id: "3", time: "08:28 AM", text: "SLM-MY-104 on return journey to Town Bus Stand approaching Five Roads.", type: "info" },
   ]);
 
   // Leaflet references
@@ -350,7 +383,7 @@ function SimulationPage() {
     }
   }, []);
 
-  // Main Simulation Loop
+  // Main Simulation Loop with True Round-Trip Logic (Start ⇄ Destination)
   useEffect(() => {
     if (!isPlaying) return;
 
@@ -362,7 +395,9 @@ function SimulationPage() {
 
       // Update bus positions along their respective routes
       setFleet((prevFleet) => {
-        return prevFleet.map((bus) => {
+        const arrivalEvents: Array<{ fleetNumber: string; terminal: string; nextDir: string; nextDest: string }> = [];
+
+        const updatedFleet = prevFleet.map((bus) => {
           if (bus.status === "breakdown" || bus.status === "standby") {
             return bus;
           }
@@ -370,28 +405,91 @@ function SimulationPage() {
           const corridor = SALEM_CORRIDORS.find((c) => c.id === bus.routeId);
           if (!corridor) return bus;
 
-          // Increment progress smoothly
+          // Increment progress smoothly along current trip leg
           const stepDelta = (bus.speedKmH / 60) * 0.002 * simSpeed;
-          let newProgress = (bus.progressAlongRoute + stepDelta) % 1.0;
-          const newPos = getInterpolatedPosition(corridor.coords, newProgress);
+          let newProgress = bus.progressAlongRoute + stepDelta;
+          let newDirection = bus.direction;
+          let completedTrips = bus.completedTrips;
+          let newOrigin = bus.origin;
+          let newDestination = bus.destination;
 
-          // Calculate current next stop name
-          const stopIdx = Math.floor(newProgress * corridor.stops.length);
-          const nextStop = corridor.stops[Math.min(stopIdx + 1, corridor.stops.length - 1)] || corridor.stops[0];
+          const startTerminal = corridor.stops[0];
+          const endTerminal = corridor.stops[corridor.stops.length - 1];
+
+          // If reached terminal end of current leg
+          if (newProgress >= 1.0) {
+            completedTrips += 1;
+            const arrivedAt = newDestination;
+
+            if (bus.direction === "outbound") {
+              // Reached Destination -> Turn around for Return trip back to Start
+              newDirection = "return";
+              newOrigin = endTerminal;
+              newDestination = startTerminal;
+            } else {
+              // Reached Start -> Turn around for Outbound trip to Destination
+              newDirection = "outbound";
+              newOrigin = startTerminal;
+              newDestination = endTerminal;
+            }
+
+            arrivalEvents.push({
+              fleetNumber: bus.fleetNumber,
+              terminal: arrivedAt,
+              nextDir: newDirection === "return" ? "Return" : "Outbound",
+              nextDest: newDestination,
+            });
+
+            newProgress = newProgress - 1.0;
+          }
+
+          // Active coordinates & stops based on current direction
+          const activeCoords = newDirection === "outbound"
+            ? corridor.coords
+            : [...corridor.coords].reverse();
+
+          const activeStops = newDirection === "outbound"
+            ? corridor.stops
+            : [...corridor.stops].reverse();
+
+          const newPos = getInterpolatedPosition(activeCoords, newProgress);
+
+          // Calculate next stop name along the active direction
+          const stopIdx = Math.floor(newProgress * (activeStops.length - 1));
+          const nextStop = activeStops[Math.min(stopIdx + 1, activeStops.length - 1)];
 
           return {
             ...bus,
+            direction: newDirection,
+            origin: newOrigin,
+            destination: newDestination,
+            completedTrips,
             progressAlongRoute: newProgress,
             currentPosition: newPos,
             nextStop,
             driverDrivingMinutes: Math.min(360, bus.driverDrivingMinutes + (simSpeed * 0.05)),
           };
         });
+
+        // If any buses reached terminal and turned around, log to radio feed
+        if (arrivalEvents.length > 0) {
+          setEventLogs((prev) => [
+            ...arrivalEvents.map((evt) => ({
+              id: String(Date.now() + Math.random()),
+              time: formatMinutesToTime(Math.floor(currentMinutes)),
+              text: `🔄 TERMINAL TURNAROUND: ${evt.fleetNumber} arrived at ${evt.terminal}. Turned around for ${evt.nextDir} trip ➔ ${evt.nextDest}.`,
+              type: "info" as const,
+            })),
+            ...prev.slice(0, 45),
+          ]);
+        }
+
+        return updatedFleet;
       });
     }, 100);
 
     return () => clearInterval(interval);
-  }, [isPlaying, simSpeed]);
+  }, [isPlaying, simSpeed, currentMinutes]);
 
   // Initialize and update Leaflet Map
   useEffect(() => {
@@ -452,6 +550,9 @@ function SimulationPage() {
       const isBreakdown = bus.status === "breakdown";
       const isStandby = bus.status === "standby";
 
+      const dirArrow = bus.direction === "return" ? "◀" : "▶";
+      const dirText = bus.direction === "return" ? "Return" : "Outbound";
+
       const markerHtml = `
         <div class="relative flex items-center justify-center transition-transform ${isSelected ? "scale-125 z-50" : "scale-100"}">
           <div class="size-7 rounded-xl flex items-center justify-center text-white text-[10px] font-mono font-bold shadow-lg border-2 ${
@@ -465,8 +566,9 @@ function SimulationPage() {
           }">
             🚌
           </div>
-          <div class="absolute -bottom-4 px-1.5 py-0.2 rounded bg-slate-900/90 text-white font-mono text-[9px] whitespace-nowrap shadow border border-white/20">
-            ${bus.fleetNumber.split("-")[2]}
+          <div class="absolute -bottom-4 px-1.5 py-0.2 rounded bg-slate-900/90 text-white font-mono text-[9px] whitespace-nowrap shadow border border-white/20 flex items-center gap-1">
+            <span>${bus.fleetNumber.split("-")[2]}</span>
+            ${!isStandby ? `<span class="text-[8px] font-bold ${bus.direction === "return" ? "text-amber-400" : "text-emerald-400"}">${dirArrow}</span>` : ""}
           </div>
         </div>
       `;
@@ -478,11 +580,17 @@ function SimulationPage() {
         iconAnchor: [14, 14],
       });
 
+      const tooltipContent = isStandby
+        ? `<strong>${bus.fleetNumber}</strong><br/>Standby Reserve at ${bus.depot}`
+        : `<strong>${bus.fleetNumber}</strong> (${dirText} Trip)<br/>Heading to: <strong>${bus.destination}</strong><br/>Next Stop: ${bus.nextStop}<br/>Trip #${bus.completedTrips + 1}`;
+
       if (busMarkersRef.current[bus.id]) {
         busMarkersRef.current[bus.id].setLatLng(bus.currentPosition);
         busMarkersRef.current[bus.id].setIcon(icon);
+        busMarkersRef.current[bus.id].setTooltipContent(tooltipContent);
       } else {
         const marker = L.marker(bus.currentPosition, { icon })
+          .bindTooltip(tooltipContent, { direction: "top", offset: [0, -16] })
           .on("click", () => {
             setSelectedBusId(bus.id);
           })
@@ -543,11 +651,16 @@ function SimulationPage() {
             routeId: "r1",
             routeName: "Route 1: Town ⇄ Junction (Relief Run)",
             routeColor: "#3B82F6",
+            direction: "return",
+            origin: "Salem Junction",
+            destination: "Town Bus Stand",
+            completedTrips: 1,
             currentPosition: [11.6705, 78.1437], // At Five Roads
             speedKmH: 34,
             passengerCount: 44,
             varianceMinutes: 3,
-            progressAlongRoute: 0.60,
+            progressAlongRoute: 0.40,
+            nextStop: "Four Roads",
           };
         }
         return b;
@@ -556,7 +669,7 @@ function SimulationPage() {
     setSelectedBusId("b7");
     setActiveScenario(null);
     setIsPlaying(true);
-    toast.success("✅ RECOVERY DEPLOYED: Standby Bus SLM-MY-108 dispatched! Schedule recovered in +3m.", {
+    toast.success("✅ RECOVERY DEPLOYED: Standby Bus SLM-MY-108 dispatched on Return trip to Town Bus Stand!", {
       duration: 6000,
     });
     setEventLogs((prev) => [
@@ -820,9 +933,16 @@ function SimulationPage() {
                         )}
                       ></span>
                     </div>
-                    <span className="text-[10px] text-muted-foreground truncate mt-1">
-                      {isBreakdown ? "Breakdown" : isStandby ? "Standby" : bus.routeName.split(":")[0]}
-                    </span>
+                    <div className="flex items-center justify-between mt-1 text-[10px] text-muted-foreground">
+                      <span className="truncate">
+                        {isBreakdown ? "Breakdown" : isStandby ? "Standby" : bus.routeName.split(":")[0]}
+                      </span>
+                      {!isStandby && !isBreakdown && (
+                        <span className={cn("font-mono text-[9px] font-bold ml-1", bus.direction === "return" ? "text-amber-500" : "text-emerald-500")}>
+                          {bus.direction === "return" ? "◀" : "▶"}
+                        </span>
+                      )}
+                    </div>
                   </button>
                 );
               })}
@@ -884,6 +1004,19 @@ function SimulationPage() {
                         >
                           {selectedBus.status}
                         </Badge>
+                        {selectedBus.status !== "standby" && (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px] font-mono px-1.5 py-0.2",
+                              selectedBus.direction === "return"
+                                ? "border-amber-500/40 text-amber-600 bg-amber-500/10"
+                                : "border-indigo-500/40 text-indigo-600 bg-indigo-500/10"
+                            )}
+                          >
+                            {selectedBus.direction === "return" ? "◀ Return Trip" : "▶ Outbound Trip"}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{selectedBus.routeName}</p>
                     </div>
@@ -893,6 +1026,32 @@ function SimulationPage() {
                       <p className="text-[10px] text-muted-foreground">Speed Telemetry</p>
                     </div>
                   </div>
+
+                  {/* Current Journey Route Path & Progress */}
+                  {selectedBus.status !== "standby" && (
+                    <div className="mt-3 p-2.5 rounded-2xl bg-muted/30 border border-border/60 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-bold text-foreground truncate">{selectedBus.origin}</span>
+                          <span className="text-muted-foreground">➔</span>
+                          <span className="font-bold text-primary truncate">{selectedBus.destination}</span>
+                        </div>
+                        <Badge variant="secondary" className="text-[10px] font-mono shrink-0">
+                          Trip #{selectedBus.completedTrips + 1}
+                        </Badge>
+                      </div>
+
+                      {/* Progress Bar of current trip leg */}
+                      <div className="space-y-1">
+                        <Progress value={Math.round(selectedBus.progressAlongRoute * 100)} className="h-1.5" />
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+                          <span>Dep: {selectedBus.origin.split(" ")[0]}</span>
+                          <span>{Math.round(selectedBus.progressAlongRoute * 100)}% route complete</span>
+                          <span>Term: {selectedBus.destination.split(" ")[0]}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Telemetry Metrics Grid */}
                   <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-border/50 text-xs">
