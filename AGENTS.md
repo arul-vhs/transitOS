@@ -35,3 +35,5 @@ Under no circumstances should the project look like an AI "vibe product". The fo
    - Never include any "Made with AI" or watermark badges.
    - Keep dedicated, high-integrity `/privacy` and `/terms` pages accessible in the footer and router.
 8. **Precision**: Make no mistakes. Always verify TypeScript compliance and run builds to ensure zero regressions.
+9. **Git Remote**: Default remote `origin` is set to `https://github.com/arul-vhs/transitOS.git`. All commits and pushes must target `origin`.
+
