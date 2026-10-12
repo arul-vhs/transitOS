@@ -33,3 +33,7 @@ dist-ssr
 
 # Local database
 .pgdata
+
+# VistaPanel Export
+digitalplat-vistapanel-package/
+digitalplat-htdocs.zip
