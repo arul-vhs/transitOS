@@ -20,6 +20,7 @@ Minimize:
 ## Central Weights Config
 
 Weights are centralized and customizable in `src/lib/transit/config.ts`:
+
 - **`UNASSIGNED_TRIP_PENALTY`** = 1000: Enforces highest priority on trip coverage.
 - **`BUS_USAGE_WEIGHT`** = 100: Prefers using fewer buses.
 - **`DUTY_COUNT_WEIGHT`** = 50: Prefers fewer driver shifts.

@@ -42,8 +42,11 @@ export const Route = createFileRoute("/operations/today")({
   },
   head: () => ({
     meta: [
-      { title: "Today's Operations — TransitOS" },
-      { name: "description", content: "Live operational duty board, fleet telemetry, and dispatch monitoring." },
+      { title: "Today's Operations: TransitOS" },
+      {
+        name: "description",
+        content: "Live operational duty board, fleet telemetry, and dispatch monitoring.",
+      },
     ],
   }),
   component: OperationsTodayPage,
@@ -145,13 +148,22 @@ function OperationsTodayPage() {
       subtitle={`Real-time dispatch board, crew shift trackers, and corridor service compliance for ${SERVICE_DATE}.`}
       actions={
         <div className="flex items-center gap-2.5">
-          <Button asChild size="sm" variant="outline" className="text-xs h-8 border-border/80 bg-card/60">
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            className="text-xs h-8 border-border/80 bg-card/60"
+          >
             <Link to="/operations/incidents">
               <AlertTriangle className="size-3.5 mr-1.5 text-warning" />
               Disruptions ({incidentsList.length})
             </Link>
           </Button>
-          <Button asChild size="sm" className="text-xs h-8 bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20">
+          <Button
+            asChild
+            size="sm"
+            className="text-xs h-8 bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20"
+          >
             <Link to="/operations/duties">
               <Sparkles className="size-3.5 mr-1.5" />
               Duty Studio
@@ -196,14 +208,22 @@ function OperationsTodayPage() {
             label="Unassigned Trips"
             value={loading ? "..." : unassignedTripsCount}
             badge={unassignedTripsCount > 0 ? "Pending" : "Complete"}
-            badgeColor={unassignedTripsCount > 0 ? "bg-warning/10 text-warning border-warning/30" : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"}
+            badgeColor={
+              unassignedTripsCount > 0
+                ? "bg-warning/10 text-warning border-warning/30"
+                : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+            }
           />
           <MetricTile
             icon={AlertTriangle}
             label="Compliance Alerts"
             value={loading ? "..." : totalValidationIssues}
             badge={totalValidationIssues > 0 ? "Action Req" : "Compliant"}
-            badgeColor={totalValidationIssues > 0 ? "bg-destructive/10 text-destructive border-destructive/30" : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"}
+            badgeColor={
+              totalValidationIssues > 0
+                ? "bg-destructive/10 text-destructive border-destructive/30"
+                : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+            }
             isDestructive={totalValidationIssues > 0}
           />
         </div>
@@ -218,8 +238,12 @@ function OperationsTodayPage() {
                   <ListTodo className="size-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold tracking-tight text-foreground">Live Duty Dispatch Board</h3>
-                  <p className="text-[11px] text-muted-foreground">Monitors departure blocks, driver sign-ons, and vehicle assignments</p>
+                  <h3 className="text-sm font-bold tracking-tight text-foreground">
+                    Live Duty Dispatch Board
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    Monitors departure blocks, driver sign-ons, and vehicle assignments
+                  </p>
                 </div>
               </div>
 
@@ -230,7 +254,9 @@ function OperationsTodayPage() {
                   onClick={() => setFilterTab("all")}
                   className={cn(
                     "px-2.5 py-1 text-xs font-semibold rounded-md transition-all",
-                    filterTab === "all" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                    filterTab === "all"
+                      ? "bg-card text-foreground shadow-xs"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   All ({dutiesList.length})
@@ -240,7 +266,9 @@ function OperationsTodayPage() {
                   onClick={() => setFilterTab("active")}
                   className={cn(
                     "px-2.5 py-1 text-xs font-semibold rounded-md transition-all",
-                    filterTab === "active" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                    filterTab === "active"
+                      ? "bg-card text-foreground shadow-xs"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   Published
@@ -250,7 +278,9 @@ function OperationsTodayPage() {
                   onClick={() => setFilterTab("issues")}
                   className={cn(
                     "px-2.5 py-1 text-xs font-semibold rounded-md transition-all",
-                    filterTab === "issues" ? "bg-destructive/15 text-destructive shadow-xs" : "text-muted-foreground hover:text-foreground"
+                    filterTab === "issues"
+                      ? "bg-destructive/15 text-destructive shadow-xs"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   Alerts ({totalValidationIssues})
@@ -267,7 +297,9 @@ function OperationsTodayPage() {
               <div className="py-20 text-center text-xs text-muted-foreground flex flex-col items-center justify-center">
                 <CalendarClock className="size-8 text-muted-foreground/50 mb-2" />
                 <p className="font-semibold text-foreground">No duties matching current filter</p>
-                <p className="text-[11px] text-muted-foreground mt-1">Switch filter or open Duty Builder to schedule duties.</p>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Switch filter or open Duty Builder to schedule duties.
+                </p>
               </div>
             ) : (
               <div className="space-y-3 max-h-[580px] overflow-y-auto pr-1">
@@ -280,20 +312,29 @@ function OperationsTodayPage() {
                       key={d.id}
                       className={cn(
                         "p-4 rounded-xl border transition-all duration-150 flex flex-col gap-3 bg-card/60 hover:border-primary/40",
-                        !val.isValid ? "border-destructive/40 bg-destructive/5" : "border-border/70"
+                        !val.isValid
+                          ? "border-destructive/40 bg-destructive/5"
+                          : "border-border/70",
                       )}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2.5">
-                          <span className="font-mono font-bold text-sm text-foreground">{d.dutyCode}</span>
-                          <Badge variant="outline" className="font-mono text-[10px] uppercase font-semibold">
+                          <span className="font-mono font-bold text-sm text-foreground">
+                            {d.dutyCode}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="font-mono text-[10px] uppercase font-semibold"
+                          >
                             {d.dutyType}
                           </Badge>
                           <Badge
                             variant="secondary"
                             className={cn(
                               "text-[10px] font-bold uppercase",
-                              d.status === "published" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : ""
+                              d.status === "published"
+                                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                : "",
                             )}
                           >
                             {d.status}
@@ -305,7 +346,12 @@ function OperationsTodayPage() {
                             <Clock className="size-3 text-primary" />
                             {formatMinutesToTime(d.startTime)} – {formatMinutesToTime(d.endTime)}
                           </span>
-                          <Button asChild size="sm" variant="ghost" className="h-7 text-xs px-2 text-primary hover:bg-primary/10">
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs px-2 text-primary hover:bg-primary/10"
+                          >
                             <Link to="/operations/duties">
                               Edit <ArrowUpRight className="size-3 ml-0.5" />
                             </Link>
@@ -320,8 +366,12 @@ function OperationsTodayPage() {
                             <BusIcon className="size-3.5" />
                           </div>
                           <div>
-                            <span className="text-[10px] uppercase text-muted-foreground font-semibold">Vehicle:</span>
-                            <p className="font-mono font-bold text-foreground text-xs">{d.busRegNumber || "Unassigned"}</p>
+                            <span className="text-[10px] uppercase text-muted-foreground font-semibold">
+                              Vehicle:
+                            </span>
+                            <p className="font-mono font-bold text-foreground text-xs">
+                              {d.busRegNumber || "Unassigned"}
+                            </p>
                           </div>
                         </div>
 
@@ -330,7 +380,9 @@ function OperationsTodayPage() {
                             <Users className="size-3.5" />
                           </div>
                           <div>
-                            <span className="text-[10px] uppercase text-muted-foreground font-semibold">Rostered Crew:</span>
+                            <span className="text-[10px] uppercase text-muted-foreground font-semibold">
+                              Rostered Crew:
+                            </span>
                             <p className="font-medium text-foreground text-xs">
                               {d.driverName ? `${d.driverName} (D)` : "No Driver"}
                               {d.conductorName ? ` · ${d.conductorName} (C)` : ""}
@@ -342,8 +394,12 @@ function OperationsTodayPage() {
                       {/* Trips Progress Bar */}
                       <div className="space-y-1.5 pt-1">
                         <div className="flex justify-between text-[11px] text-muted-foreground">
-                          <span>Trips Progress: <strong>{tripCount} corridor departures</strong></span>
-                          <span className="font-mono text-primary font-semibold">100% Scheduled</span>
+                          <span>
+                            Trips Progress: <strong>{tripCount} corridor departures</strong>
+                          </span>
+                          <span className="font-mono text-primary font-semibold">
+                            100% Scheduled
+                          </span>
                         </div>
                         <Progress value={100} className="h-1.5 bg-secondary" />
                       </div>
@@ -371,11 +427,16 @@ function OperationsTodayPage() {
                     <Radio className="size-4 animate-pulse" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold tracking-tight text-foreground">Disruption Radar</h3>
+                    <h3 className="text-sm font-bold tracking-tight text-foreground">
+                      Disruption Radar
+                    </h3>
                     <p className="text-[11px] text-muted-foreground">Real-time incident feed</p>
                   </div>
                 </div>
-                <Badge variant="outline" className="border-warning/30 text-warning bg-warning/5 text-xs font-mono">
+                <Badge
+                  variant="outline"
+                  className="border-warning/30 text-warning bg-warning/5 text-xs font-mono"
+                >
                   {incidentsList.length} Logged
                 </Badge>
               </div>
@@ -384,7 +445,9 @@ function OperationsTodayPage() {
                 <div className="p-6 rounded-xl border border-dashed border-border/70 text-center text-xs text-muted-foreground bg-background/30">
                   <CheckCircle2 className="size-8 text-emerald-500 mx-auto mb-2 opacity-80" />
                   <p className="font-semibold text-foreground">Zero Active Disruptions</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">All scheduled corridors operating within normal headway bounds.</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    All scheduled corridors operating within normal headway bounds.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
@@ -394,14 +457,16 @@ function OperationsTodayPage() {
                       className="p-3 rounded-lg border border-border/70 bg-card/60 text-xs space-y-1.5 hover:border-warning/50 transition-colors"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-foreground font-mono text-xs">{inc.type}</span>
+                        <span className="font-bold text-foreground font-mono text-xs">
+                          {inc.type}
+                        </span>
                         <Badge
                           variant="outline"
                           className={cn(
                             "text-[9px] uppercase font-mono font-bold",
                             inc.severity === "critical"
                               ? "border-destructive/40 text-destructive bg-destructive/5"
-                              : "border-warning/40 text-warning bg-warning/5"
+                              : "border-warning/40 text-warning bg-warning/5",
                           )}
                         >
                           {inc.severity}
@@ -412,7 +477,10 @@ function OperationsTodayPage() {
                       </p>
                       <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/40 font-mono">
                         <span>Time: {formatMinutesToTime(inc.startTime)}</span>
-                        <Link to="/operations/incidents" className="text-primary font-bold hover:underline">
+                        <Link
+                          to="/operations/incidents"
+                          className="text-primary font-bold hover:underline"
+                        >
                           Inspect ➔
                         </Link>
                       </div>
@@ -429,9 +497,14 @@ function OperationsTodayPage() {
                 <span>Dispatcher Quick Access</span>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Need to re-route or generate algorithmic recovery proposals? Access the Disruption Recovery Engine.
+                Need to re-route or generate algorithmic recovery proposals? Access the Disruption
+                Recovery Engine.
               </p>
-              <Button asChild size="sm" className="w-full text-xs font-semibold bg-primary text-primary-foreground">
+              <Button
+                asChild
+                size="sm"
+                className="w-full text-xs font-semibold bg-primary text-primary-foreground"
+              >
                 <Link to="/operations/incidents">Open Disruption Recovery</Link>
               </Button>
             </div>
@@ -461,7 +534,7 @@ function MetricTile({
     <div
       className={cn(
         "glass-card p-4 rounded-xl border flex flex-col justify-between transition-all",
-        isDestructive ? "border-destructive/40 bg-destructive/5" : "border-border/70"
+        isDestructive ? "border-destructive/40 bg-destructive/5" : "border-border/70",
       )}
     >
       <div className="flex items-center justify-between text-muted-foreground">
@@ -470,11 +543,21 @@ function MetricTile({
       </div>
 
       <div className="mt-2 flex items-baseline justify-between">
-        <span className={cn("text-2xl font-bold font-mono", isDestructive ? "text-destructive" : "text-foreground")}>
+        <span
+          className={cn(
+            "text-2xl font-bold font-mono",
+            isDestructive ? "text-destructive" : "text-foreground",
+          )}
+        >
           {value}
         </span>
         {badge ? (
-          <span className={cn("rounded-full border px-1.5 py-0.2 text-[9px] font-mono font-bold", badgeColor)}>
+          <span
+            className={cn(
+              "rounded-full border px-1.5 py-0.2 text-[9px] font-mono font-bold",
+              badgeColor,
+            )}
+          >
             {badge}
           </span>
         ) : null}

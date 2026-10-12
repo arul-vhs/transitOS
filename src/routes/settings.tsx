@@ -46,8 +46,11 @@ export const Route = createFileRoute("/settings")({
   },
   head: () => ({
     meta: [
-      { title: "System & Depot Settings — TransitOS" },
-      { name: "description", content: "Depot rules, labor compliance limits and optimizer solver weights." },
+      { title: "System & Depot Settings: TransitOS" },
+      {
+        name: "description",
+        content: "Depot rules, labor compliance limits and optimizer solver weights.",
+      },
     ],
   }),
   component: SettingsPage,
@@ -124,16 +127,24 @@ function SettingsPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-foreground">{orgName}</h3>
-                <Badge variant="outline" className="text-[9px] font-mono border-primary/30 text-primary bg-primary/5">
+                <Badge
+                  variant="outline"
+                  className="text-[9px] font-mono border-primary/30 text-primary bg-primary/5"
+                >
                   Enterprise Tier
                 </Badge>
               </div>
-              <p className="text-[11px] text-muted-foreground font-mono">Depot ID: {depotCode} · Dedicated PostgreSQL Schema</p>
+              <p className="text-[11px] text-muted-foreground font-mono">
+                Depot ID: {depotCode} · Dedicated PostgreSQL Schema
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-xs font-mono">
+            <Badge
+              variant="outline"
+              className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-xs font-mono"
+            >
               ● Tenant Active
             </Badge>
           </div>
@@ -142,19 +153,34 @@ function SettingsPage() {
         {/* Settings Tabs */}
         <Tabs defaultValue="rules" className="space-y-6">
           <TabsList className="bg-secondary/40 p-1 rounded-xl border border-border/60">
-            <TabsTrigger value="rules" className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs">
+            <TabsTrigger
+              value="rules"
+              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs"
+            >
               <Clock className="size-3.5" /> Depot Rules & Buffers
             </TabsTrigger>
-            <TabsTrigger value="labor" className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs">
+            <TabsTrigger
+              value="labor"
+              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs"
+            >
               <ShieldCheck className="size-3.5" /> Labor & MV Act Limits
             </TabsTrigger>
-            <TabsTrigger value="optimizer" className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs">
+            <TabsTrigger
+              value="optimizer"
+              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs"
+            >
               <Cpu className="size-3.5" /> Solver Weights
             </TabsTrigger>
-            <TabsTrigger value="organization" className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs">
+            <TabsTrigger
+              value="organization"
+              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs"
+            >
               <Building2 className="size-3.5" /> Organization Profile
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs">
+            <TabsTrigger
+              value="notifications"
+              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs"
+            >
               <Bell className="size-3.5" /> Notifications & Webhooks
             </TabsTrigger>
           </TabsList>
@@ -163,8 +189,12 @@ function SettingsPage() {
           <TabsContent value="rules" className="space-y-6">
             <div className="glass-panel p-6 space-y-5">
               <div className="border-b border-border/60 pb-3">
-                <h3 className="text-sm font-bold text-foreground">Turnaround & Headway Parameters</h3>
-                <p className="text-xs text-muted-foreground">Define depot buffer intervals applied during automatic schedule generation</p>
+                <h3 className="text-sm font-bold text-foreground">
+                  Turnaround & Headway Parameters
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Define depot buffer intervals applied during automatic schedule generation
+                </p>
               </div>
 
               <div className="grid gap-5 sm:grid-cols-3">
@@ -177,9 +207,13 @@ function SettingsPage() {
                       onChange={(e) => setTurnaroundBuffer(e.target.value)}
                       className="bg-background/60 text-xs font-mono pr-12"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">mins</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">
+                      mins
+                    </span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Minimum layover between inbound and outbound trips</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Minimum layover between inbound and outbound trips
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -191,9 +225,13 @@ function SettingsPage() {
                       onChange={(e) => setReliefWindow(e.target.value)}
                       className="bg-background/60 text-xs font-mono pr-12"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">mins</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">
+                      mins
+                    </span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Buffer allotted for driver sign-off & ticket audit</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Buffer allotted for driver sign-off & ticket audit
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -205,9 +243,13 @@ function SettingsPage() {
                       onChange={(e) => setGarageDepartureBuffer(e.target.value)}
                       className="bg-background/60 text-xs font-mono pr-12"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">mins</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">
+                      mins
+                    </span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Pre-trip inspection time before first departure</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Pre-trip inspection time before first departure
+                  </p>
                 </div>
               </div>
             </div>
@@ -219,16 +261,27 @@ function SettingsPage() {
               <div className="border-b border-border/60 pb-3">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="size-4 text-emerald-500" />
-                  <h3 className="text-sm font-bold text-foreground">Motor Vehicles Act (1988) Labor Compliance</h3>
+                  <h3 className="text-sm font-bold text-foreground">
+                    Motor Vehicles Act (1988) Labor Compliance
+                  </h3>
                 </div>
-                <p className="text-xs text-muted-foreground">Hard and soft constraint thresholds enforced across duty builders and optimizer</p>
+                <p className="text-xs text-muted-foreground">
+                  Hard and soft constraint thresholds enforced across duty builders and optimizer
+                </p>
               </div>
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <div className="p-4 rounded-xl border border-border/70 bg-secondary/20 space-y-2">
                   <div className="flex justify-between items-center">
-                    <Label className="text-xs font-semibold text-foreground">Max Continuous Driving Stretch</Label>
-                    <Badge variant="outline" className="text-[9px] font-mono text-emerald-600 border-emerald-500/30">Mandatory</Badge>
+                    <Label className="text-xs font-semibold text-foreground">
+                      Max Continuous Driving Stretch
+                    </Label>
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] font-mono text-emerald-600 border-emerald-500/30"
+                    >
+                      Mandatory
+                    </Badge>
                   </div>
                   <div className="relative">
                     <Input
@@ -237,15 +290,26 @@ function SettingsPage() {
                       onChange={(e) => setMaxContinuousDriving(e.target.value)}
                       className="bg-background/60 text-xs font-mono pr-12"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">mins</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">
+                      mins
+                    </span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Section 13: Drivers must not exceed 4 continuous hours (240 min) without rest</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Section 13: Drivers must not exceed 4 continuous hours (240 min) without rest
+                  </p>
                 </div>
 
                 <div className="p-4 rounded-xl border border-border/70 bg-secondary/20 space-y-2">
                   <div className="flex justify-between items-center">
-                    <Label className="text-xs font-semibold text-foreground">Mandatory Shift Recovery Rest</Label>
-                    <Badge variant="outline" className="text-[9px] font-mono text-emerald-600 border-emerald-500/30">Mandatory</Badge>
+                    <Label className="text-xs font-semibold text-foreground">
+                      Mandatory Shift Recovery Rest
+                    </Label>
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] font-mono text-emerald-600 border-emerald-500/30"
+                    >
+                      Mandatory
+                    </Badge>
                   </div>
                   <div className="relative">
                     <Input
@@ -254,13 +318,19 @@ function SettingsPage() {
                       onChange={(e) => setMandatoryRest(e.target.value)}
                       className="bg-background/60 text-xs font-mono pr-12"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">mins</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">
+                      mins
+                    </span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Minimum 8 hours (480 min) off-duty rest required before next sign-on</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Minimum 8 hours (480 min) off-duty rest required before next sign-on
+                  </p>
                 </div>
 
                 <div className="p-4 rounded-xl border border-border/70 bg-secondary/20 space-y-2">
-                  <Label className="text-xs font-semibold text-foreground">Maximum Weekly Driving Limit</Label>
+                  <Label className="text-xs font-semibold text-foreground">
+                    Maximum Weekly Driving Limit
+                  </Label>
                   <div className="relative">
                     <Input
                       type="number"
@@ -268,13 +338,19 @@ function SettingsPage() {
                       onChange={(e) => setMaxWeeklyHours(e.target.value)}
                       className="bg-background/60 text-xs font-mono pr-12"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">hours</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">
+                      hours
+                    </span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Standard 48-hour weekly ceiling per driver roster cycle</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Standard 48-hour weekly ceiling per driver roster cycle
+                  </p>
                 </div>
 
                 <div className="p-4 rounded-xl border border-border/70 bg-secondary/20 space-y-2">
-                  <Label className="text-xs font-semibold text-foreground">Maximum Spreadover Window</Label>
+                  <Label className="text-xs font-semibold text-foreground">
+                    Maximum Spreadover Window
+                  </Label>
                   <div className="relative">
                     <Input
                       type="number"
@@ -282,9 +358,13 @@ function SettingsPage() {
                       onChange={(e) => setMaxSpreadover(e.target.value)}
                       className="bg-background/60 text-xs font-mono pr-12"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">mins</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">
+                      mins
+                    </span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Total elapsed time from first sign-on to final sign-off (max 12 hours)</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Total elapsed time from first sign-on to final sign-off (max 12 hours)
+                  </p>
                 </div>
               </div>
             </div>
@@ -296,9 +376,13 @@ function SettingsPage() {
               <div className="border-b border-border/60 pb-3">
                 <div className="flex items-center gap-2">
                   <Cpu className="size-4 text-primary" />
-                  <h3 className="text-sm font-bold text-foreground">Mathematical Solver Objective Penalties</h3>
+                  <h3 className="text-sm font-bold text-foreground">
+                    Mathematical Solver Objective Penalties
+                  </h3>
                 </div>
-                <p className="text-xs text-muted-foreground">Tune MILP cost coefficients to prioritize minimal fleet count or crew continuity</p>
+                <p className="text-xs text-muted-foreground">
+                  Tune MILP cost coefficients to prioritize minimal fleet count or crew continuity
+                </p>
               </div>
 
               <div className="grid gap-5 sm:grid-cols-3">
@@ -311,7 +395,9 @@ function SettingsPage() {
                     onChange={(e) => setDeadheadWeight(e.target.value)}
                     className="bg-background/60 text-xs font-mono"
                   />
-                  <p className="text-[10px] text-muted-foreground">Multiplier weighting for non-revenue kilometers</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Multiplier weighting for non-revenue kilometers
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -323,7 +409,9 @@ function SettingsPage() {
                     onChange={(e) => setHandoverWeight(e.target.value)}
                     className="bg-background/60 text-xs font-mono"
                   />
-                  <p className="text-[10px] text-muted-foreground">Penalty against unlinked mid-shift crew swaps</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Penalty against unlinked mid-shift crew swaps
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -335,9 +423,13 @@ function SettingsPage() {
                       onChange={(e) => setSolverTimeout(e.target.value)}
                       className="bg-background/60 text-xs font-mono pr-12"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">sec</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono">
+                      sec
+                    </span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Maximum branch-and-cut optimization search time</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Maximum branch-and-cut optimization search time
+                  </p>
                 </div>
               </div>
             </div>
@@ -348,7 +440,9 @@ function SettingsPage() {
             <div className="glass-panel p-6 space-y-5">
               <div className="border-b border-border/60 pb-3">
                 <h3 className="text-sm font-bold text-foreground">Organization & Tenant Profile</h3>
-                <p className="text-xs text-muted-foreground">Core transit authority details and geographic locality</p>
+                <p className="text-xs text-muted-foreground">
+                  Core transit authority details and geographic locality
+                </p>
               </div>
 
               <div className="grid gap-5 sm:grid-cols-2">
@@ -396,18 +490,24 @@ function SettingsPage() {
             <div className="glass-panel p-6 space-y-5">
               <div className="border-b border-border/60 pb-3">
                 <h3 className="text-sm font-bold text-foreground">Incident Telemetry & Webhooks</h3>
-                <p className="text-xs text-muted-foreground">Automated dispatches to operations rooms and field supervisors</p>
+                <p className="text-xs text-muted-foreground">
+                  Automated dispatches to operations rooms and field supervisors
+                </p>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Disruption Webhook Endpoint (Slack / Discord)</Label>
+                  <Label className="text-xs font-semibold">
+                    Disruption Webhook Endpoint (Slack / Discord)
+                  </Label>
                   <Input
                     value={webhookUrl}
                     onChange={(e) => setWebhookUrl(e.target.value)}
                     className="bg-background/60 text-xs font-mono"
                   />
-                  <p className="text-[10px] text-muted-foreground">Payload fired whenever a high or critical incident is logged</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Payload fired whenever a high or critical incident is logged
+                  </p>
                 </div>
               </div>
             </div>

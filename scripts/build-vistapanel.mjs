@@ -56,7 +56,9 @@ fs.writeFileSync(path.join(outDir, ".htaccess"), htaccessContent, "utf-8");
 
 // 6. Create zip bundle
 console.log("🗜️  Creating digitalplat-htdocs.zip archive...");
-execSync(`cd "${outDir}" && zip -r ../digitalplat-htdocs.zip ./* .htaccess && cd ..`, { stdio: "inherit" });
+execSync(`cd "${outDir}" && zip -r ../digitalplat-htdocs.zip ./* .htaccess && cd ..`, {
+  stdio: "inherit",
+});
 
 console.log("✅ DigitalPlat VistaPanel package ready!");
 console.log(`📁 Files directory: ${outDir}`);

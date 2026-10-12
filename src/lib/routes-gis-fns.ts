@@ -9,7 +9,9 @@ const _getRoutes = createServerFn({ method: "GET" })
   });
 
 export const getRoutes = async (
-  filters?: { status?: string; direction?: string; search?: string } | { data?: { status?: string; direction?: string; search?: string } }
+  filters?:
+    | { status?: string; direction?: string; search?: string }
+    | { data?: { status?: string; direction?: string; search?: string } },
 ) => {
   return await _getRoutes(toServerFnArgs(filters));
 };
@@ -40,7 +42,7 @@ const _createRoute = createServerFn({ method: "POST" })
       peakFrequency?: number;
       offPeakFrequency?: number;
       geometryGeojson?: any;
-    }) => data
+    }) => data,
   )
   .handler(async ({ data }) => {
     const { createRouteImpl } = await import("../server/routes-gis");
@@ -78,7 +80,7 @@ export const createRoute = async (
           offPeakFrequency?: number;
           geometryGeojson?: any;
         };
-      }
+      },
 ) => {
   return await _createRoute(toServerFnArgs(data)!);
 };
@@ -101,7 +103,7 @@ const _updateRoute = createServerFn({ method: "POST" })
         offPeakFrequency?: number;
         geometryGeojson?: any;
       };
-    }) => payload
+    }) => payload,
   )
   .handler(async ({ data }) => {
     const { updateRouteImpl } = await import("../server/routes-gis");
@@ -120,7 +122,7 @@ const _updateRouteStatus = createServerFn({ method: "POST" })
   });
 
 export const updateRouteStatus = async (
-  payload: { id: string; status: string } | { data: { id: string; status: string } }
+  payload: { id: string; status: string } | { data: { id: string; status: string } },
 ) => {
   return await _updateRouteStatus(toServerFnArgs(payload)!);
 };
@@ -155,7 +157,7 @@ const _createStop = createServerFn({ method: "POST" })
       sequence: number;
       latitude: string;
       longitude: string;
-    }) => data
+    }) => data,
   )
   .handler(async ({ data }) => {
     const { createStopImpl } = await import("../server/routes-gis");
@@ -176,7 +178,7 @@ const _updateStop = createServerFn({ method: "POST" })
         latitude: string;
         longitude: string;
       };
-    }) => payload
+    }) => payload,
   )
   .handler(async ({ data }) => {
     const { updateStopImpl } = await import("../server/routes-gis");
@@ -206,7 +208,8 @@ const _reorderStops = createServerFn({ method: "POST" })
   });
 
 export const reorderStops = async (
-  payload: { routeId: string; stopIds: string[] } | { data: { routeId: string; stopIds: string[] } }
+  payload:
+    { routeId: string; stopIds: string[] } | { data: { routeId: string; stopIds: string[] } },
 ) => {
   return await _reorderStops(toServerFnArgs(payload)!);
 };

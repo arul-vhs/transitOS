@@ -9,11 +9,7 @@ import { FALLBACK_BUSES, FALLBACK_CREW } from "./db/fallback-data";
 // Fleet Management Implementations
 // ----------------------------------------------------
 
-export async function getBusesImpl(filters?: {
-  status?: string;
-  depot?: string;
-  search?: string;
-}) {
+export async function getBusesImpl(filters?: { status?: string; depot?: string; search?: string }) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "fleet.view");
 
@@ -31,10 +27,7 @@ export async function getBusesImpl(filters?: {
     if (filters?.search) {
       const searchPattern = `%${filters.search}%`;
       conditions.push(
-        or(
-          like(buses.registrationNumber, searchPattern),
-          like(buses.fleetNumber, searchPattern)
-        )!
+        or(like(buses.registrationNumber, searchPattern), like(buses.fleetNumber, searchPattern))!,
       );
     }
 
@@ -55,8 +48,7 @@ export async function getBusesImpl(filters?: {
       const q = filters.search.toLowerCase();
       result = result.filter(
         (b) =>
-          b.registrationNumber.toLowerCase().includes(q) ||
-          b.fleetNumber.toLowerCase().includes(q)
+          b.registrationNumber.toLowerCase().includes(q) || b.fleetNumber.toLowerCase().includes(q),
       );
     }
     return result as any;
@@ -106,19 +98,18 @@ export async function createBusImpl(data: {
   const existingReg = await db.query.buses.findFirst({
     where: and(
       eq(buses.registrationNumber, data.registrationNumber),
-      eq(buses.tenantId, currentUser.tenantId)
+      eq(buses.tenantId, currentUser.tenantId),
     ),
   });
   if (existingReg) {
-    throw new Error(`Registration number ${data.registrationNumber} already exists in this tenant.`);
+    throw new Error(
+      `Registration number ${data.registrationNumber} already exists in this tenant.`,
+    );
   }
 
   // Validate unique fleet number within tenant
   const existingFleet = await db.query.buses.findFirst({
-    where: and(
-      eq(buses.fleetNumber, data.fleetNumber),
-      eq(buses.tenantId, currentUser.tenantId)
-    ),
+    where: and(eq(buses.fleetNumber, data.fleetNumber), eq(buses.tenantId, currentUser.tenantId)),
   });
   if (existingFleet) {
     throw new Error(`Fleet number ${data.fleetNumber} already exists in this tenant.`);
@@ -160,7 +151,7 @@ export async function updateBusImpl(
     depot: string;
     status: string;
     availableFrom?: number;
-  }
+  },
 ) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "fleet.manage");
@@ -180,7 +171,7 @@ export async function updateBusImpl(
     const existingReg = await db.query.buses.findFirst({
       where: and(
         eq(buses.registrationNumber, data.registrationNumber),
-        eq(buses.tenantId, currentUser.tenantId)
+        eq(buses.tenantId, currentUser.tenantId),
       ),
     });
     if (existingReg) {
@@ -191,10 +182,7 @@ export async function updateBusImpl(
   // Validate uniqueness if changing fleet number
   if (data.fleetNumber !== bus.fleetNumber) {
     const existingFleet = await db.query.buses.findFirst({
-      where: and(
-        eq(buses.fleetNumber, data.fleetNumber),
-        eq(buses.tenantId, currentUser.tenantId)
-      ),
+      where: and(eq(buses.fleetNumber, data.fleetNumber), eq(buses.tenantId, currentUser.tenantId)),
     });
     if (existingFleet) {
       throw new Error(`Fleet number ${data.fleetNumber} already exists.`);
@@ -259,15 +247,15 @@ export async function updateBusStatusImpl(id: string, status: string) {
 // Crew Management Implementations
 // ----------------------------------------------------
 
-async function getCrewByRole(role: string, filters?: { search?: string; status?: string; depot?: string }) {
+async function getCrewByRole(
+  role: string,
+  filters?: { search?: string; status?: string; depot?: string },
+) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "crew.view");
 
   try {
-    let conditions = [
-      eq(crew.tenantId, currentUser.tenantId),
-      eq(crew.role, role)
-    ];
+    let conditions = [eq(crew.tenantId, currentUser.tenantId), eq(crew.role, role)];
 
     if (filters?.status && filters.status !== "all") {
       conditions.push(eq(crew.status, filters.status));
@@ -279,12 +267,7 @@ async function getCrewByRole(role: string, filters?: { search?: string; status?:
 
     if (filters?.search) {
       const searchPattern = `%${filters.search}%`;
-      conditions.push(
-        or(
-          like(crew.name, searchPattern),
-          like(crew.employeeId, searchPattern)
-        )!
-      );
+      conditions.push(or(like(crew.name, searchPattern), like(crew.employeeId, searchPattern))!);
     }
 
     return await db
@@ -306,18 +289,26 @@ async function getCrewByRole(role: string, filters?: { search?: string; status?:
         (c) =>
           c.name.toLowerCase().includes(q) ||
           ((c as any).badgeNumber || "").toLowerCase().includes(q) ||
-          c.employeeId.toLowerCase().includes(q)
+          c.employeeId.toLowerCase().includes(q),
       );
     }
     return result as any;
   }
 }
 
-export async function getDriversImpl(filters?: { search?: string; status?: string; depot?: string }) {
+export async function getDriversImpl(filters?: {
+  search?: string;
+  status?: string;
+  depot?: string;
+}) {
   return await getCrewByRole("driver", filters);
 }
 
-export async function getConductorsImpl(filters?: { search?: string; status?: string; depot?: string }) {
+export async function getConductorsImpl(filters?: {
+  search?: string;
+  status?: string;
+  depot?: string;
+}) {
   return await getCrewByRole("conductor", filters);
 }
 
@@ -361,10 +352,7 @@ export async function createCrewMemberImpl(data: {
 
   // Validate employeeId uniqueness within tenant
   const existing = await db.query.crew.findFirst({
-    where: and(
-      eq(crew.employeeId, data.employeeId),
-      eq(crew.tenantId, currentUser.tenantId)
-    ),
+    where: and(eq(crew.employeeId, data.employeeId), eq(crew.tenantId, currentUser.tenantId)),
   });
   if (existing) {
     throw new Error(`Employee ID ${data.employeeId} already exists in this tenant.`);
@@ -381,7 +369,8 @@ export async function createCrewMemberImpl(data: {
       depot: data.depot,
       availableFrom: data.availableFrom ?? 330,
       restUntil: data.restUntil ?? 330,
-      licenseCategory: data.role === "driver" ? (data.licenseCategory || "Commercial Bus Licence") : null,
+      licenseCategory:
+        data.role === "driver" ? data.licenseCategory || "Commercial Bus Licence" : null,
       licenseExpiry: data.role === "driver" ? parsedLicenseExpiry : null,
     })
     .returning();
@@ -410,7 +399,7 @@ export async function updateCrewMemberImpl(
     restUntil?: number;
     licenseCategory?: string | null;
     licenseExpiry?: Date | null;
-  }
+  },
 ) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "crew.manage");
@@ -435,10 +424,7 @@ export async function updateCrewMemberImpl(
   // Validate uniqueness if changing employeeId
   if (data.employeeId !== member.employeeId) {
     const existing = await db.query.crew.findFirst({
-      where: and(
-        eq(crew.employeeId, data.employeeId),
-        eq(crew.tenantId, currentUser.tenantId)
-      ),
+      where: and(eq(crew.employeeId, data.employeeId), eq(crew.tenantId, currentUser.tenantId)),
     });
     if (existing) {
       throw new Error(`Employee ID ${data.employeeId} already exists.`);
@@ -490,7 +476,8 @@ export async function updateCrewStatusImpl(id: string, status: string) {
     .returning();
 
   // Audit Log
-  const actionType = member.role === "driver" ? "DRIVER_STATUS_CHANGED" : "CONDUCTOR_STATUS_CHANGED";
+  const actionType =
+    member.role === "driver" ? "DRIVER_STATUS_CHANGED" : "CONDUCTOR_STATUS_CHANGED";
   await db.insert(auditLogs).values({
     tenantId: currentUser.tenantId,
     userId: currentUser.id,
@@ -527,4 +514,3 @@ export async function getCrewAvailabilityImpl() {
 
   return FALLBACK_CREW as any;
 }
-

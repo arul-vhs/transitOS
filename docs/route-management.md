@@ -7,12 +7,15 @@ This document describes the Route Management module of the TransitOS platform, d
 ## 1. Database Schemas
 
 ### Route Table Schema
+
 Routes are stored in the PostgreSQL database using the `routes` table:
 
 ```typescript
 export const routes = pgTable("routes", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
   code: varchar("code", { length: 50 }).notNull(), // e.g. Route 101
   name: varchar("name", { length: 255 }).notNull(), // e.g. Salem Central -> Hasthampatti
   origin: varchar("origin", { length: 255 }),
@@ -31,13 +34,18 @@ export const routes = pgTable("routes", {
 ```
 
 ### Stops Table Schema
+
 Stops belong to routes and are ordered by sequence:
 
 ```typescript
 export const stops = pgTable("stops", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
-  routeId: uuid("route_id").notNull().references(() => routes.id, { onDelete: "cascade" }),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  routeId: uuid("route_id")
+    .notNull()
+    .references(() => routes.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   sequence: integer("sequence").notNull(),
   latitude: decimal("latitude", { precision: 10, scale: 6 }),
@@ -63,6 +71,7 @@ The module exports clean client-safe RPC-bridged TanStack Start server functions
 ## 3. Stop CRUD & Reordering Mechanics
 
 ### Sequencing Safeguards
+
 - **Create Stop (`createStop`)**: Validates name, positive sequence, lat/lng ranges. If a stop already exists at the target sequence number, sequences of all subsequent stops are incremented by 1 before inserting.
 - **Delete Stop (`deleteStop`)**: Deletes the stop record and sequentially re-numbers remaining stops (`1, 2, 3...`) to ensure a continuous gapless sequence.
 - **Reorder Stops (`reorderStops`)**: Updates stop sequences based on an ordered array of IDs.
@@ -83,7 +92,7 @@ const list = await db
     and(
       eq(routes.tenantId, currentUser.tenantId),
       // ... filters
-    )
+    ),
   );
 ```
 
@@ -92,6 +101,7 @@ const list = await db
 ## 5. Audit Logging
 
 State modifications trigger audit log entries:
+
 - `ROUTE_CREATED` / `ROUTE_UPDATED`
 - `ROUTE_STATUS_CHANGED` / `ROUTE_ARCHIVED`
 - `STOP_CREATED` / `STOP_UPDATED` / `STOP_DELETED`

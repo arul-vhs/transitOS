@@ -50,8 +50,11 @@ export const Route = createFileRoute("/network/planner")({
   },
   head: () => ({
     meta: [
-      { title: "Route Planner — TransitOS" },
-      { name: "description", content: "Design new Salem corridors, draw points and analyze overlap." },
+      { title: "Route Planner: TransitOS" },
+      {
+        name: "description",
+        content: "Design new Salem corridors, draw points and analyze overlap.",
+      },
     ],
   }),
   component: RoutePlannerPage,
@@ -291,8 +294,8 @@ function RoutePlannerPage() {
       const newRoute: any = await createRoute({
         code,
         name,
-        origin: origin || (localStops[0]?.name) || "Salem Origin",
-        destination: destination || (localStops[localStops.length - 1]?.name) || "Salem Destination",
+        origin: origin || localStops[0]?.name || "Salem Origin",
+        destination: destination || localStops[localStops.length - 1]?.name || "Salem Destination",
         lengthKm: calculatedLength,
         durationMin: Number(durationMin),
         direction,
@@ -414,7 +417,9 @@ function RoutePlannerPage() {
             <div className="space-y-3.5">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="code" className="text-xs">Route Code</Label>
+                  <Label htmlFor="code" className="text-xs">
+                    Route Code
+                  </Label>
                   <Input
                     id="code"
                     value={code}
@@ -424,7 +429,9 @@ function RoutePlannerPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="direction" className="text-xs">Direction</Label>
+                  <Label htmlFor="direction" className="text-xs">
+                    Direction
+                  </Label>
                   <Select value={direction} onValueChange={setDirection}>
                     <SelectTrigger id="direction" className="text-xs font-mono bg-background/60">
                       <SelectValue />
@@ -439,7 +446,9 @@ function RoutePlannerPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-xs">Route Name</Label>
+                <Label htmlFor="name" className="text-xs">
+                  Route Name
+                </Label>
                 <Input
                   id="name"
                   value={name}
@@ -473,7 +482,12 @@ function RoutePlannerPage() {
               <div className="grid grid-cols-3 gap-2">
                 <div className="space-y-1">
                   <Label htmlFor="length">Length (Km)</Label>
-                  <Input id="length" value={calculatedLength} readOnly className="bg-muted font-mono" />
+                  <Input
+                    id="length"
+                    value={calculatedLength}
+                    readOnly
+                    className="bg-muted font-mono"
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="duration">Est. Min</Label>
@@ -529,7 +543,11 @@ function RoutePlannerPage() {
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   <Waypoints className="size-4 text-primary" /> Route Overlap Analysis
                 </h3>
-                <Button size="sm" onClick={() => analyzeMutation.mutate()} disabled={analyzeMutation.isPending}>
+                <Button
+                  size="sm"
+                  onClick={() => analyzeMutation.mutate()}
+                  disabled={analyzeMutation.isPending}
+                >
                   {analyzeMutation.isPending ? "Analyzing..." : "Analyze Overlap"}
                 </Button>
               </div>
@@ -537,11 +555,14 @@ function RoutePlannerPage() {
               {analyzeMutation.data ? (
                 overlapList.length === 0 ? (
                   <div className="flex items-center gap-2 rounded-lg border border-success/20 bg-success/5 px-4 py-3 text-xs font-semibold text-success">
-                    <CheckCircle2 className="size-4" /> Minimal corridor overlap. Proposed corridor is independent.
+                    <CheckCircle2 className="size-4" /> Minimal corridor overlap. Proposed corridor
+                    is independent.
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className={`flex items-start gap-2.5 rounded-lg border px-4 py-3 text-xs font-medium ${recommendation.color}`}>
+                    <div
+                      className={`flex items-start gap-2.5 rounded-lg border px-4 py-3 text-xs font-medium ${recommendation.color}`}
+                    >
                       <AlertTriangle className="size-4 mt-0.5 shrink-0" />
                       <div>
                         <p className="font-bold">Severity: {recommendation.severity}</p>
@@ -551,14 +572,23 @@ function RoutePlannerPage() {
 
                     <div className="space-y-2">
                       {overlapList.map((res: any) => (
-                        <div key={res.routeId} className="flex justify-between items-center text-xs p-2 rounded bg-secondary/10 border">
+                        <div
+                          key={res.routeId}
+                          className="flex justify-between items-center text-xs p-2 rounded bg-secondary/10 border"
+                        >
                           <div>
                             <span className="font-semibold text-foreground">{res.routeCode}</span>
-                            <span className="text-muted-foreground ml-1 font-normal">({res.routeName})</span>
+                            <span className="text-muted-foreground ml-1 font-normal">
+                              ({res.routeName})
+                            </span>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold font-mono text-primary">{res.overlapDistanceKm} km</p>
-                            <p className="text-[10px] text-muted-foreground">{res.overlapPercentage}% overlap</p>
+                            <p className="font-semibold font-mono text-primary">
+                              {res.overlapDistanceKm} km
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {res.overlapPercentage}% overlap
+                            </p>
                           </div>
                         </div>
                       ))}
@@ -575,7 +605,12 @@ function RoutePlannerPage() {
 
           {/* Action Row */}
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={handleClearDraw} disabled={drawnCoords.length === 0}>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={handleClearDraw}
+              disabled={drawnCoords.length === 0}
+            >
               <Trash2 className="size-4 mr-1.5" /> Clear Path
             </Button>
             <Button
@@ -635,18 +670,28 @@ function RoutePlannerPage() {
               <div className="grid gap-6 md:grid-cols-2">
                 {/* Vertices List */}
                 <div className="space-y-2">
-                  <p className="text-xs font-bold uppercase text-muted-foreground">Corridor Vertices</p>
+                  <p className="text-xs font-bold uppercase text-muted-foreground">
+                    Corridor Vertices
+                  </p>
                   <div className="max-h-[220px] overflow-y-auto space-y-1 border rounded-md p-1.5 bg-background/50">
                     {drawnCoords.map((c, idx) => {
                       const isStop = localStops.some((s) => s.lat === c[1] && s.lng === c[0]);
                       return (
-                        <div key={idx} className="flex justify-between items-center text-xs p-1.5 rounded border border-transparent hover:bg-secondary">
+                        <div
+                          key={idx}
+                          className="flex justify-between items-center text-xs p-1.5 rounded border border-transparent hover:bg-secondary"
+                        >
                           <span className="font-mono">
                             Point {idx + 1}: {c[1].toFixed(5)}, {c[0].toFixed(5)}
                           </span>
                           <div className="flex gap-2">
                             {isStop ? (
-                              <Badge variant="secondary" className="text-[9px] uppercase font-bold py-0.5">Stop Node</Badge>
+                              <Badge
+                                variant="secondary"
+                                className="text-[9px] uppercase font-bold py-0.5"
+                              >
+                                Stop Node
+                              </Badge>
                             ) : (
                               <Button
                                 size="sm"
@@ -666,15 +711,24 @@ function RoutePlannerPage() {
 
                 {/* Stop Nodes Registry */}
                 <div className="space-y-2">
-                  <p className="text-xs font-bold uppercase text-muted-foreground">Sequenced Stops</p>
+                  <p className="text-xs font-bold uppercase text-muted-foreground">
+                    Sequenced Stops
+                  </p>
                   <div className="max-h-[220px] overflow-y-auto space-y-1 border rounded-md p-1.5 bg-background/50">
                     {localStops.length === 0 ? (
-                      <div className="py-10 text-center text-xs text-muted-foreground">No stops defined. Mark a vertex as stop.</div>
+                      <div className="py-10 text-center text-xs text-muted-foreground">
+                        No stops defined. Mark a vertex as stop.
+                      </div>
                     ) : (
                       localStops.map((stop) => (
-                        <div key={stop.sequence} className="flex justify-between items-center text-xs p-1.5 rounded bg-primary/5 border border-primary/10">
+                        <div
+                          key={stop.sequence}
+                          className="flex justify-between items-center text-xs p-1.5 rounded bg-primary/5 border border-primary/10"
+                        >
                           <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-primary font-mono">{stop.sequence}</span>
+                            <span className="font-bold text-primary font-mono">
+                              {stop.sequence}
+                            </span>
                             <span className="font-semibold">{stop.name}</span>
                           </div>
                           <span className="font-mono text-[10px] text-muted-foreground">
@@ -692,13 +746,19 @@ function RoutePlannerPage() {
       </div>
 
       {/* DIALOG FOR MARKING VERTEX AS STOP */}
-      <Dialog open={selectedCoordIndex !== null} onOpenChange={(val) => { if (!val) setSelectedCoordIndex(null); }}>
+      <Dialog
+        open={selectedCoordIndex !== null}
+        onOpenChange={(val) => {
+          if (!val) setSelectedCoordIndex(null);
+        }}
+      >
         <DialogContent className="sm:max-w-[360px]">
           <form onSubmit={handleMarkAsStop}>
             <DialogHeader>
               <DialogTitle>Mark Coordinate as Stop</DialogTitle>
               <DialogDescription>
-                Assign a Stop Node Name to Vertex {selectedCoordIndex !== null ? selectedCoordIndex + 1 : ""}.
+                Assign a Stop Node Name to Vertex{" "}
+                {selectedCoordIndex !== null ? selectedCoordIndex + 1 : ""}.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-1">

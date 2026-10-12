@@ -9,7 +9,8 @@ const _loginFn = createServerFn({ method: "POST" })
   });
 
 export const loginFn = async (
-  credentials: { email: string; password?: string } | { data: { email: string; password?: string } }
+  credentials:
+    { email: string; password?: string } | { data: { email: string; password?: string } },
 ) => {
   return await _loginFn(toServerFnArgs(credentials)!);
 };

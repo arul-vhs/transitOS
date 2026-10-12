@@ -2,13 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-  Download,
-  Calendar,
-  Filter,
-  ArrowLeft,
-  Search,
-} from "lucide-react";
+import { Download, Calendar, Filter, ArrowLeft, Search } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
@@ -89,7 +83,9 @@ function PlanVsActualPage() {
       actions={
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link to="/analytics"><ArrowLeft className="mr-2 size-3.5" /> Back</Link>
+            <Link to="/analytics">
+              <ArrowLeft className="mr-2 size-3.5" /> Back
+            </Link>
           </Button>
 
           <Button
@@ -126,7 +122,9 @@ function PlanVsActualPage() {
               <SelectContent>
                 <SelectItem value="all">All Routes</SelectItem>
                 {routesList.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>{r.code}</SelectItem>
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.code}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -141,7 +139,9 @@ function PlanVsActualPage() {
               <SelectContent>
                 <SelectItem value="all">All Buses</SelectItem>
                 {busesList.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>{b.registrationNumber}</SelectItem>
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.registrationNumber}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -167,9 +167,13 @@ function PlanVsActualPage() {
         {/* Tabular data */}
         <section className="panel p-5 space-y-4">
           {listLoading ? (
-            <div className="py-20 text-center text-xs text-muted-foreground">Loading plan vs actual logs...</div>
+            <div className="py-20 text-center text-xs text-muted-foreground">
+              Loading plan vs actual logs...
+            </div>
           ) : pvsList.length === 0 ? (
-            <div className="py-20 text-center text-xs text-muted-foreground italic">No matching operational records found.</div>
+            <div className="py-20 text-center text-xs text-muted-foreground italic">
+              No matching operational records found.
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -190,23 +194,26 @@ function PlanVsActualPage() {
                 <TableBody>
                   {pvsList.map((t: any) => {
                     const varNum = parseInt(t.departureVariance);
-                    const varColor =
-                      isNaN(varNum)
-                        ? "text-muted-foreground"
-                        : varNum > 5
+                    const varColor = isNaN(varNum)
+                      ? "text-muted-foreground"
+                      : varNum > 5
                         ? "text-destructive font-bold"
                         : varNum < 0
-                        ? "text-success font-semibold"
-                        : "text-muted-foreground";
+                          ? "text-success font-semibold"
+                          : "text-muted-foreground";
 
                     return (
                       <TableRow key={t.tripId}>
                         <TableCell className="font-bold text-xs">{t.tripCode}</TableCell>
                         <TableCell className="text-xs">{t.routeCode}</TableCell>
-                        <TableCell className="text-[10px] uppercase font-mono">{t.direction}</TableCell>
+                        <TableCell className="text-[10px] uppercase font-mono">
+                          {t.direction}
+                        </TableCell>
                         <TableCell className="text-xs font-mono">{t.plannedStart}</TableCell>
                         <TableCell className="text-xs font-mono">{t.actualStart}</TableCell>
-                        <TableCell className={`text-xs font-mono ${varColor}`}>{t.departureVariance}</TableCell>
+                        <TableCell className={`text-xs font-mono ${varColor}`}>
+                          {t.departureVariance}
+                        </TableCell>
                         <TableCell className="text-xs font-mono">{t.plannedEnd}</TableCell>
                         <TableCell className="text-xs font-mono">{t.actualEnd}</TableCell>
                         <TableCell>
@@ -215,10 +222,10 @@ function PlanVsActualPage() {
                               t.status === "COMPLETED"
                                 ? "default"
                                 : t.status === "RECOVERED"
-                                ? "secondary"
-                                : t.status === "CANCELLED"
-                                ? "destructive"
-                                : "outline"
+                                  ? "secondary"
+                                  : t.status === "CANCELLED"
+                                    ? "destructive"
+                                    : "outline"
                             }
                             className="text-[9px] uppercase px-1 py-0 h-5"
                           >

@@ -74,10 +74,11 @@ export const Route = createFileRoute("/operations/incidents")({
   },
   head: () => ({
     meta: [
-      { title: "Disruption Recovery Manager — TransitOS" },
+      { title: "Disruption Recovery Manager: TransitOS" },
       {
         name: "description",
-        content: "Track live operational incidents, analyze impacts, and apply re-optimized recovery schedules.",
+        content:
+          "Track live operational incidents, analyze impacts, and apply re-optimized recovery schedules.",
       },
     ],
   }),
@@ -238,7 +239,7 @@ function IncidentsPage() {
 
   // Sort proposals to find recommended (lowest objectiveScore)
   const sortedProposals = [...proposals].sort(
-    (a, b) => Number(a.objectiveScore) - Number(b.objectiveScore)
+    (a, b) => Number(a.objectiveScore) - Number(b.objectiveScore),
   );
   const recommendedProposalId = sortedProposals[0]?.id;
   const selectedIncidentObj = selectedIncident;
@@ -269,12 +270,18 @@ function IncidentsPage() {
             <div>
               <p className="font-bold text-foreground flex items-center gap-1.5">
                 <span>Disruption Recovery Workflow</span>
-                <Badge variant="outline" className="text-[9px] font-mono border-destructive/40 text-destructive bg-destructive/10">
+                <Badge
+                  variant="outline"
+                  className="text-[9px] font-mono border-destructive/40 text-destructive bg-destructive/10"
+                >
                   Incident Radar
                 </Badge>
               </p>
               <p className="text-muted-foreground mt-0.5 leading-relaxed">
-                <strong>Step 1:</strong> Log or select an active breakdown. ➔ <strong>Step 2:</strong> TransitOS evaluates cascade impacts across all downline trips and computes automated recovery options (short-turns, vehicle swaps, or deadhead injection).
+                <strong>Step 1:</strong> Log or select an active breakdown. ➔{" "}
+                <strong>Step 2:</strong> TransitOS evaluates cascade impacts across all downline
+                trips and computes automated recovery options (short-turns, vehicle swaps, or
+                deadhead injection).
               </p>
             </div>
           </div>
@@ -297,7 +304,10 @@ function IncidentsPage() {
             <section className="glass-panel p-4 space-y-3 flex flex-col h-[740px]">
               <div className="flex items-center justify-between border-b border-border/60 pb-2.5 px-1">
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="font-mono text-[9px] font-bold text-destructive bg-destructive/15 px-1 py-0">
+                  <Badge
+                    variant="secondary"
+                    className="font-mono text-[9px] font-bold text-destructive bg-destructive/15 px-1 py-0"
+                  >
                     Step 1
                   </Badge>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
@@ -309,381 +319,477 @@ function IncidentsPage() {
                 </Badge>
               </div>
 
-            {listLoading ? (
-              <div className="py-20 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2 flex-1">
-                <Loader2 className="size-5 animate-spin text-primary" />
-                <span>Loading disruptions log...</span>
+              {listLoading ? (
+                <div className="py-20 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2 flex-1">
+                  <Loader2 className="size-5 animate-spin text-primary" />
+                  <span>Loading disruptions log...</span>
+                </div>
+              ) : incidentsList.length === 0 ? (
+                <div className="py-20 text-center text-xs text-muted-foreground italic flex-1 flex flex-col items-center justify-center p-4">
+                  <CheckCircle className="size-8 text-emerald-500/60 mb-2" />
+                  <p className="font-semibold text-foreground">No Incidents Logged</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Click 'Report Disruption' to record an incident.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2.5 overflow-y-auto flex-1 pr-1">
+                  {incidentsList.map((inc) => {
+                    const isSelected = selectedIncidentId === inc.id;
+
+                    return (
+                      <button
+                        key={inc.id}
+                        onClick={() => setSelectedIncidentId(inc.id)}
+                        className={cn(
+                          "w-full p-3 rounded-xl border text-left transition-all duration-150 flex flex-col gap-2 cursor-pointer",
+                          isSelected
+                            ? "border-destructive bg-destructive/10 shadow-xs ring-1 ring-destructive/30"
+                            : "border-border/70 bg-card/60 hover:bg-muted/60",
+                        )}
+                      >
+                        <div className="flex justify-between items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[9px] uppercase font-bold font-mono px-1.5 py-0",
+                              inc.severity === "critical"
+                                ? "border-destructive/40 text-destructive bg-destructive/10"
+                                : "border-warning/40 text-warning bg-warning/10",
+                            )}
+                          >
+                            {inc.type.replace("_", " ")}
+                          </Badge>
+                          <span className="text-[10px] font-mono text-muted-foreground">
+                            {formatMinutesToTime(inc.startTime)}
+                          </span>
+                        </div>
+
+                        <p className="text-xs font-bold truncate text-foreground">
+                          {inc.description || "Operational disruption reported on vehicle/crew."}
+                        </p>
+
+                        <div className="flex justify-between items-center text-[10px] text-muted-foreground font-mono pt-1 border-t border-border/40">
+                          <span>
+                            Status:{" "}
+                            <strong className="text-foreground uppercase">{inc.status}</strong>
+                          </span>
+                          <span
+                            className={cn(
+                              "font-bold uppercase",
+                              inc.severity === "critical" ? "text-destructive" : "text-warning",
+                            )}
+                          >
+                            {inc.severity}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </div>
+
+          {/* Center/Right Details Panel */}
+          <div className="lg:col-span-8 space-y-6">
+            {detailsLoading ? (
+              <div className="glass-panel p-24 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
+                <Loader2 className="size-6 animate-spin text-primary" />
+                <span>Analyzing disruption chain...</span>
               </div>
-            ) : incidentsList.length === 0 ? (
-              <div className="py-20 text-center text-xs text-muted-foreground italic flex-1 flex flex-col items-center justify-center p-4">
-                <CheckCircle className="size-8 text-emerald-500/60 mb-2" />
-                <p className="font-semibold text-foreground">No Incidents Logged</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Click 'Report Disruption' to record an incident.</p>
+            ) : !selectedIncidentObj ? (
+              <div className="glass-panel p-24 text-center text-xs text-muted-foreground flex flex-col items-center justify-center">
+                <ShieldAlert className="size-10 text-muted-foreground/40 mb-2" />
+                <p className="font-semibold text-foreground">No Disruption Selected</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Select an incident from the left to inspect downline impacts.
+                </p>
               </div>
             ) : (
-              <div className="space-y-2.5 overflow-y-auto flex-1 pr-1">
-                {incidentsList.map((inc) => {
-                  const isSelected = selectedIncidentId === inc.id;
-
-                  return (
-                    <button
-                      key={inc.id}
-                      onClick={() => setSelectedIncidentId(inc.id)}
-                      className={cn(
-                        "w-full p-3 rounded-xl border text-left transition-all duration-150 flex flex-col gap-2 cursor-pointer",
-                        isSelected
-                          ? "border-destructive bg-destructive/10 shadow-xs ring-1 ring-destructive/30"
-                          : "border-border/70 bg-card/60 hover:bg-muted/60"
-                      )}
-                    >
-                      <div className="flex justify-between items-center gap-2">
+              <div className="space-y-6">
+                {/* INCIDENT STATUS HEADER CARD */}
+                <section className="glass-panel p-5 space-y-4">
+                  <div className="flex flex-wrap justify-between items-start gap-4 border-b border-border/60 pb-3.5">
+                    <div>
+                      <div className="flex items-center gap-2.5">
+                        <h2 className="text-lg font-bold text-foreground font-mono">
+                          {selectedIncidentObj.type.replace("_", " ")}
+                        </h2>
                         <Badge
                           variant="outline"
                           className={cn(
-                            "text-[9px] uppercase font-bold font-mono px-1.5 py-0",
-                            inc.severity === "critical"
+                            "uppercase text-[9px] font-mono font-bold",
+                            selectedIncidentObj.severity === "critical"
                               ? "border-destructive/40 text-destructive bg-destructive/10"
-                              : "border-warning/40 text-warning bg-warning/10"
+                              : "border-warning/40 text-warning bg-warning/10",
                           )}
                         >
-                          {inc.type.replace("_", " ")}
+                          {selectedIncidentObj.severity} Severity
                         </Badge>
-                        <span className="text-[10px] font-mono text-muted-foreground">
-                          {formatMinutesToTime(inc.startTime)}
-                        </span>
-                      </div>
-
-                      <p className="text-xs font-bold truncate text-foreground">
-                        {inc.description || "Operational disruption reported on vehicle/crew."}
-                      </p>
-
-                      <div className="flex justify-between items-center text-[10px] text-muted-foreground font-mono pt-1 border-t border-border/40">
-                        <span>Status: <strong className="text-foreground uppercase">{inc.status}</strong></span>
-                        <span className={cn("font-bold uppercase", inc.severity === "critical" ? "text-destructive" : "text-warning")}>
-                          {inc.severity}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        </div>
-
-        {/* Center/Right Details Panel */}
-        <div className="lg:col-span-8 space-y-6">
-          {detailsLoading ? (
-            <div className="glass-panel p-24 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
-              <Loader2 className="size-6 animate-spin text-primary" />
-              <span>Analyzing disruption chain...</span>
-            </div>
-          ) : !selectedIncidentObj ? (
-            <div className="glass-panel p-24 text-center text-xs text-muted-foreground flex flex-col items-center justify-center">
-              <ShieldAlert className="size-10 text-muted-foreground/40 mb-2" />
-              <p className="font-semibold text-foreground">No Disruption Selected</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Select an incident from the left to inspect downline impacts.</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* INCIDENT STATUS HEADER CARD */}
-              <section className="glass-panel p-5 space-y-4">
-                <div className="flex flex-wrap justify-between items-start gap-4 border-b border-border/60 pb-3.5">
-                  <div>
-                    <div className="flex items-center gap-2.5">
-                      <h2 className="text-lg font-bold text-foreground font-mono">{selectedIncidentObj.type.replace("_", " ")}</h2>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "uppercase text-[9px] font-mono font-bold",
-                          selectedIncidentObj.severity === "critical"
-                            ? "border-destructive/40 text-destructive bg-destructive/10"
-                            : "border-warning/40 text-warning bg-warning/10"
-                        )}
-                      >
-                        {selectedIncidentObj.severity} Severity
-                      </Badge>
-                      <Badge variant="secondary" className="uppercase text-[9px] font-bold">
-                        {selectedIncidentObj.status}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Logged at {formatMinutesToTime(selectedIncidentObj.startTime)} · Location: <strong className="text-foreground">{selectedIncidentObj.location || "En Route Corridor"}</strong>
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    {canGenerate && selectedIncidentObj.status !== "APPLIED" && selectedIncidentObj.status !== "RESOLVED" && selectedIncidentObj.status !== "CANCELLED" ? (
-                      <Button
-                        onClick={() => generateProposalsMutation.mutate(selectedIncidentObj.id)}
-                        disabled={generateProposalsMutation.isPending}
-                        size="sm"
-                        className="bg-primary text-primary-foreground text-xs font-semibold shadow-md shadow-primary/20"
-                      >
-                        {generateProposalsMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-1.5 size-3.5 animate-spin" /> Solving...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="mr-1.5 size-3.5" />
-                            {proposals.length > 0 ? "Regenerate Options" : "Solve Disruption"}
-                          </>
-                        )}
-                      </Button>
-                    ) : null}
-
-                    {selectedIncidentObj.status !== "RESOLVED" && selectedIncidentObj.status !== "CANCELLED" && (
-                      <Button
-                        onClick={() => resolveIncidentMutation.mutate(selectedIncidentObj.id)}
-                        disabled={resolveIncidentMutation.isPending}
-                        variant="outline"
-                        size="sm"
-                        className="text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
-                      >
-                        <Check className="size-3.5 mr-1" /> Mark Resolved
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-3 text-xs bg-secondary/30 rounded-xl p-3 border border-border/60">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Resource Affected:</span>
-                    <p className="font-mono font-bold text-foreground mt-0.5">
-                      {selectedIncidentObj.resourceType === "bus" ? "Bus Vehicle" : "Crew Member"} ({selectedIncidentObj.resourceId || "N/A"})
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Expected Duration:</span>
-                    <p className="font-mono font-bold text-foreground mt-0.5">
-                      {selectedIncidentObj.expectedEndTime ? `${selectedIncidentObj.expectedEndTime - selectedIncidentObj.startTime} mins` : "Indefinite"}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Description:</span>
-                    <p className="text-muted-foreground mt-0.5 italic truncate">{selectedIncidentObj.description || "Standard delay logged"}</p>
-                  </div>
-                </div>
-              </section>
-
-              {/* RIPPLE EFFECT IMPACT TIMELINE */}
-              <section className="glass-panel p-5 space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Activity className="size-4 text-warning" /> Disruption Downstream Propagation Chain
-                </h3>
-
-                <div className="flex flex-col gap-2.5 max-w-xl mx-auto py-2">
-                  {/* Source Node */}
-                  <div className="p-3.5 rounded-xl border border-destructive/30 bg-destructive/5 flex items-center gap-3">
-                    <div className="size-8 rounded-lg bg-destructive/10 text-destructive grid place-items-center shrink-0">
-                      <Flame className="size-4.5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-destructive">Origin Incident: {selectedIncidentObj.type}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Reported at {formatMinutesToTime(selectedIncidentObj.startTime)} at {selectedIncidentObj.location || "Salem Corridor"}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-center my-0.5">
-                    <ArrowDown className="size-4 text-muted-foreground/60" />
-                  </div>
-
-                  {/* Resource Node */}
-                  <div className="p-3.5 rounded-xl border border-border/70 bg-card/60 flex items-center gap-3">
-                    <div className="size-8 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
-                      <BusIcon className="size-4.5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-foreground">Direct Resource Immobilized</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Assigned duty block trips blocked from subsequent on-time departure</p>
-                    </div>
-                  </div>
-
-                  {selectedIncidentObj.impacts?.length > 0 && (
-                    <>
-                      <div className="flex justify-center my-0.5">
-                        <ArrowDown className="size-4 text-muted-foreground/60" />
-                      </div>
-
-                      <div className="p-3.5 rounded-xl border border-warning/30 bg-warning/5 space-y-2">
-                        <div className="flex items-center gap-2 text-xs font-bold text-warning">
-                          <AlertTriangle className="size-4" />
-                          <span>Downstream Cascade Impact ({selectedIncidentObj.impacts.length} trips affected)</span>
-                        </div>
-                        <div className="divide-y divide-border/40 text-[11px] text-muted-foreground">
-                          {selectedIncidentObj.impacts.map((imp: any) => (
-                            <div key={imp.id} className="py-1.5 flex justify-between gap-4 font-mono">
-                              <span>Trip <strong>{imp.trip?.tripCode || "Departure"}</strong> ({imp.impactType})</span>
-                              <span className="font-bold text-warning uppercase text-[10px]">{imp.impactLevel}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </section>
-
-              {/* RECOVERY PROPOSALS CARDS */}
-              {proposals.length > 0 && (
-                <section className="glass-panel p-5 space-y-4">
-                  <div className="flex items-center justify-between border-b border-border/60 pb-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="font-mono text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 px-1 py-0">
-                          Step 2
+                        <Badge variant="secondary" className="uppercase text-[9px] font-bold">
+                          {selectedIncidentObj.status}
                         </Badge>
-                        <h3 className="text-sm font-bold tracking-tight text-foreground">Algorithmic Recovery Options</h3>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Compare options and click <strong>Approve & Dispatch</strong> to apply the selected solution live.
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Logged at {formatMinutesToTime(selectedIncidentObj.startTime)} · Location:{" "}
+                        <strong className="text-foreground">
+                          {selectedIncidentObj.location || "En Route Corridor"}
+                        </strong>
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono text-xs text-primary border-primary/30">
-                        {proposals.length} Proposals Generated
-                      </Badge>
-                      {canGenerate && selectedIncidentObj.status !== "APPLIED" && selectedIncidentObj.status !== "RESOLVED" && (
+
+                    <div className="flex gap-2">
+                      {canGenerate &&
+                      selectedIncidentObj.status !== "APPLIED" &&
+                      selectedIncidentObj.status !== "RESOLVED" &&
+                      selectedIncidentObj.status !== "CANCELLED" ? (
                         <Button
                           onClick={() => generateProposalsMutation.mutate(selectedIncidentObj.id)}
                           disabled={generateProposalsMutation.isPending}
                           size="sm"
-                          variant="outline"
-                          className="text-xs h-7 gap-1"
+                          className="bg-primary text-primary-foreground text-xs font-semibold shadow-md shadow-primary/20"
                         >
                           {generateProposalsMutation.isPending ? (
-                            <Loader2 className="size-3 animate-spin text-primary" />
+                            <>
+                              <Loader2 className="mr-1.5 size-3.5 animate-spin" /> Solving...
+                            </>
                           ) : (
-                            <Sparkles className="size-3 text-primary" />
+                            <>
+                              <Sparkles className="mr-1.5 size-3.5" />
+                              {proposals.length > 0 ? "Regenerate Options" : "Solve Disruption"}
+                            </>
                           )}
-                          <span>Regenerate</span>
                         </Button>
-                      )}
+                      ) : null}
+
+                      {selectedIncidentObj.status !== "RESOLVED" &&
+                        selectedIncidentObj.status !== "CANCELLED" && (
+                          <Button
+                            onClick={() => resolveIncidentMutation.mutate(selectedIncidentObj.id)}
+                            disabled={resolveIncidentMutation.isPending}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                          >
+                            <Check className="size-3.5 mr-1" /> Mark Resolved
+                          </Button>
+                        )}
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-3">
-                    {proposals.map((prop: any) => {
-                      const isRecommended = prop.id === recommendedProposalId;
-                      return (
-                        <div
-                          key={prop.id}
-                          className={cn(
-                            "p-4 rounded-xl border flex flex-col justify-between relative transition-all duration-150",
-                            isRecommended
-                              ? "border-emerald-500/50 bg-emerald-500/5 shadow-md shadow-emerald-500/5 ring-1 ring-emerald-500/30"
-                              : "border-border/70 bg-card/60 hover:border-border"
-                          )}
-                        >
-                          <div className="space-y-3">
-                            <div className="flex items-start justify-between gap-1">
-                              <div>
-                                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
-                                  Option {prop.proposalNumber}
-                                </p>
-                                <p className="text-lg font-bold font-mono mt-0.5 text-primary">
-                                  Score: {prop.objectiveScore}
-                                </p>
-                              </div>
-                              {isRecommended ? (
-                                <Badge className="bg-emerald-600 text-white hover:bg-emerald-600 text-[9px] font-mono font-bold px-1.5 py-0.5">
-                                  Recommended
-                                </Badge>
-                              ) : prop.cancellations === 0 ? (
-                                <Badge variant="outline" className="text-[9px] font-mono text-emerald-600 border-emerald-500/40 px-1 py-0">
-                                  0 Cancellations
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-[9px] font-mono text-muted-foreground px-1 py-0">
-                                  Alternative
-                                </Badge>
-                              )}
-                            </div>
-
-                            <div className="space-y-1.5 text-xs border-y border-border/60 py-2.5 my-2 font-mono">
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Trips Recovered:</span>
-                                <span className="font-bold text-emerald-600 dark:text-emerald-400">{prop.tripsRecovered}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Cancellations:</span>
-                                <span className={cn("font-bold", prop.cancellations > 0 ? "text-destructive" : "text-emerald-500")}>
-                                  {prop.cancellations}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Relief Handovers:</span>
-                                <span className="font-bold text-foreground">{prop.handovers}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Reserve Buses:</span>
-                                <span className="font-bold text-foreground">{prop.busesUsed}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Net Delay:</span>
-                                <span className="font-bold text-warning">{prop.delayMinutes} min</span>
-                              </div>
-                            </div>
-
-                            <p className="text-[11px] text-muted-foreground leading-relaxed italic bg-muted/30 p-2 rounded-lg border border-border/50">
-                              "{prop.explanation}"
-                            </p>
-                          </div>
-
-                          <div className="pt-4 mt-auto">
-                            {canPublish ? (
-                              prop.status === "APPLIED" ? (
-                                <Button
-                                  disabled
-                                  className="w-full text-xs font-semibold h-8.5 bg-emerald-600 text-white opacity-100"
-                                >
-                                  <CheckCircle2 className="mr-1.5 size-3.5" /> Applied & Dispatched
-                                </Button>
-                              ) : selectedIncidentObj.status === "APPLIED" ? (
-                                <Button
-                                  disabled
-                                  variant="outline"
-                                  className="w-full text-xs font-semibold h-8.5 text-muted-foreground"
-                                >
-                                  Superseded
-                                </Button>
-                              ) : (
-                                <Button
-                                  onClick={() => approveProposalMutation.mutate({ proposalId: prop.id })}
-                                  disabled={approveProposalMutation.isPending || generateProposalsMutation.isPending}
-                                  className={cn(
-                                    "w-full text-xs font-semibold h-8.5 cursor-pointer",
-                                    isRecommended ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-500/20" : ""
-                                  )}
-                                  variant={isRecommended ? "default" : "outline"}
-                                >
-                                  {approveProposalMutation.isPending ? (
-                                    <>
-                                      <Loader2 className="mr-1.5 size-3.5 animate-spin" /> Applying...
-                                    </>
-                                  ) : (
-                                    "Approve & Dispatch"
-                                  )}
-                                </Button>
-                              )
-                            ) : (
-                              <p className="text-[10px] text-center text-muted-foreground italic">
-                                Lacks schedule.publish permission
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="grid gap-3 sm:grid-cols-3 text-xs bg-secondary/30 rounded-xl p-3 border border-border/60">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                        Resource Affected:
+                      </span>
+                      <p className="font-mono font-bold text-foreground mt-0.5">
+                        {selectedIncidentObj.resourceType === "bus" ? "Bus Vehicle" : "Crew Member"}{" "}
+                        ({selectedIncidentObj.resourceId || "N/A"})
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                        Expected Duration:
+                      </span>
+                      <p className="font-mono font-bold text-foreground mt-0.5">
+                        {selectedIncidentObj.expectedEndTime
+                          ? `${selectedIncidentObj.expectedEndTime - selectedIncidentObj.startTime} mins`
+                          : "Indefinite"}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                        Description:
+                      </span>
+                      <p className="text-muted-foreground mt-0.5 italic truncate">
+                        {selectedIncidentObj.description || "Standard delay logged"}
+                      </p>
+                    </div>
                   </div>
                 </section>
-              )}
-            </div>
-          )}
+
+                {/* RIPPLE EFFECT IMPACT TIMELINE */}
+                <section className="glass-panel p-5 space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <Activity className="size-4 text-warning" /> Disruption Downstream Propagation
+                    Chain
+                  </h3>
+
+                  <div className="flex flex-col gap-2.5 max-w-xl mx-auto py-2">
+                    {/* Source Node */}
+                    <div className="p-3.5 rounded-xl border border-destructive/30 bg-destructive/5 flex items-center gap-3">
+                      <div className="size-8 rounded-lg bg-destructive/10 text-destructive grid place-items-center shrink-0">
+                        <Flame className="size-4.5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-destructive">
+                          Origin Incident: {selectedIncidentObj.type}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          Reported at {formatMinutesToTime(selectedIncidentObj.startTime)} at{" "}
+                          {selectedIncidentObj.location || "Salem Corridor"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-center my-0.5">
+                      <ArrowDown className="size-4 text-muted-foreground/60" />
+                    </div>
+
+                    {/* Resource Node */}
+                    <div className="p-3.5 rounded-xl border border-border/70 bg-card/60 flex items-center gap-3">
+                      <div className="size-8 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
+                        <BusIcon className="size-4.5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-foreground">
+                          Direct Resource Immobilized
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          Assigned duty block trips blocked from subsequent on-time departure
+                        </p>
+                      </div>
+                    </div>
+
+                    {selectedIncidentObj.impacts?.length > 0 && (
+                      <>
+                        <div className="flex justify-center my-0.5">
+                          <ArrowDown className="size-4 text-muted-foreground/60" />
+                        </div>
+
+                        <div className="p-3.5 rounded-xl border border-warning/30 bg-warning/5 space-y-2">
+                          <div className="flex items-center gap-2 text-xs font-bold text-warning">
+                            <AlertTriangle className="size-4" />
+                            <span>
+                              Downstream Cascade Impact ({selectedIncidentObj.impacts.length} trips
+                              affected)
+                            </span>
+                          </div>
+                          <div className="divide-y divide-border/40 text-[11px] text-muted-foreground">
+                            {selectedIncidentObj.impacts.map((imp: any) => (
+                              <div
+                                key={imp.id}
+                                className="py-1.5 flex justify-between gap-4 font-mono"
+                              >
+                                <span>
+                                  Trip <strong>{imp.trip?.tripCode || "Departure"}</strong> (
+                                  {imp.impactType})
+                                </span>
+                                <span className="font-bold text-warning uppercase text-[10px]">
+                                  {imp.impactLevel}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </section>
+
+                {/* RECOVERY PROPOSALS CARDS */}
+                {proposals.length > 0 && (
+                  <section className="glass-panel p-5 space-y-4">
+                    <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant="secondary"
+                            className="font-mono text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 px-1 py-0"
+                          >
+                            Step 2
+                          </Badge>
+                          <h3 className="text-sm font-bold tracking-tight text-foreground">
+                            Algorithmic Recovery Options
+                          </h3>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Compare options and click <strong>Approve & Dispatch</strong> to apply the
+                          selected solution live.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className="font-mono text-xs text-primary border-primary/30"
+                        >
+                          {proposals.length} Proposals Generated
+                        </Badge>
+                        {canGenerate &&
+                          selectedIncidentObj.status !== "APPLIED" &&
+                          selectedIncidentObj.status !== "RESOLVED" && (
+                            <Button
+                              onClick={() =>
+                                generateProposalsMutation.mutate(selectedIncidentObj.id)
+                              }
+                              disabled={generateProposalsMutation.isPending}
+                              size="sm"
+                              variant="outline"
+                              className="text-xs h-7 gap-1"
+                            >
+                              {generateProposalsMutation.isPending ? (
+                                <Loader2 className="size-3 animate-spin text-primary" />
+                              ) : (
+                                <Sparkles className="size-3 text-primary" />
+                              )}
+                              <span>Regenerate</span>
+                            </Button>
+                          )}
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                      {proposals.map((prop: any) => {
+                        const isRecommended = prop.id === recommendedProposalId;
+                        return (
+                          <div
+                            key={prop.id}
+                            className={cn(
+                              "p-4 rounded-xl border flex flex-col justify-between relative transition-all duration-150",
+                              isRecommended
+                                ? "border-emerald-500/50 bg-emerald-500/5 shadow-md shadow-emerald-500/5 ring-1 ring-emerald-500/30"
+                                : "border-border/70 bg-card/60 hover:border-border",
+                            )}
+                          >
+                            <div className="space-y-3">
+                              <div className="flex items-start justify-between gap-1">
+                                <div>
+                                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
+                                    Option {prop.proposalNumber}
+                                  </p>
+                                  <p className="text-lg font-bold font-mono mt-0.5 text-primary">
+                                    Score: {prop.objectiveScore}
+                                  </p>
+                                </div>
+                                {isRecommended ? (
+                                  <Badge className="bg-emerald-600 text-white hover:bg-emerald-600 text-[9px] font-mono font-bold px-1.5 py-0.5">
+                                    Recommended
+                                  </Badge>
+                                ) : prop.cancellations === 0 ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[9px] font-mono text-emerald-600 border-emerald-500/40 px-1 py-0"
+                                  >
+                                    0 Cancellations
+                                  </Badge>
+                                ) : (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[9px] font-mono text-muted-foreground px-1 py-0"
+                                  >
+                                    Alternative
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <div className="space-y-1.5 text-xs border-y border-border/60 py-2.5 my-2 font-mono">
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Trips Recovered:</span>
+                                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                                    {prop.tripsRecovered}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Cancellations:</span>
+                                  <span
+                                    className={cn(
+                                      "font-bold",
+                                      prop.cancellations > 0
+                                        ? "text-destructive"
+                                        : "text-emerald-500",
+                                    )}
+                                  >
+                                    {prop.cancellations}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Relief Handovers:</span>
+                                  <span className="font-bold text-foreground">
+                                    {prop.handovers}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Reserve Buses:</span>
+                                  <span className="font-bold text-foreground">
+                                    {prop.busesUsed}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Net Delay:</span>
+                                  <span className="font-bold text-warning">
+                                    {prop.delayMinutes} min
+                                  </span>
+                                </div>
+                              </div>
+
+                              <p className="text-[11px] text-muted-foreground leading-relaxed italic bg-muted/30 p-2 rounded-lg border border-border/50">
+                                "{prop.explanation}"
+                              </p>
+                            </div>
+
+                            <div className="pt-4 mt-auto">
+                              {canPublish ? (
+                                prop.status === "APPLIED" ? (
+                                  <Button
+                                    disabled
+                                    className="w-full text-xs font-semibold h-8.5 bg-emerald-600 text-white opacity-100"
+                                  >
+                                    <CheckCircle2 className="mr-1.5 size-3.5" /> Applied &
+                                    Dispatched
+                                  </Button>
+                                ) : selectedIncidentObj.status === "APPLIED" ? (
+                                  <Button
+                                    disabled
+                                    variant="outline"
+                                    className="w-full text-xs font-semibold h-8.5 text-muted-foreground"
+                                  >
+                                    Superseded
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    onClick={() =>
+                                      approveProposalMutation.mutate({ proposalId: prop.id })
+                                    }
+                                    disabled={
+                                      approveProposalMutation.isPending ||
+                                      generateProposalsMutation.isPending
+                                    }
+                                    className={cn(
+                                      "w-full text-xs font-semibold h-8.5 cursor-pointer",
+                                      isRecommended
+                                        ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-500/20"
+                                        : "",
+                                    )}
+                                    variant={isRecommended ? "default" : "outline"}
+                                  >
+                                    {approveProposalMutation.isPending ? (
+                                      <>
+                                        <Loader2 className="mr-1.5 size-3.5 animate-spin" />{" "}
+                                        Applying...
+                                      </>
+                                    ) : (
+                                      "Approve & Dispatch"
+                                    )}
+                                  </Button>
+                                )
+                              ) : (
+                                <p className="text-[10px] text-center text-muted-foreground italic">
+                                  Lacks schedule.publish permission
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
 
       {/* REPORT DISRUPTION MODAL */}
       <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
@@ -780,10 +886,19 @@ function IncidentsPage() {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowReportDialog(false)} className="text-xs">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowReportDialog(false)}
+                className="text-xs"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createIncidentMutation.isPending} className="bg-destructive text-destructive-foreground text-xs font-semibold">
+              <Button
+                type="submit"
+                disabled={createIncidentMutation.isPending}
+                className="bg-destructive text-destructive-foreground text-xs font-semibold"
+              >
                 {createIncidentMutation.isPending ? "Logging..." : "Record Disruption"}
               </Button>
             </DialogFooter>

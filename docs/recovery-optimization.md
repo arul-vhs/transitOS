@@ -8,12 +8,14 @@ Trips starting outside the recovery window are **FROZEN** (Region $U$). The solv
 $$S' = U + \text{Optimize}(A)$$
 
 The recovery window bounds:
+
 - **`MIN_RECOVERY_WINDOW`**: 60 minutes.
 - **`MAX_RECOVERY_WINDOW`**: 240 minutes (4 hours).
 
 ## Recovery Objective Weights
 
 The engine uses a dedicated objective function to minimize disruption:
+
 - **`UNASSIGNED_TRIP_PENALTY`** = 1000: High penalty on cancelled runs.
 - **`NEW_BUS_WEIGHT`** = 150: Penalty on dispatching extra/spare buses.
 - **`CREW_CHANGE_WEIGHT`** = 100: Penalty on altering driver/conductor assignments.

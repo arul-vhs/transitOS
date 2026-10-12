@@ -37,8 +37,12 @@ import { cn, formatMinutesToTime } from "@/lib/utils";
 export const Route = createFileRoute("/simulation")({
   head: () => ({
     meta: [
-      { title: "Interactive Transit Simulator — TransitOS" },
-      { name: "description", content: "Interactive day-in-the-life simulation of Salem City transit operations, fleet movement, and AI auto-recovery." },
+      { title: "Interactive Transit Simulator: TransitOS" },
+      {
+        name: "description",
+        content:
+          "Interactive day-in-the-life simulation of Salem City transit operations, fleet movement, and AI auto-recovery.",
+      },
     ],
   }),
   component: SimulationPage,
@@ -51,13 +55,20 @@ const SALEM_CORRIDORS = [
     code: "Route 1",
     name: "Town Bus Stand ⇄ Salem Junction",
     color: "#3B82F6", // Royal Blue
-    stops: ["Town Bus Stand", "Collectorate", "Four Roads", "Five Roads", "Suramangalam", "Salem Junction"],
+    stops: [
+      "Town Bus Stand",
+      "Collectorate",
+      "Four Roads",
+      "Five Roads",
+      "Suramangalam",
+      "Salem Junction",
+    ],
     coords: [
       [11.6528, 78.1591],
-      [11.6580, 78.1550],
+      [11.658, 78.155],
       [11.6668, 78.1565],
       [11.6705, 78.1437],
-      [11.6718, 78.1170],
+      [11.6718, 78.117],
       [11.6714, 78.1132],
     ],
   },
@@ -66,14 +77,22 @@ const SALEM_CORRIDORS = [
     code: "Route 13",
     name: "Town Bus Stand ⇄ Yercaud Foothills",
     color: "#10B981", // Emerald
-    stops: ["Town Bus Stand", "Collectorate", "Sundar Lodge", "Hasthampatti", "Gorimedu", "Kannankurichi", "Yercaud Foothills"],
+    stops: [
+      "Town Bus Stand",
+      "Collectorate",
+      "Sundar Lodge",
+      "Hasthampatti",
+      "Gorimedu",
+      "Kannankurichi",
+      "Yercaud Foothills",
+    ],
     coords: [
       [11.6528, 78.1591],
-      [11.6580, 78.1550],
-      [11.6625, 78.1560],
+      [11.658, 78.155],
+      [11.6625, 78.156],
       [11.6795, 78.1573],
       [11.6965, 78.1635],
-      [11.6989, 78.1790],
+      [11.6989, 78.179],
       [11.7125, 78.1885],
     ],
   },
@@ -82,13 +101,20 @@ const SALEM_CORRIDORS = [
     code: "Route 4",
     name: "Town Bus Stand ⇄ Kondalampatti",
     color: "#F43F5E", // Rose
-    stops: ["Town Bus Stand", "Shevapet Market", "Gugai", "Dadagapatti", "Trichy Main Rd", "Kondalampatti"],
+    stops: [
+      "Town Bus Stand",
+      "Shevapet Market",
+      "Gugai",
+      "Dadagapatti",
+      "Trichy Main Rd",
+      "Kondalampatti",
+    ],
     coords: [
       [11.6528, 78.1591],
-      [11.6520, 78.1430],
+      [11.652, 78.143],
       [11.6432, 78.1508],
-      [11.6360, 78.1480],
-      [11.6315, 78.1380],
+      [11.636, 78.148],
+      [11.6315, 78.138],
       [11.6305, 78.1248],
     ],
   },
@@ -96,16 +122,24 @@ const SALEM_CORRIDORS = [
     id: "r33",
     code: "Route 33",
     name: "MGR Central Bus Stand ⇄ Steel Plant",
-    color: "#8B5CF6", // Purple
-    stops: ["MGR Central", "Meyyanur", "Five Roads", "Salem Junction", "Mamangam", "Jagir Ammapalayam", "Steel Plant"],
+    color: "#0284C7", // Sky Blue
+    stops: [
+      "MGR Central",
+      "Meyyanur",
+      "Five Roads",
+      "Salem Junction",
+      "Mamangam",
+      "Jagir Ammapalayam",
+      "Steel Plant",
+    ],
     coords: [
       [11.6673, 78.1424],
-      [11.6685, 78.1380],
+      [11.6685, 78.138],
       [11.6705, 78.1437],
       [11.6714, 78.1132],
-      [11.6850, 78.1150],
-      [11.6780, 78.1020],
-      [11.6710, 78.0940],
+      [11.685, 78.115],
+      [11.678, 78.102],
+      [11.671, 78.094],
     ],
   },
   {
@@ -113,14 +147,22 @@ const SALEM_CORRIDORS = [
     code: "Route 74",
     name: "Town Bus Stand ⇄ Omalur Bus Stand",
     color: "#06B6D4", // Cyan
-    stops: ["Town Bus Stand", "Four Roads", "MGR Central", "Mamangam", "Karuppur", "Omalur Toll", "Omalur Town"],
+    stops: [
+      "Town Bus Stand",
+      "Four Roads",
+      "MGR Central",
+      "Mamangam",
+      "Karuppur",
+      "Omalur Toll",
+      "Omalur Town",
+    ],
     coords: [
       [11.6528, 78.1591],
       [11.6668, 78.1565],
       [11.6673, 78.1424],
-      [11.6850, 78.1150],
-      [11.7180, 78.0780],
-      [11.7320, 78.0580],
+      [11.685, 78.115],
+      [11.718, 78.078],
+      [11.732, 78.058],
       [11.7436, 78.0476],
     ],
   },
@@ -170,7 +212,7 @@ const INITIAL_FLEET: SimBus[] = [
     speedKmH: 32,
     fuelBatteryPct: 88,
     status: "on-route",
-    currentPosition: [11.6580, 78.1550],
+    currentPosition: [11.658, 78.155],
     nextStop: "Four Roads",
     varianceMinutes: 0,
     progressAlongRoute: 0.25,
@@ -198,7 +240,7 @@ const INITIAL_FLEET: SimBus[] = [
     currentPosition: [11.6795, 78.1573],
     nextStop: "Gorimedu (Arts College)",
     varianceMinutes: 1,
-    progressAlongRoute: 0.50,
+    progressAlongRoute: 0.5,
     direction: "outbound",
     origin: "Town Bus Stand",
     destination: "Yercaud Foothills",
@@ -223,7 +265,7 @@ const INITIAL_FLEET: SimBus[] = [
     currentPosition: [11.6705, 78.1437],
     nextStop: "Four Roads",
     varianceMinutes: -1,
-    progressAlongRoute: 0.40,
+    progressAlongRoute: 0.4,
     direction: "return", // Returning from Salem Junction back to Town Bus Stand!
     origin: "Salem Junction",
     destination: "Town Bus Stand",
@@ -248,7 +290,7 @@ const INITIAL_FLEET: SimBus[] = [
     currentPosition: [11.6432, 78.1508],
     nextStop: "Dadagapatti",
     varianceMinutes: 0,
-    progressAlongRoute: 0.40,
+    progressAlongRoute: 0.4,
     direction: "outbound",
     origin: "Town Bus Stand",
     destination: "Kondalampatti",
@@ -270,7 +312,7 @@ const INITIAL_FLEET: SimBus[] = [
     speedKmH: 38,
     fuelBatteryPct: 81,
     status: "on-route",
-    currentPosition: [11.6780, 78.1020],
+    currentPosition: [11.678, 78.102],
     nextStop: "Salem Junction",
     varianceMinutes: 0,
     progressAlongRoute: 0.45,
@@ -295,7 +337,7 @@ const INITIAL_FLEET: SimBus[] = [
     speedKmH: 42,
     fuelBatteryPct: 85,
     status: "on-route",
-    currentPosition: [11.7180, 78.0780],
+    currentPosition: [11.718, 78.078],
     nextStop: "Omalur Toll",
     varianceMinutes: 2,
     progressAlongRoute: 0.65,
@@ -320,7 +362,7 @@ const INITIAL_FLEET: SimBus[] = [
     speedKmH: 0,
     fuelBatteryPct: 100,
     status: "standby",
-    currentPosition: [11.6685, 78.1380], // Meyyanur Depot
+    currentPosition: [11.6685, 78.138], // Meyyanur Depot
     nextStop: "Depot Standby Bay 3",
     varianceMinutes: 0,
     progressAlongRoute: 0.0,
@@ -361,10 +403,32 @@ function SimulationPage() {
   const [activeTab, setActiveTab] = useState<"controls" | "walkthrough" | "telemetry">("controls");
 
   // Radio Dispatch / Event Ticker Logs
-  const [eventLogs, setEventLogs] = useState<Array<{ id: string; time: string; text: string; type: "info" | "alert" | "success" | "recovery" }>>([
-    { id: "1", time: "08:15 AM", text: "Dispatch check: 6 vehicles active on Salem corridors, 1 standby bus at Meyyanur Depot.", type: "info" },
-    { id: "2", time: "08:22 AM", text: "Driver Murugesan K. (SLM-MY-101) outbound to Salem Junction passed Four Roads with 0 departure variance.", type: "success" },
-    { id: "3", time: "08:28 AM", text: "SLM-MY-104 on return journey to Town Bus Stand approaching Five Roads.", type: "info" },
+  const [eventLogs, setEventLogs] = useState<
+    Array<{
+      id: string;
+      time: string;
+      text: string;
+      type: "info" | "alert" | "success" | "recovery";
+    }>
+  >([
+    {
+      id: "1",
+      time: "08:15 AM",
+      text: "Dispatch check: 6 vehicles active on Salem corridors, 1 standby bus at Meyyanur Depot.",
+      type: "info",
+    },
+    {
+      id: "2",
+      time: "08:22 AM",
+      text: "Driver Murugesan K. (SLM-MY-101) outbound to Salem Junction passed Four Roads with 0 departure variance.",
+      type: "success",
+    },
+    {
+      id: "3",
+      time: "08:28 AM",
+      text: "SLM-MY-104 on return journey to Town Bus Stand approaching Five Roads.",
+      type: "info",
+    },
   ]);
 
   // Leaflet references
@@ -389,13 +453,18 @@ function SimulationPage() {
 
     const interval = setInterval(() => {
       setCurrentMinutes((prev) => {
-        const next = prev + (simSpeed * 0.1);
+        const next = prev + simSpeed * 0.1;
         return next >= 1380 ? 330 : next; // Reset at 11:00 PM back to 05:30 AM
       });
 
       // Update bus positions along their respective routes
       setFleet((prevFleet) => {
-        const arrivalEvents: Array<{ fleetNumber: string; terminal: string; nextDir: string; nextDest: string }> = [];
+        const arrivalEvents: Array<{
+          fleetNumber: string;
+          terminal: string;
+          nextDir: string;
+          nextDest: string;
+        }> = [];
 
         const updatedFleet = prevFleet.map((bus) => {
           if (bus.status === "breakdown" || bus.status === "standby") {
@@ -444,13 +513,11 @@ function SimulationPage() {
           }
 
           // Active coordinates & stops based on current direction
-          const activeCoords = newDirection === "outbound"
-            ? corridor.coords
-            : [...corridor.coords].reverse();
+          const activeCoords =
+            newDirection === "outbound" ? corridor.coords : [...corridor.coords].reverse();
 
-          const activeStops = newDirection === "outbound"
-            ? corridor.stops
-            : [...corridor.stops].reverse();
+          const activeStops =
+            newDirection === "outbound" ? corridor.stops : [...corridor.stops].reverse();
 
           const newPos = getInterpolatedPosition(activeCoords, newProgress);
 
@@ -467,7 +534,7 @@ function SimulationPage() {
             progressAlongRoute: newProgress,
             currentPosition: newPos,
             nextStop,
-            driverDrivingMinutes: Math.min(360, bus.driverDrivingMinutes + (simSpeed * 0.05)),
+            driverDrivingMinutes: Math.min(360, bus.driverDrivingMinutes + simSpeed * 0.05),
           };
         });
 
@@ -477,7 +544,7 @@ function SimulationPage() {
             ...arrivalEvents.map((evt) => ({
               id: String(Date.now() + Math.random()),
               time: formatMinutesToTime(Math.floor(currentMinutes)),
-              text: `🔄 TERMINAL TURNAROUND: ${evt.fleetNumber} arrived at ${evt.terminal}. Turned around for ${evt.nextDir} trip ➔ ${evt.nextDest}.`,
+              text: `[TURNAROUND] ${evt.fleetNumber} arrived at ${evt.terminal}. Turned around for ${evt.nextDir} trip ➔ ${evt.nextDest}.`,
               type: "info" as const,
             })),
             ...prev.slice(0, 45),
@@ -533,7 +600,10 @@ function SimulationPage() {
             color: "#ffffff",
             weight: 1.5,
           })
-            .bindTooltip(`${corridor.code}: ${corridor.stops[i]}`, { direction: "top", offset: [0, -5] })
+            .bindTooltip(`${corridor.code}: ${corridor.stops[i]}`, {
+              direction: "top",
+              offset: [0, -5],
+            })
             .addTo(polylineGroupRef.current);
         });
       });
@@ -559,12 +629,12 @@ function SimulationPage() {
             isBreakdown
               ? "bg-rose-600 border-white animate-bounce"
               : isStandby
-              ? "bg-slate-500 border-white opacity-85"
-              : isSelected
-              ? "bg-primary border-white ring-2 ring-primary ring-offset-2"
-              : "bg-slate-900 border-white"
+                ? "bg-slate-500 border-white opacity-85"
+                : isSelected
+                  ? "bg-primary border-white ring-2 ring-primary ring-offset-2"
+                  : "bg-slate-900 border-white"
           }">
-            🚌
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C18.1 6.7 17.1 6 16 6H4c-1.1 0-2.1.7-2.4 1.8l-1.4 5C0.1 13.2 0 13.6 0 14c0 .4.1.8.2 1.2.3 1.1.8 2.8.8 2.8h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/></svg>
           </div>
           <div class="absolute -bottom-4 px-1.5 py-0.2 rounded bg-slate-900/90 text-white font-mono text-[9px] whitespace-nowrap shadow border border-white/20 flex items-center gap-1">
             <span>${bus.fleetNumber.split("-")[2]}</span>
@@ -600,16 +670,40 @@ function SimulationPage() {
     });
   }, [L, fleet, selectedBusId]);
 
-  const selectedBus = fleet.find((b) => b.id === selectedBusId) || fleet[0];
+  const selectedBus = (fleet.find((b) => b.id === selectedBusId) || fleet[0] || INITIAL_FLEET[0])!;
 
   // Simulation Time Phase description
   const timePhase = useMemo(() => {
     const h = Math.floor(currentMinutes / 60);
-    if (h < 7) return { title: "Dawn Launch & Depots Pull-Out", badge: "Morning Rollout", color: "text-amber-500" };
-    if (h < 10) return { title: "Morning Peak Commute (Heavy Load)", badge: "Peak Rush", color: "text-rose-500 font-bold" };
-    if (h < 16) return { title: "Steady Daytime Service", badge: "Normal Operations", color: "text-emerald-500" };
-    if (h < 20) return { title: "Evening Return Peak (Heavy Load)", badge: "Evening Peak", color: "text-primary font-bold" };
-    return { title: "Late Night Wind-down & Depot Influx", badge: "Night Shift", color: "text-indigo-400" };
+    if (h < 7)
+      return {
+        title: "Dawn Launch & Depots Pull-Out",
+        badge: "Morning Rollout",
+        color: "text-amber-500",
+      };
+    if (h < 10)
+      return {
+        title: "Morning Peak Commute (Heavy Load)",
+        badge: "Peak Rush",
+        color: "text-rose-500 font-bold",
+      };
+    if (h < 16)
+      return {
+        title: "Steady Daytime Service",
+        badge: "Normal Operations",
+        color: "text-emerald-500",
+      };
+    if (h < 20)
+      return {
+        title: "Evening Return Peak (Heavy Load)",
+        badge: "Evening Peak",
+        color: "text-primary font-bold",
+      };
+    return {
+      title: "Late Night Wind-down & Depot Influx",
+      badge: "Night Shift",
+      color: "text-indigo-400",
+    };
   }, [currentMinutes]);
 
   // SCENARIO 1: Simulate Bus Breakdown
@@ -618,18 +712,18 @@ function SimulationPage() {
     setIsPlaying(false); // Pause so the user can inspect the incident
     setFleet((prev) =>
       prev.map((b) =>
-        b.id === "b3" ? { ...b, status: "breakdown", speedKmH: 0, varianceMinutes: 18 } : b
-      )
+        b.id === "b3" ? { ...b, status: "breakdown", speedKmH: 0, varianceMinutes: 18 } : b,
+      ),
     );
     setSelectedBusId("b3");
-    toast.error("🚨 EMERGENCY: Bus SLM-MY-104 reported engine temperature failure at Five Roads!", {
+    toast.error("[EMERGENCY] Bus SLM-MY-104 reported engine temperature failure at Five Roads!", {
       duration: 6000,
     });
     setEventLogs((prev) => [
       {
         id: String(Date.now()),
         time: formatMinutesToTime(Math.floor(currentMinutes)),
-        text: "🚨 BREAKDOWN ALERT: Bus SLM-MY-104 stalled at Five Roads. Disruption Radar triggered.",
+        text: "[BREAKDOWN ALERT] Bus SLM-MY-104 stalled at Five Roads. Disruption Radar triggered.",
         type: "alert",
       },
       ...prev,
@@ -659,24 +753,27 @@ function SimulationPage() {
             speedKmH: 34,
             passengerCount: 44,
             varianceMinutes: 3,
-            progressAlongRoute: 0.40,
+            progressAlongRoute: 0.4,
             nextStop: "Four Roads",
           };
         }
         return b;
-      })
+      }),
     );
     setSelectedBusId("b7");
     setActiveScenario(null);
     setIsPlaying(true);
-    toast.success("✅ RECOVERY DEPLOYED: Standby Bus SLM-MY-108 dispatched on Return trip to Town Bus Stand!", {
-      duration: 6000,
-    });
+    toast.success(
+      "[RECOVERY DEPLOYED] Standby Bus SLM-MY-108 dispatched on Return trip to Town Bus Stand!",
+      {
+        duration: 6000,
+      },
+    );
     setEventLogs((prev) => [
       {
         id: String(Date.now()),
         time: formatMinutesToTime(Math.floor(currentMinutes)),
-        text: "✅ INCIDENT RESOLVED: Standby Bus SLM-MY-108 accepted Route 1 duty. 0 passengers stranded.",
+        text: "[INCIDENT RESOLVED] Standby Bus SLM-MY-108 accepted Route 1 duty. 0 passengers stranded.",
         type: "recovery",
       },
       ...prev,
@@ -687,19 +784,20 @@ function SimulationPage() {
   const triggerTrafficScenario = () => {
     setActiveScenario("traffic");
     setFleet((prev) =>
-      prev.map((b) =>
-        b.id === "b1" ? { ...b, speedKmH: 12, varianceMinutes: 14 } : b
-      )
+      prev.map((b) => (b.id === "b1" ? { ...b, speedKmH: 12, varianceMinutes: 14 } : b)),
     );
     setSelectedBusId("b1");
-    toast.warning("🚦 CONGESTION SPIKE: Junction corridor gridlock detected. Arrival variance +14 min.", {
-      duration: 5000,
-    });
+    toast.warning(
+      "[CONGESTION SPIKE] Junction corridor gridlock detected. Arrival variance +14 min.",
+      {
+        duration: 5000,
+      },
+    );
     setEventLogs((prev) => [
       {
         id: String(Date.now()),
         time: formatMinutesToTime(Math.floor(currentMinutes)),
-        text: "🚦 TRAFFIC ALERT: SLM-MY-101 speed dropped to 12 km/h. Headway regulator deployed.",
+        text: "[TRAFFIC ALERT] SLM-MY-101 speed dropped to 12 km/h. Headway regulator deployed.",
         type: "alert",
       },
       ...prev,
@@ -709,20 +807,19 @@ function SimulationPage() {
   // SCENARIO 3: Trigger Driver Fatigue / Rest Handover
   const triggerDriverRestScenario = () => {
     setActiveScenario("driver-rest");
-    setFleet((prev) =>
-      prev.map((b) =>
-        b.id === "b1" ? { ...b, driverDrivingMinutes: 245 } : b
-      )
-    );
+    setFleet((prev) => prev.map((b) => (b.id === "b1" ? { ...b, driverDrivingMinutes: 245 } : b)));
     setSelectedBusId("b1");
-    toast.info("👨‍✈️ COMPLIANCE ALERT: Driver Murugesan K. reached 240 mins continuous driving limit!", {
-      duration: 6000,
-    });
+    toast.info(
+      "[COMPLIANCE ALERT] Driver Murugesan K. reached 240 mins continuous driving limit!",
+      {
+        duration: 6000,
+      },
+    );
     setEventLogs((prev) => [
       {
         id: String(Date.now()),
         time: formatMinutesToTime(Math.floor(currentMinutes)),
-        text: "👨‍✈️ MVA COMPLIANCE: Driver Murugesan reached 4.0 hr limit. Mandating relief handover.",
+        text: "[MVA COMPLIANCE] Driver Murugesan reached 4.0 hr limit. Mandating relief handover.",
         type: "info",
       },
       ...prev,
@@ -735,18 +832,18 @@ function SimulationPage() {
       prev.map((b) =>
         b.id === "b1"
           ? { ...b, driver: "Palanisamy M. (Relief Driver)", driverDrivingMinutes: 15 }
-          : b
-      )
+          : b,
+      ),
     );
     setActiveScenario(null);
-    toast.success("✅ CREW HANDOVER COMPLETED: Driver Palanisamy M. took over at Town Bus Stand.", {
+    toast.success("[HANDOVER COMPLETED] Driver Palanisamy M. took over at Town Bus Stand.", {
       duration: 5000,
     });
     setEventLogs((prev) => [
       {
         id: String(Date.now()),
         time: formatMinutesToTime(Math.floor(currentMinutes)),
-        text: "✅ HANDOVER VERIFIED: Palanisamy M. logged as active driver. Murugesan K. on mandatory rest.",
+        text: "[HANDOVER VERIFIED] Palanisamy M. logged as active driver. Murugesan K. on mandatory rest.",
         type: "success",
       },
       ...prev,
@@ -769,7 +866,10 @@ function SimulationPage() {
       subtitle="Experience TransitOS in action: real-time vehicle dispatch, telemetry streaming, and automated disruption healing."
       actions={
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="font-mono text-xs border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 gap-1.5">
+          <Badge
+            variant="outline"
+            className="font-mono text-xs border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 gap-1.5"
+          >
             <span className="size-2 rounded-full bg-indigo-500 animate-ping"></span>
             Simulation Deck
           </Badge>
@@ -799,7 +899,10 @@ function SimulationPage() {
                   <span className="text-3xl font-extrabold font-mono tracking-tight text-foreground">
                     {formatMinutesToTime(Math.floor(currentMinutes))}
                   </span>
-                  <Badge variant="outline" className={cn("text-[11px] font-semibold px-2 py-0.5", timePhase.color)}>
+                  <Badge
+                    variant="outline"
+                    className={cn("text-[11px] font-semibold px-2 py-0.5", timePhase.color)}
+                  >
                     {timePhase.badge}
                   </Badge>
                 </div>
@@ -856,7 +959,9 @@ function SimulationPage() {
           <div className="mt-4 pt-3 border-t border-border/50">
             <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground mb-1">
               <span>05:30 AM (Start)</span>
-              <span className="font-semibold text-primary">Time Scrubber (Drag to fast-forward)</span>
+              <span className="font-semibold text-primary">
+                Time Scrubber (Drag to fast-forward)
+              </span>
               <span>11:00 PM (Depot Pull-in)</span>
             </div>
             <input
@@ -879,7 +984,9 @@ function SimulationPage() {
               <div className="flex items-center justify-between pb-3 border-b border-border/50 z-10">
                 <div className="flex items-center gap-2">
                   <span className="size-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-                  <span className="text-xs font-bold text-foreground">Salem City Corridors (Live Fleet Map)</span>
+                  <span className="text-xs font-bold text-foreground">
+                    Salem City Corridors (Live Fleet Map)
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
                   <span>{fleet.filter((b) => b.status === "on-route").length} Moving</span>
@@ -895,7 +1002,10 @@ function SimulationPage() {
               <div className="mt-2 pt-2 border-t border-border/50 flex flex-wrap items-center gap-3 text-[11px] font-mono">
                 {SALEM_CORRIDORS.map((c) => (
                   <div key={c.id} className="flex items-center gap-1.5">
-                    <span className="size-2 rounded-full" style={{ backgroundColor: c.color }}></span>
+                    <span
+                      className="size-2 rounded-full"
+                      style={{ backgroundColor: c.color }}
+                    ></span>
                     <span className="text-muted-foreground">{c.code}</span>
                   </div>
                 ))}
@@ -918,27 +1028,42 @@ function SimulationPage() {
                       isSelected
                         ? "border-primary bg-primary/10 shadow-sm"
                         : isBreakdown
-                        ? "border-rose-500/50 bg-rose-500/10 animate-pulse"
-                        : isStandby
-                        ? "border-border/60 bg-muted/40"
-                        : "border-border/60 bg-card hover:border-border"
+                          ? "border-rose-500/50 bg-rose-500/10 animate-pulse"
+                          : isStandby
+                            ? "border-border/60 bg-muted/40"
+                            : "border-border/60 bg-card hover:border-border",
                     )}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-foreground">{bus.fleetNumber.split("-")[2]}</span>
+                      <span className="font-mono text-xs font-bold text-foreground">
+                        {bus.fleetNumber.split("-")[2]}
+                      </span>
                       <span
                         className={cn(
                           "size-2 rounded-full",
-                          isBreakdown ? "bg-rose-500" : isStandby ? "bg-slate-400" : "bg-emerald-500"
+                          isBreakdown
+                            ? "bg-rose-500"
+                            : isStandby
+                              ? "bg-slate-400"
+                              : "bg-emerald-500",
                         )}
                       ></span>
                     </div>
                     <div className="flex items-center justify-between mt-1 text-[10px] text-muted-foreground">
                       <span className="truncate">
-                        {isBreakdown ? "Breakdown" : isStandby ? "Standby" : bus.routeName.split(":")[0]}
+                        {isBreakdown
+                          ? "Breakdown"
+                          : isStandby
+                            ? "Standby"
+                            : bus.routeName.split(":")[0]}
                       </span>
                       {!isStandby && !isBreakdown && (
-                        <span className={cn("font-mono text-[9px] font-bold ml-1", bus.direction === "return" ? "text-amber-500" : "text-emerald-500")}>
+                        <span
+                          className={cn(
+                            "font-mono text-[9px] font-bold ml-1",
+                            bus.direction === "return" ? "text-amber-500" : "text-emerald-500",
+                          )}
+                        >
                           {bus.direction === "return" ? "◀" : "▶"}
                         </span>
                       )}
@@ -952,33 +1077,42 @@ function SimulationPage() {
           {/* TELEMETRY & SCENARIO TESTING DECK (5 COLS) */}
           <div className="lg:col-span-5 space-y-4">
             {/* TABS: CONTROLS & SCENARIOS vs GUIDED WALKTHROUGH vs TELEMETRY */}
-            <div className="flex items-center bg-muted/60 p-1 rounded-2xl border border-border/60">
+            <div className="flex items-center bg-muted/60 p-1 rounded-md border border-border/60">
               <button
                 onClick={() => setActiveTab("controls")}
                 className={cn(
-                  "flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer",
-                  activeTab === "controls" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                  "flex-1 py-1.5 text-xs font-semibold rounded transition-all cursor-pointer flex items-center justify-center gap-1.5",
+                  activeTab === "controls"
+                    ? "bg-card text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                🎮 Test Scenarios
+                <Sliders className="size-3.5" />
+                <span>Test Scenarios</span>
               </button>
               <button
                 onClick={() => setActiveTab("walkthrough")}
                 className={cn(
-                  "flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer",
-                  activeTab === "walkthrough" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                  "flex-1 py-1.5 text-xs font-semibold rounded transition-all cursor-pointer flex items-center justify-center gap-1.5",
+                  activeTab === "walkthrough"
+                    ? "bg-card text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                📖 4-Step Tour
+                <Info className="size-3.5" />
+                <span>4-Step Tour</span>
               </button>
               <button
                 onClick={() => setActiveTab("telemetry")}
                 className={cn(
-                  "flex-1 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer",
-                  activeTab === "telemetry" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                  "flex-1 py-1.5 text-xs font-semibold rounded transition-all cursor-pointer flex items-center justify-center gap-1.5",
+                  activeTab === "telemetry"
+                    ? "bg-card text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                📡 Radio Log ({eventLogs.length})
+                <Radio className="size-3.5" />
+                <span>Radio Log ({eventLogs.length})</span>
               </button>
             </div>
 
@@ -990,7 +1124,9 @@ function SimulationPage() {
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="font-extrabold text-base text-foreground font-mono">{selectedBus.fleetNumber}</h4>
+                        <h4 className="font-extrabold text-base text-foreground font-mono">
+                          {selectedBus.fleetNumber}
+                        </h4>
                         <Badge
                           variant="outline"
                           className={cn(
@@ -998,8 +1134,8 @@ function SimulationPage() {
                             selectedBus.status === "breakdown"
                               ? "border-rose-500/40 text-rose-500 bg-rose-500/10"
                               : selectedBus.status === "standby"
-                              ? "border-slate-500/40 text-slate-500 bg-slate-500/10"
-                              : "border-emerald-500/40 text-emerald-600 bg-emerald-500/10"
+                                ? "border-slate-500/40 text-slate-500 bg-slate-500/10"
+                                : "border-emerald-500/40 text-emerald-600 bg-emerald-500/10",
                           )}
                         >
                           {selectedBus.status}
@@ -1011,18 +1147,24 @@ function SimulationPage() {
                               "text-[10px] font-mono px-1.5 py-0.2",
                               selectedBus.direction === "return"
                                 ? "border-amber-500/40 text-amber-600 bg-amber-500/10"
-                                : "border-indigo-500/40 text-indigo-600 bg-indigo-500/10"
+                                : "border-indigo-500/40 text-indigo-600 bg-indigo-500/10",
                             )}
                           >
-                            {selectedBus.direction === "return" ? "◀ Return Trip" : "▶ Outbound Trip"}
+                            {selectedBus.direction === "return"
+                              ? "◀ Return Trip"
+                              : "▶ Outbound Trip"}
                           </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">{selectedBus.routeName}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {selectedBus.routeName}
+                      </p>
                     </div>
 
                     <div className="text-right">
-                      <span className="text-xs font-bold font-mono text-foreground">{selectedBus.speedKmH} km/h</span>
+                      <span className="text-xs font-bold font-mono text-foreground">
+                        {selectedBus.speedKmH} km/h
+                      </span>
                       <p className="text-[10px] text-muted-foreground">Speed Telemetry</p>
                     </div>
                   </div>
@@ -1032,9 +1174,13 @@ function SimulationPage() {
                     <div className="mt-3 p-2.5 rounded-2xl bg-muted/30 border border-border/60 space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="font-bold text-foreground truncate">{selectedBus.origin}</span>
+                          <span className="font-bold text-foreground truncate">
+                            {selectedBus.origin}
+                          </span>
                           <span className="text-muted-foreground">➔</span>
-                          <span className="font-bold text-primary truncate">{selectedBus.destination}</span>
+                          <span className="font-bold text-primary truncate">
+                            {selectedBus.destination}
+                          </span>
                         </div>
                         <Badge variant="secondary" className="text-[10px] font-mono shrink-0">
                           Trip #{selectedBus.completedTrips + 1}
@@ -1043,10 +1189,15 @@ function SimulationPage() {
 
                       {/* Progress Bar of current trip leg */}
                       <div className="space-y-1">
-                        <Progress value={Math.round(selectedBus.progressAlongRoute * 100)} className="h-1.5" />
+                        <Progress
+                          value={Math.round(selectedBus.progressAlongRoute * 100)}
+                          className="h-1.5"
+                        />
                         <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono">
                           <span>Dep: {selectedBus.origin.split(" ")[0]}</span>
-                          <span>{Math.round(selectedBus.progressAlongRoute * 100)}% route complete</span>
+                          <span>
+                            {Math.round(selectedBus.progressAlongRoute * 100)}% route complete
+                          </span>
                           <span>Term: {selectedBus.destination.split(" ")[0]}</span>
                         </div>
                       </div>
@@ -1057,19 +1208,24 @@ function SimulationPage() {
                   <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-border/50 text-xs">
                     <div className="p-2 rounded-xl bg-muted/40">
                       <p className="text-[10px] text-muted-foreground">Next Stop</p>
-                      <p className="font-semibold text-foreground truncate mt-0.5">{selectedBus.nextStop}</p>
+                      <p className="font-semibold text-foreground truncate mt-0.5">
+                        {selectedBus.nextStop}
+                      </p>
                     </div>
 
                     <div className="p-2 rounded-xl bg-muted/40">
                       <p className="text-[10px] text-muted-foreground">Passenger Load</p>
                       <p className="font-semibold text-foreground mt-0.5">
-                        {selectedBus.passengerCount} / {selectedBus.capacity} ({Math.round((selectedBus.passengerCount / selectedBus.capacity) * 100)}%)
+                        {selectedBus.passengerCount} / {selectedBus.capacity} (
+                        {Math.round((selectedBus.passengerCount / selectedBus.capacity) * 100)}%)
                       </p>
                     </div>
 
                     <div className="p-2 rounded-xl bg-muted/40">
                       <p className="text-[10px] text-muted-foreground">Driver</p>
-                      <p className="font-semibold text-foreground truncate mt-0.5">{selectedBus.driver}</p>
+                      <p className="font-semibold text-foreground truncate mt-0.5">
+                        {selectedBus.driver}
+                      </p>
                     </div>
 
                     <div className="p-2 rounded-xl bg-muted/40">
@@ -1077,30 +1233,38 @@ function SimulationPage() {
                       <p
                         className={cn(
                           "font-semibold mt-0.5 font-mono",
-                          selectedBus.driverDrivingMinutes >= 240 ? "text-rose-500 font-bold" : "text-foreground"
+                          selectedBus.driverDrivingMinutes >= 240
+                            ? "text-rose-500 font-bold"
+                            : "text-foreground",
                         )}
                       >
                         {Math.floor(selectedBus.driverDrivingMinutes)} mins{" "}
-                        {selectedBus.driverDrivingMinutes >= 240 && "⚠️ REST EXCEEDED"}
+                        {selectedBus.driverDrivingMinutes >= 240 && "[REST EXCEEDED]"}
                       </p>
                     </div>
                   </div>
                 </div>
 
                 {/* SCENARIO INJECTOR PANEL */}
-                <div className="glass-panel p-4 rounded-3xl space-y-3">
+                <div className="glass-panel p-4 rounded-lg space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      <Sparkles className="size-4 text-primary" />
-                      <span className="text-xs font-bold text-foreground">Interactive Scenarios (Click to Inject)</span>
+                      <Sliders className="size-4 text-primary" />
+                      <span className="text-xs font-bold text-foreground">
+                        Interactive Scenarios (Click to Inject)
+                      </span>
                     </div>
-                    <Badge variant="outline" className="text-[10px] text-muted-foreground font-mono">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] text-muted-foreground font-mono"
+                    >
                       Real-World Demos
                     </Badge>
                   </div>
 
                   <p className="text-xs text-muted-foreground">
-                    Click any real-world incident below to see how TransitOS's AI Disruption Radar and Rescheduling Engine respond in real-time:
+                    Click any real-world incident below to see how TransitOS's AI Disruption Radar
+                    and Rescheduling Engine respond in real-time:
                   </p>
 
                   <div className="space-y-2">
@@ -1110,7 +1274,9 @@ function SimulationPage() {
                         <div>
                           <div className="flex items-center gap-1.5">
                             <span className="size-2 rounded-full bg-rose-500"></span>
-                            <span className="text-xs font-bold text-foreground">Scenario 1: Vehicle Engine Breakdown</span>
+                            <span className="text-xs font-bold text-foreground">
+                              Scenario 1: Vehicle Engine Breakdown
+                            </span>
                           </div>
                           <p className="text-[11px] text-muted-foreground mt-0.5">
                             Bus SLM-MY-104 suffers engine failure on Route 1 at Five Roads.
@@ -1144,7 +1310,9 @@ function SimulationPage() {
                         <div>
                           <div className="flex items-center gap-1.5">
                             <span className="size-2 rounded-full bg-amber-500"></span>
-                            <span className="text-xs font-bold text-foreground">Scenario 2: Traffic Congestion Spike</span>
+                            <span className="text-xs font-bold text-foreground">
+                              Scenario 2: Traffic Congestion Spike
+                            </span>
                           </div>
                           <p className="text-[11px] text-muted-foreground mt-0.5">
                             Spikes arrival variance by +14 min on Salem Junction corridor.
@@ -1167,10 +1335,13 @@ function SimulationPage() {
                         <div>
                           <div className="flex items-center gap-1.5">
                             <span className="size-2 rounded-full bg-primary"></span>
-                            <span className="text-xs font-bold text-foreground">Scenario 3: Driver 4-Hour Limit Handover</span>
+                            <span className="text-xs font-bold text-foreground">
+                              Scenario 3: Driver 4-Hour Limit Handover
+                            </span>
                           </div>
                           <p className="text-[11px] text-muted-foreground mt-0.5">
-                            Driver hits 240 mins continuous steering limit; mandates relief handover.
+                            Driver hits 240 mins continuous steering limit; mandates relief
+                            handover.
                           </p>
                         </div>
                         {activeScenario === "driver-rest" ? (
@@ -1207,15 +1378,23 @@ function SimulationPage() {
                     1
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-foreground">1. Network & Timetable Architecture</h4>
-                    <p className="text-[11px] text-muted-foreground">Defining corridors, stops, and departure headway.</p>
+                    <h4 className="font-bold text-sm text-foreground">
+                      1. Network & Timetable Architecture
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground">
+                      Defining corridors, stops, and departure headway.
+                    </p>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed pl-9">
-                  Operators configure routes (like Route 1: Town ⇄ Junction), geo-located bus stops, and generate the daily departure timetable.
+                  Operators configure routes (like Route 1: Town ⇄ Junction), geo-located bus stops,
+                  and generate the daily departure timetable.
                 </p>
                 <div className="pl-9">
-                  <Link to="/operations/trips" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+                  <Link
+                    to="/operations/trips"
+                    className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                  >
                     Open Timetable & Departures <ArrowRight className="size-3" />
                   </Link>
                 </div>
@@ -1225,15 +1404,24 @@ function SimulationPage() {
                     2
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-foreground">2. Google OR-Tools AI Schedule Optimization</h4>
-                    <p className="text-[11px] text-muted-foreground">Solving mixed-integer vehicle & crew duties.</p>
+                    <h4 className="font-bold text-sm text-foreground">
+                      2. Google OR-Tools AI Schedule Optimization
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground">
+                      Solving mixed-integer vehicle & crew duties.
+                    </p>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed pl-9">
-                  Instead of manual guesswork, the AI solver batches trips into legal shifts, guaranteeing drivers never exceed 240 mins continuous driving and get 8h mandatory rest.
+                  Instead of manual guesswork, the AI solver batches trips into legal shifts,
+                  guaranteeing drivers never exceed 240 mins continuous driving and get 8h mandatory
+                  rest.
                 </p>
                 <div className="pl-9">
-                  <Link to="/scheduling/optimizer" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+                  <Link
+                    to="/scheduling/optimizer"
+                    className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                  >
                     Open AI Schedule Optimizer <ArrowRight className="size-3" />
                   </Link>
                 </div>
@@ -1243,15 +1431,23 @@ function SimulationPage() {
                     3
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-foreground">3. Real-Time Fleet Dispatch & Live Tracking</h4>
-                    <p className="text-[11px] text-muted-foreground">Monitoring vehicles, passenger load, and adherence.</p>
+                    <h4 className="font-bold text-sm text-foreground">
+                      3. Real-Time Fleet Dispatch & Live Tracking
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground">
+                      Monitoring vehicles, passenger load, and adherence.
+                    </p>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed pl-9">
-                  The operations desk tracks buses moving across Salem corridors, alerting dispatchers if a bus falls behind schedule by more than 5 minutes.
+                  The operations desk tracks buses moving across Salem corridors, alerting
+                  dispatchers if a bus falls behind schedule by more than 5 minutes.
                 </p>
                 <div className="pl-9">
-                  <Link to="/operations/today" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+                  <Link
+                    to="/operations/today"
+                    className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                  >
                     Open Live Dispatch Board <ArrowRight className="size-3" />
                   </Link>
                 </div>
@@ -1261,15 +1457,23 @@ function SimulationPage() {
                     4
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-foreground">4. Automated Disruption Recovery</h4>
-                    <p className="text-[11px] text-muted-foreground">Instant self-healing when vehicles break down.</p>
+                    <h4 className="font-bold text-sm text-foreground">
+                      4. Automated Disruption Recovery
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground">
+                      Instant self-healing when vehicles break down.
+                    </p>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed pl-9">
-                  When a breakdown occurs, Disruption Radar generates candidate recovery plans, automatically recommending the lowest-delay standby vehicle dispatch.
+                  When a breakdown occurs, Disruption Radar generates candidate recovery plans,
+                  automatically recommending the lowest-delay standby vehicle dispatch.
                 </p>
                 <div className="pl-9">
-                  <Link to="/operations/incidents" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+                  <Link
+                    to="/operations/incidents"
+                    className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                  >
                     Open Disruption Radar <ArrowRight className="size-3" />
                   </Link>
                 </div>
@@ -1282,7 +1486,9 @@ function SimulationPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <Radio className="size-4 text-emerald-500 animate-pulse" />
-                    <span className="text-xs font-bold text-foreground">Live Telemetry & Radio Dispatch Feed</span>
+                    <span className="text-xs font-bold text-foreground">
+                      Live Telemetry & Radio Dispatch Feed
+                    </span>
                   </div>
                   <Button
                     variant="ghost"
@@ -1303,8 +1509,8 @@ function SimulationPage() {
                         log.type === "alert"
                           ? "border-rose-500/30 bg-rose-500/5 text-rose-700 dark:text-rose-300"
                           : log.type === "recovery" || log.type === "success"
-                          ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300"
-                          : "border-border/60 bg-muted/30 text-muted-foreground"
+                            ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300"
+                            : "border-border/60 bg-muted/30 text-muted-foreground",
                       )}
                     >
                       <div className="flex items-center justify-between font-mono text-[10px] text-muted-foreground mb-1">

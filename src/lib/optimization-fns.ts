@@ -3,12 +3,7 @@ import { toServerFnArgs } from "./server-fn-utils";
 import type { OptimizerResult } from "../server/scheduling/types";
 
 const _generateOptimizedSchedule = createServerFn({ method: "POST" })
-  .validator(
-    (data: {
-      serviceDate: string;
-      mode: "LINKED" | "UNLINKED" | "HYBRID";
-    }) => data
-  )
+  .validator((data: { serviceDate: string; mode: "LINKED" | "UNLINKED" | "HYBRID" }) => data)
   .handler(async ({ data }) => {
     const { generateOptimizedScheduleImpl } = await import("../server/scheduling/optimizer");
     return await generateOptimizedScheduleImpl(data);
@@ -25,7 +20,7 @@ export const generateOptimizedSchedule = async (
           serviceDate: string;
           mode: "LINKED" | "UNLINKED" | "HYBRID";
         };
-      }
+      },
 ) => {
   return await _generateOptimizedSchedule(toServerFnArgs(data)!);
 };
@@ -49,7 +44,9 @@ const _publishSchedule = createServerFn({ method: "POST" })
   });
 
 export const publishSchedule = async (
-  payload: { runId: string; proposal: OptimizerResult } | { data: { runId: string; proposal: OptimizerResult } }
+  payload:
+    | { runId: string; proposal: OptimizerResult }
+    | { data: { runId: string; proposal: OptimizerResult } },
 ) => {
   return await _publishSchedule(toServerFnArgs(payload)!);
 };

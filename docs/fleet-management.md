@@ -11,7 +11,9 @@ Buses are stored in the PostgreSQL database using the `buses` table.
 ```typescript
 export const buses = pgTable("buses", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
   registrationNumber: varchar("registration_number", { length: 50 }).notNull(),
   fleetNumber: varchar("fleet_number", { length: 50 }),
   depot: varchar("depot", { length: 255 }).notNull(),
@@ -25,6 +27,7 @@ export const buses = pgTable("buses", {
 ```
 
 ### Constraints & Indexes
+
 - **Tenant Scope Isolation**: Row-level isolation is logically enforced using an index on `tenant_id`.
 - **Tenant Uniqueness**: Uniqueness is enforced on both `registration_number` and `fleet_number` within each individual tenant scope:
   - `unique("buses_tenant_registration_number_unique").on(table.tenantId, table.registrationNumber)`
@@ -71,7 +74,7 @@ const list = await db
     and(
       eq(buses.tenantId, currentUser.tenantId),
       // ... filters
-    )
+    ),
   );
 ```
 
@@ -80,6 +83,7 @@ const list = await db
 ## 5. Audit Logging & Tracking
 
 All status changes and modifications are logged in the `audit_logs` table for compliance tracking:
+
 - **`BUS_CREATED`**: Triggered when a new bus is registered.
 - **`BUS_UPDATED`**: Triggered when properties are modified.
 - **`BUS_STATUS_CHANGED`**: Triggered when status is modified.
@@ -89,6 +93,7 @@ All status changes and modifications are logged in the `audit_logs` table for co
 ## 6. Future Scheduling Engine Integration
 
 The status of the bus dictates its eligibility for the scheduling optimizer:
+
 - Only buses marked `available` or `assigned` are considered pool candidates.
 - Buses marked `maintenance`, `breakdown`, or `out-of-service` are excluded.
 - If a bus is marked `breakdown` during the service day, this status change will later trigger the dynamic rescheduling workflow to select a replacement vehicle from the available pool.

@@ -24,6 +24,7 @@ graph TD
   APPLIED --> RESOLVED[RESOLVED]
   OPEN --> CANCELLED[CANCELLED]
 ```
+
 - **`OPEN`**: Incident reported.
 - **`ANALYZING`**: Direct and downstream impacts mapped in PostgreSQL.
 - **`RECOVERY_PROPOSED`**: Alternate recovery proposals generated.

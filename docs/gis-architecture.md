@@ -7,6 +7,7 @@ This document describes the Geographical Information Systems (GIS) architecture 
 ## 1. Stack & Library Selection
 
 TransitOS uses **Leaflet** as its primary mapping engine:
+
 - **Leaflet**: Lightweight, performant, mobile-friendly GIS library.
 - **OpenStreetMap (OSM) Tiles**: Free, public tile provider for rendering geographic base layers, avoiding paid mapping API dependencies.
 - **Vanilla Integration**: To prevent React 19 package compatibility warnings and ensure full execution control, Leaflet is instantiated directly (`L.map`) inside standard React `useEffect` hooks rather than through React wrapper packages.
@@ -19,14 +20,16 @@ TransitOS uses **Leaflet** as its primary mapping engine:
 Route shapes are stored directly in the `routes` table as GeoJSON using the PostgreSQL `jsonb` column type.
 
 ### GeoJSON LineString Representation
+
 A route is saved as a LineString GeoJSON object:
+
 ```json
 {
   "type": "LineString",
   "coordinates": [
-    [78.1460, 11.6643],
-    [78.1450, 11.6500],
-    [78.1330, 11.6750]
+    [78.146, 11.6643],
+    [78.145, 11.65],
+    [78.133, 11.675]
   ]
 }
 ```
@@ -50,6 +53,7 @@ A route is saved as a LineString GeoJSON object:
 ## 4. Interactive Vertex Drawing Workflow
 
 The Route Planner (`/network/planner`) introduces a dynamic vertex drawing mode:
+
 1. **State Activation**: Enabling map clicks adds a click listener to the map.
 2. **Point Addition**: Clicking coordinates on the map pushes new `[lng, lat]` coordinates into the proposed route's coordinate array.
 3. **Polyline Preview**: Leaflet updates the proposed path polyline in real-time as nodes are placed.

@@ -90,12 +90,8 @@
           "name": "audit_logs_tenant_id_tenants_id_fk",
           "tableFrom": "audit_logs",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -103,12 +99,8 @@
           "name": "audit_logs_user_id_users_id_fk",
           "tableFrom": "audit_logs",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -217,12 +209,8 @@
           "name": "buses_tenant_id_tenants_id_fk",
           "tableFrom": "buses",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -232,18 +220,12 @@
         "buses_tenant_registration_number_unique": {
           "name": "buses_tenant_registration_number_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id",
-            "registration_number"
-          ]
+          "columns": ["tenant_id", "registration_number"]
         },
         "buses_tenant_fleet_number_unique": {
           "name": "buses_tenant_fleet_number_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id",
-            "fleet_number"
-          ]
+          "columns": ["tenant_id", "fleet_number"]
         }
       },
       "policies": {},
@@ -361,12 +343,8 @@
           "name": "crew_tenant_id_tenants_id_fk",
           "tableFrom": "crew",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -376,10 +354,7 @@
         "crew_tenant_employee_id_unique": {
           "name": "crew_tenant_employee_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id",
-            "employee_id"
-          ]
+          "columns": ["tenant_id", "employee_id"]
         }
       },
       "policies": {},
@@ -543,12 +518,8 @@
           "name": "duties_tenant_id_tenants_id_fk",
           "tableFrom": "duties",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -556,12 +527,8 @@
           "name": "duties_bus_id_buses_id_fk",
           "tableFrom": "duties",
           "tableTo": "buses",
-          "columnsFrom": [
-            "bus_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["bus_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -569,12 +536,8 @@
           "name": "duties_driver_id_crew_id_fk",
           "tableFrom": "duties",
           "tableTo": "crew",
-          "columnsFrom": [
-            "driver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["driver_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -582,12 +545,8 @@
           "name": "duties_conductor_id_crew_id_fk",
           "tableFrom": "duties",
           "tableTo": "crew",
-          "columnsFrom": [
-            "conductor_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["conductor_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -597,10 +556,7 @@
         "duties_tenant_duty_code_unique": {
           "name": "duties_tenant_duty_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id",
-            "duty_code"
-          ]
+          "columns": ["tenant_id", "duty_code"]
         }
       },
       "policies": {},
@@ -705,12 +661,8 @@
           "name": "duty_crew_segments_tenant_id_tenants_id_fk",
           "tableFrom": "duty_crew_segments",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -718,12 +670,8 @@
           "name": "duty_crew_segments_duty_id_duties_id_fk",
           "tableFrom": "duty_crew_segments",
           "tableTo": "duties",
-          "columnsFrom": [
-            "duty_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["duty_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -731,12 +679,8 @@
           "name": "duty_crew_segments_driver_id_crew_id_fk",
           "tableFrom": "duty_crew_segments",
           "tableTo": "crew",
-          "columnsFrom": [
-            "driver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["driver_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -744,12 +688,8 @@
           "name": "duty_crew_segments_conductor_id_crew_id_fk",
           "tableFrom": "duty_crew_segments",
           "tableTo": "crew",
-          "columnsFrom": [
-            "conductor_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["conductor_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -862,12 +802,8 @@
           "name": "duty_trips_tenant_id_tenants_id_fk",
           "tableFrom": "duty_trips",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -875,12 +811,8 @@
           "name": "duty_trips_duty_id_duties_id_fk",
           "tableFrom": "duty_trips",
           "tableTo": "duties",
-          "columnsFrom": [
-            "duty_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["duty_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -888,12 +820,8 @@
           "name": "duty_trips_trip_id_trips_id_fk",
           "tableFrom": "duty_trips",
           "tableTo": "trips",
-          "columnsFrom": [
-            "trip_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["trip_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -992,12 +920,8 @@
           "name": "incident_impacts_incident_id_incidents_id_fk",
           "tableFrom": "incident_impacts",
           "tableTo": "incidents",
-          "columnsFrom": [
-            "incident_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["incident_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1005,12 +929,8 @@
           "name": "incident_impacts_trip_id_trips_id_fk",
           "tableFrom": "incident_impacts",
           "tableTo": "trips",
-          "columnsFrom": [
-            "trip_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["trip_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1018,12 +938,8 @@
           "name": "incident_impacts_duty_id_duties_id_fk",
           "tableFrom": "incident_impacts",
           "tableTo": "duties",
-          "columnsFrom": [
-            "duty_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["duty_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1031,12 +947,8 @@
           "name": "incident_impacts_bus_id_buses_id_fk",
           "tableFrom": "incident_impacts",
           "tableTo": "buses",
-          "columnsFrom": [
-            "bus_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["bus_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1044,12 +956,8 @@
           "name": "incident_impacts_driver_id_crew_id_fk",
           "tableFrom": "incident_impacts",
           "tableTo": "crew",
-          "columnsFrom": [
-            "driver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["driver_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1057,12 +965,8 @@
           "name": "incident_impacts_conductor_id_crew_id_fk",
           "tableFrom": "incident_impacts",
           "tableTo": "crew",
-          "columnsFrom": [
-            "conductor_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["conductor_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1248,12 +1152,8 @@
           "name": "incidents_tenant_id_tenants_id_fk",
           "tableFrom": "incidents",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1261,12 +1161,8 @@
           "name": "incidents_schedule_id_schedules_id_fk",
           "tableFrom": "incidents",
           "tableTo": "schedules",
-          "columnsFrom": [
-            "schedule_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schedule_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1274,12 +1170,8 @@
           "name": "incidents_trip_id_trips_id_fk",
           "tableFrom": "incidents",
           "tableTo": "trips",
-          "columnsFrom": [
-            "trip_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["trip_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1287,12 +1179,8 @@
           "name": "incidents_route_id_routes_id_fk",
           "tableFrom": "incidents",
           "tableTo": "routes",
-          "columnsFrom": [
-            "route_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["route_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1300,12 +1188,8 @@
           "name": "incidents_reported_by_users_id_fk",
           "tableFrom": "incidents",
           "tableTo": "users",
-          "columnsFrom": [
-            "reported_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reported_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1424,12 +1308,8 @@
           "name": "operational_events_tenant_id_tenants_id_fk",
           "tableFrom": "operational_events",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1437,12 +1317,8 @@
           "name": "operational_events_trip_id_trips_id_fk",
           "tableFrom": "operational_events",
           "tableTo": "trips",
-          "columnsFrom": [
-            "trip_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["trip_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1450,12 +1326,8 @@
           "name": "operational_events_recorded_by_users_id_fk",
           "tableFrom": "operational_events",
           "tableTo": "users",
-          "columnsFrom": [
-            "recorded_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["recorded_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1593,12 +1465,8 @@
           "name": "optimization_runs_tenant_id_tenants_id_fk",
           "tableFrom": "optimization_runs",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1606,12 +1474,8 @@
           "name": "optimization_runs_created_by_users_id_fk",
           "tableFrom": "optimization_runs",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1750,12 +1614,8 @@
           "name": "recovery_proposals_run_id_rescheduling_runs_id_fk",
           "tableFrom": "recovery_proposals",
           "tableTo": "rescheduling_runs",
-          "columnsFrom": [
-            "run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1900,12 +1760,8 @@
           "name": "reschedule_actions_tenant_id_tenants_id_fk",
           "tableFrom": "reschedule_actions",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1913,12 +1769,8 @@
           "name": "reschedule_actions_schedule_id_schedules_id_fk",
           "tableFrom": "reschedule_actions",
           "tableTo": "schedules",
-          "columnsFrom": [
-            "schedule_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["schedule_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1926,12 +1778,8 @@
           "name": "reschedule_actions_incident_id_incidents_id_fk",
           "tableFrom": "reschedule_actions",
           "tableTo": "incidents",
-          "columnsFrom": [
-            "incident_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["incident_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1939,12 +1787,8 @@
           "name": "reschedule_actions_duty_id_duties_id_fk",
           "tableFrom": "reschedule_actions",
           "tableTo": "duties",
-          "columnsFrom": [
-            "duty_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["duty_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2089,12 +1933,8 @@
           "name": "rescheduling_runs_tenant_id_tenants_id_fk",
           "tableFrom": "rescheduling_runs",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2102,12 +1942,8 @@
           "name": "rescheduling_runs_incident_id_incidents_id_fk",
           "tableFrom": "rescheduling_runs",
           "tableTo": "incidents",
-          "columnsFrom": [
-            "incident_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["incident_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2115,12 +1951,8 @@
           "name": "rescheduling_runs_created_by_users_id_fk",
           "tableFrom": "rescheduling_runs",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2273,12 +2105,8 @@
           "name": "routes_tenant_id_tenants_id_fk",
           "tableFrom": "routes",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2288,10 +2116,7 @@
         "routes_tenant_code_unique": {
           "name": "routes_tenant_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id",
-            "code"
-          ]
+          "columns": ["tenant_id", "code"]
         }
       },
       "policies": {},
@@ -2377,12 +2202,8 @@
           "name": "schedules_tenant_id_tenants_id_fk",
           "tableFrom": "schedules",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2478,12 +2299,8 @@
           "name": "stops_tenant_id_tenants_id_fk",
           "tableFrom": "stops",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2491,12 +2308,8 @@
           "name": "stops_route_id_routes_id_fk",
           "tableFrom": "stops",
           "tableTo": "routes",
-          "columnsFrom": [
-            "route_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["route_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2552,9 +2365,7 @@
         "tenants_slug_unique": {
           "name": "tenants_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "policies": {},
@@ -2780,12 +2591,8 @@
           "name": "trips_tenant_id_tenants_id_fk",
           "tableFrom": "trips",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2793,12 +2600,8 @@
           "name": "trips_route_id_routes_id_fk",
           "tableFrom": "trips",
           "tableTo": "routes",
-          "columnsFrom": [
-            "route_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["route_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2808,10 +2611,7 @@
         "trips_tenant_trip_code_unique": {
           "name": "trips_tenant_trip_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id",
-            "trip_code"
-          ]
+          "columns": ["tenant_id", "trip_code"]
         }
       },
       "policies": {},
@@ -2897,12 +2697,8 @@
           "name": "users_tenant_id_tenants_id_fk",
           "tableFrom": "users",
           "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tenant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2912,10 +2708,7 @@
         "users_tenant_email_unique": {
           "name": "users_tenant_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id",
-            "email"
-          ]
+          "columns": ["tenant_id", "email"]
         }
       },
       "policies": {},

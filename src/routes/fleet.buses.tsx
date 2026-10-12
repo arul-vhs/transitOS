@@ -47,13 +47,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
-import {
-  getBuses,
-  getBus,
-  createBus,
-  updateBus,
-  updateBusStatus,
-} from "@/lib/fleet-crew";
+import { getBuses, getBus, createBus, updateBus, updateBusStatus } from "@/lib/fleet-crew";
 
 export const Route = createFileRoute("/fleet/buses")({
   beforeLoad: ({ context }) => {
@@ -63,7 +57,7 @@ export const Route = createFileRoute("/fleet/buses")({
   },
   head: () => ({
     meta: [
-      { title: "Fleet Management — TransitOS" },
+      { title: "Fleet Management: TransitOS" },
       { name: "description", content: "Fleet register, availability and depot allocation." },
     ],
   }),
@@ -266,7 +260,12 @@ function BusesPage() {
   };
 
   // Status change dropdown handler
-  const handleStatusSelect = (id: string, currentReg: string, currentFleet: string, newStatus: string) => {
+  const handleStatusSelect = (
+    id: string,
+    currentReg: string,
+    currentFleet: string,
+    newStatus: string,
+  ) => {
     if (newStatus === "breakdown" || newStatus === "out-of-service") {
       setPendingStatusChange({ id, regNum: currentReg, fleetNum: currentFleet, status: newStatus });
       setIsConfirmStatusOpen(true);
@@ -308,55 +307,79 @@ function BusesPage() {
         <div className="grid gap-3.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
           <div className="rounded-2xl border border-border/80 bg-card p-4 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Total Fleet</span>
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Total Fleet
+              </span>
               <Bus className="size-4 text-primary" />
             </div>
-            <p className="text-3xl font-extrabold tracking-tight mt-2 text-foreground">{totalBuses}</p>
+            <p className="text-3xl font-extrabold tracking-tight mt-2 text-foreground">
+              {totalBuses}
+            </p>
             <p className="text-[11px] text-muted-foreground mt-1">Salem City Fleet</p>
           </div>
 
           <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Available</span>
+              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                Available
+              </span>
               <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
             </div>
-            <p className="text-3xl font-extrabold tracking-tight mt-2 text-emerald-600 dark:text-emerald-400">{availableBuses}</p>
+            <p className="text-3xl font-extrabold tracking-tight mt-2 text-emerald-600 dark:text-emerald-400">
+              {availableBuses}
+            </p>
             <p className="text-[11px] text-muted-foreground mt-1">Ready to dispatch</p>
           </div>
 
           <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">In Service</span>
+              <span className="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">
+                In Service
+              </span>
               <span className="size-2 rounded-full bg-cyan-500"></span>
             </div>
-            <p className="text-3xl font-extrabold tracking-tight mt-2 text-cyan-600 dark:text-cyan-400">{inServiceBuses + assignedBuses}</p>
+            <p className="text-3xl font-extrabold tracking-tight mt-2 text-cyan-600 dark:text-cyan-400">
+              {inServiceBuses + assignedBuses}
+            </p>
             <p className="text-[11px] text-muted-foreground mt-1">On road or assigned</p>
           </div>
 
           <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Maintenance</span>
+              <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                Maintenance
+              </span>
               <Wrench className="size-4 text-amber-500" />
             </div>
-            <p className="text-3xl font-extrabold tracking-tight mt-2 text-amber-600 dark:text-amber-400">{maintenanceBuses}</p>
+            <p className="text-3xl font-extrabold tracking-tight mt-2 text-amber-600 dark:text-amber-400">
+              {maintenanceBuses}
+            </p>
             <p className="text-[11px] text-muted-foreground mt-1">In workshop bays</p>
           </div>
 
           <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider">Breakdown</span>
+              <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
+                Breakdown
+              </span>
               <AlertTriangle className="size-4 text-rose-500" />
             </div>
-            <p className="text-3xl font-extrabold tracking-tight mt-2 text-rose-600 dark:text-rose-400">{breakdownBuses}</p>
+            <p className="text-3xl font-extrabold tracking-tight mt-2 text-rose-600 dark:text-rose-400">
+              {breakdownBuses}
+            </p>
             <p className="text-[11px] text-muted-foreground mt-1">Needs recovery</p>
           </div>
 
           <div className="rounded-2xl border border-border/70 bg-muted/30 p-4 flex flex-col justify-between shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Standby</span>
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Standby
+              </span>
               <span className="size-2 rounded-full bg-muted-foreground"></span>
             </div>
-            <p className="text-3xl font-extrabold tracking-tight mt-2 text-muted-foreground">{outOfServiceBuses}</p>
+            <p className="text-3xl font-extrabold tracking-tight mt-2 text-muted-foreground">
+              {outOfServiceBuses}
+            </p>
             <p className="text-[11px] text-muted-foreground mt-1">Depot reserve</p>
           </div>
         </div>
@@ -432,7 +455,9 @@ function BusesPage() {
               <TableBody>
                 {busesList.map((bus) => (
                   <TableRow key={bus.id}>
-                    <TableCell className="font-semibold text-primary">{bus.fleetNumber || "-"}</TableCell>
+                    <TableCell className="font-semibold text-primary">
+                      {bus.fleetNumber || "-"}
+                    </TableCell>
                     <TableCell className="font-mono text-sm">{bus.registrationNumber}</TableCell>
                     <TableCell className="text-sm">{bus.busType || "Standard"}</TableCell>
                     <TableCell className="text-right text-sm">{bus.capacity || 40}</TableCell>
@@ -442,23 +467,63 @@ function BusesPage() {
                         <Select
                           value={bus.status}
                           onValueChange={(val) =>
-                            handleStatusSelect(bus.id, bus.registrationNumber, bus.fleetNumber || "", val)
+                            handleStatusSelect(
+                              bus.id,
+                              bus.registrationNumber,
+                              bus.fleetNumber || "",
+                              val,
+                            )
                           }
                         >
-                          <SelectTrigger className={`h-7 w-[130px] text-xs font-semibold uppercase tracking-wider border ${getStatusBadgeClass(bus.status)}`}>
+                          <SelectTrigger
+                            className={`h-7 w-[130px] text-xs font-semibold uppercase tracking-wider border ${getStatusBadgeClass(bus.status)}`}
+                          >
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="available" className="text-xs uppercase tracking-wider text-success">Available</SelectItem>
-                            <SelectItem value="assigned" className="text-xs uppercase tracking-wider text-info">Assigned</SelectItem>
-                            <SelectItem value="in-service" className="text-xs uppercase tracking-wider text-primary">In Service</SelectItem>
-                            <SelectItem value="maintenance" className="text-xs uppercase tracking-wider text-warning">Maintenance</SelectItem>
-                            <SelectItem value="breakdown" className="text-xs uppercase tracking-wider text-destructive">Breakdown</SelectItem>
-                            <SelectItem value="out-of-service" className="text-xs uppercase tracking-wider text-muted-foreground">Out of Service</SelectItem>
+                            <SelectItem
+                              value="available"
+                              className="text-xs uppercase tracking-wider text-success"
+                            >
+                              Available
+                            </SelectItem>
+                            <SelectItem
+                              value="assigned"
+                              className="text-xs uppercase tracking-wider text-info"
+                            >
+                              Assigned
+                            </SelectItem>
+                            <SelectItem
+                              value="in-service"
+                              className="text-xs uppercase tracking-wider text-primary"
+                            >
+                              In Service
+                            </SelectItem>
+                            <SelectItem
+                              value="maintenance"
+                              className="text-xs uppercase tracking-wider text-warning"
+                            >
+                              Maintenance
+                            </SelectItem>
+                            <SelectItem
+                              value="breakdown"
+                              className="text-xs uppercase tracking-wider text-destructive"
+                            >
+                              Breakdown
+                            </SelectItem>
+                            <SelectItem
+                              value="out-of-service"
+                              className="text-xs uppercase tracking-wider text-muted-foreground"
+                            >
+                              Out of Service
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       ) : (
-                        <Badge variant="outline" className={`h-6 text-[10px] font-semibold uppercase tracking-wider border ${getStatusBadgeClass(bus.status)}`}>
+                        <Badge
+                          variant="outline"
+                          className={`h-6 text-[10px] font-semibold uppercase tracking-wider border ${getStatusBadgeClass(bus.status)}`}
+                        >
                           {bus.status.replace("-", " ")}
                         </Badge>
                       )}
@@ -507,12 +572,15 @@ function BusesPage() {
             <DialogHeader>
               <DialogTitle>Create New Bus</DialogTitle>
               <DialogDescription>
-                Add a new verified passenger bus vehicle to this organization's database fleet registry.
+                Add a new verified passenger bus vehicle to this organization's database fleet
+                registry.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="regNum" className="text-right">Registration</Label>
+                <Label htmlFor="regNum" className="text-right">
+                  Registration
+                </Label>
                 <Input
                   id="regNum"
                   value={formRegNum}
@@ -523,7 +591,9 @@ function BusesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="fleetNum" className="text-right">Fleet No.</Label>
+                <Label htmlFor="fleetNum" className="text-right">
+                  Fleet No.
+                </Label>
                 <Input
                   id="fleetNum"
                   value={formFleetNum}
@@ -534,7 +604,9 @@ function BusesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="busType" className="text-right">Bus Type</Label>
+                <Label htmlFor="busType" className="text-right">
+                  Bus Type
+                </Label>
                 <Select value={formBusType} onValueChange={setFormBusType}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue />
@@ -548,7 +620,9 @@ function BusesPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="capacity" className="text-right">Capacity</Label>
+                <Label htmlFor="capacity" className="text-right">
+                  Capacity
+                </Label>
                 <Input
                   id="capacity"
                   type="number"
@@ -560,7 +634,9 @@ function BusesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="depot" className="text-right">Depot</Label>
+                <Label htmlFor="depot" className="text-right">
+                  Depot
+                </Label>
                 <Select value={formDepot} onValueChange={setFormDepot}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue />
@@ -574,7 +650,9 @@ function BusesPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="status" className="text-right">Status</Label>
+                <Label htmlFor="status" className="text-right">
+                  Status
+                </Label>
                 <Select value={formStatus} onValueChange={setFormStatus}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue />
@@ -588,7 +666,9 @@ function BusesPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="availFrom" className="text-right text-xs">Available From</Label>
+                <Label htmlFor="availFrom" className="text-right text-xs">
+                  Available From
+                </Label>
                 <Input
                   id="availFrom"
                   type="time"
@@ -623,7 +703,9 @@ function BusesPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editRegNum" className="text-right">Registration</Label>
+                <Label htmlFor="editRegNum" className="text-right">
+                  Registration
+                </Label>
                 <Input
                   id="editRegNum"
                   value={formRegNum}
@@ -633,7 +715,9 @@ function BusesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editFleetNum" className="text-right">Fleet No.</Label>
+                <Label htmlFor="editFleetNum" className="text-right">
+                  Fleet No.
+                </Label>
                 <Input
                   id="editFleetNum"
                   value={formFleetNum}
@@ -643,7 +727,9 @@ function BusesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editBusType" className="text-right">Bus Type</Label>
+                <Label htmlFor="editBusType" className="text-right">
+                  Bus Type
+                </Label>
                 <Select value={formBusType} onValueChange={setFormBusType}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue />
@@ -657,7 +743,9 @@ function BusesPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editCapacity" className="text-right">Capacity</Label>
+                <Label htmlFor="editCapacity" className="text-right">
+                  Capacity
+                </Label>
                 <Input
                   id="editCapacity"
                   type="number"
@@ -669,7 +757,9 @@ function BusesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editDepot" className="text-right">Depot</Label>
+                <Label htmlFor="editDepot" className="text-right">
+                  Depot
+                </Label>
                 <Select value={formDepot} onValueChange={setFormDepot}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue />
@@ -683,7 +773,9 @@ function BusesPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editStatus" className="text-right">Status</Label>
+                <Label htmlFor="editStatus" className="text-right">
+                  Status
+                </Label>
                 <Select value={formStatus} onValueChange={setFormStatus}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue />
@@ -699,7 +791,9 @@ function BusesPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editAvailFrom" className="text-right text-xs">Available From</Label>
+                <Label htmlFor="editAvailFrom" className="text-right text-xs">
+                  Available From
+                </Label>
                 <Input
                   id="editAvailFrom"
                   type="time"
@@ -732,7 +826,10 @@ function BusesPage() {
             </DialogTitle>
             <DialogDescription className="pt-2 text-foreground font-semibold">
               Mark {pendingStatusChange?.fleetNum || "bus"} ({pendingStatusChange?.regNum}) as{" "}
-              <span className="capitalize text-destructive font-bold">{pendingStatusChange?.status.replace("-", " ")}</span>?
+              <span className="capitalize text-destructive font-bold">
+                {pendingStatusChange?.status.replace("-", " ")}
+              </span>
+              ?
             </DialogDescription>
           </DialogHeader>
           <div className="py-2 text-sm text-muted-foreground">
@@ -781,15 +878,22 @@ function BusesPage() {
               <div className="panel p-4 space-y-3 bg-secondary/20">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-muted-foreground">Fleet Number</span>
-                  <span className="font-bold text-primary">{selectedBusDetails.fleetNumber || "-"}</span>
+                  <span className="font-bold text-primary">
+                    {selectedBusDetails.fleetNumber || "-"}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-muted-foreground">Registration</span>
-                  <span className="font-mono text-sm font-semibold">{selectedBusDetails.registrationNumber}</span>
+                  <span className="font-mono text-sm font-semibold">
+                    {selectedBusDetails.registrationNumber}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-muted-foreground">Status</span>
-                  <Badge variant="outline" className={`h-6 text-[10px] font-semibold uppercase tracking-wider border ${getStatusBadgeClass(selectedBusDetails.status)}`}>
+                  <Badge
+                    variant="outline"
+                    className={`h-6 text-[10px] font-semibold uppercase tracking-wider border ${getStatusBadgeClass(selectedBusDetails.status)}`}
+                  >
                     {selectedBusDetails.status.replace("-", " ")}
                   </Badge>
                 </div>
@@ -803,7 +907,9 @@ function BusesPage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-muted-foreground">Available From</span>
-                  <span className="text-sm font-mono">{formatMinutesToTime(selectedBusDetails.availableFrom)}</span>
+                  <span className="text-sm font-mono">
+                    {formatMinutesToTime(selectedBusDetails.availableFrom)}
+                  </span>
                 </div>
               </div>
 

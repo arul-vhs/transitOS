@@ -33,8 +33,7 @@ import type {
   Schedule,
 } from "./types";
 
-const overlaps = (aS: number, aE: number, bS: number, bE: number) =>
-  aS < bE && bS < aE;
+const overlaps = (aS: number, aE: number, bS: number, bE: number) => aS < bE && bS < aE;
 
 /** Wave definition keeps the generator deterministic and demo-friendly. */
 const MORNING_BUSES = BUSES.slice(0, 10);
@@ -151,10 +150,7 @@ export function validateSchedule(duties: Duty[]): ConstraintCheck[] {
   ];
 }
 
-export function createIncident(
-  kind: Incident["kind"],
-  schedule: Schedule,
-): Incident | null {
+export function createIncident(kind: Incident["kind"], schedule: Schedule): Incident | null {
   if (kind === "bus-breakdown") {
     const busId = "B003";
     const time = minutes(9, 20);
@@ -187,12 +183,7 @@ export function createIncident(
   };
 }
 
-const busFreeFor = (
-  busId: string,
-  duty: Duty,
-  frozen: Duty[],
-  blocked: Set<string>,
-) => {
+const busFreeFor = (busId: string, duty: Duty, frozen: Duty[], blocked: Set<string>) => {
   if (blocked.has(busId)) return false;
   return !frozen.some(
     (f) =>
@@ -214,10 +205,7 @@ const driverFreeFor = (driverId: string, duty: Duty, frozen: Duty[], blocked: Se
   );
 };
 
-export function rescheduleAffectedDuties(
-  schedule: Schedule,
-  incident: Incident,
-): RescheduleResult {
+export function rescheduleAffectedDuties(schedule: Schedule, incident: Incident): RescheduleResult {
   const affectedIds = new Set(incident.affectedDutyIds);
   const frozen = schedule.duties.filter((d) => !affectedIds.has(d.id));
   const working = schedule.duties.map((d) => ({ ...d }));
@@ -324,10 +312,48 @@ export function calculateDisruptionScore(before: Schedule, after: Schedule): num
   return total === 0 ? 100 : Math.round((same / total) * 100);
 }
 
-export const OVERLAP_ANALYSIS: Record<string, { overlaps: { code: string; pct: number }[]; coverage: number }> = {
-  R101: { overlaps: [{ code: "Route 102", pct: 12 }, { code: "Route 103", pct: 18 }, { code: "Route 105", pct: 24 }], coverage: 91 },
-  R102: { overlaps: [{ code: "Route 101", pct: 12 }, { code: "Route 104", pct: 9 }, { code: "Route 105", pct: 15 }], coverage: 84 },
-  R103: { overlaps: [{ code: "Route 101", pct: 18 }, { code: "Route 102", pct: 7 }, { code: "Route 104", pct: 31 }], coverage: 87 },
-  R104: { overlaps: [{ code: "Route 101", pct: 21 }, { code: "Route 103", pct: 31 }, { code: "Route 105", pct: 6 }], coverage: 79 },
-  R105: { overlaps: [{ code: "Route 101", pct: 24 }, { code: "Route 102", pct: 15 }, { code: "Route 103", pct: 11 }], coverage: 88 },
+export const OVERLAP_ANALYSIS: Record<
+  string,
+  { overlaps: { code: string; pct: number }[]; coverage: number }
+> = {
+  R101: {
+    overlaps: [
+      { code: "Route 102", pct: 12 },
+      { code: "Route 103", pct: 18 },
+      { code: "Route 105", pct: 24 },
+    ],
+    coverage: 91,
+  },
+  R102: {
+    overlaps: [
+      { code: "Route 101", pct: 12 },
+      { code: "Route 104", pct: 9 },
+      { code: "Route 105", pct: 15 },
+    ],
+    coverage: 84,
+  },
+  R103: {
+    overlaps: [
+      { code: "Route 101", pct: 18 },
+      { code: "Route 102", pct: 7 },
+      { code: "Route 104", pct: 31 },
+    ],
+    coverage: 87,
+  },
+  R104: {
+    overlaps: [
+      { code: "Route 101", pct: 21 },
+      { code: "Route 103", pct: 31 },
+      { code: "Route 105", pct: 6 },
+    ],
+    coverage: 79,
+  },
+  R105: {
+    overlaps: [
+      { code: "Route 101", pct: 24 },
+      { code: "Route 102", pct: 15 },
+      { code: "Route 103", pct: 11 },
+    ],
+    coverage: 88,
+  },
 };

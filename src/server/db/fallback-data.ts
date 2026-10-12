@@ -144,7 +144,9 @@ export const FALLBACK_CREW: FallbackCrew[] = (rawData.crew || []).map((c: any) =
   availableFrom: c.available_from ?? 330,
   restUntil: c.rest_until ?? 330,
   licenseNumber: c.license_number,
-  licenseCategory: c.license_category || (c.role === "driver" ? "Heavy Passenger Vehicle (HPV) / PSV Badge" : null),
+  licenseCategory:
+    c.license_category ||
+    (c.role === "driver" ? "Heavy Passenger Vehicle (HPV) / PSV Badge" : null),
   licenseExpiry: c.license_expiry || null,
   shiftType: c.shift_type || "Morning",
   weeklyHours: c.weekly_hours ?? 44,
@@ -191,7 +193,7 @@ export const FALLBACK_ROUTES: FallbackRoute[] = (rawData.routes || []).map((r: a
 export const FALLBACK_TRIPS: FallbackTrip[] = (rawData.trips || []).map((t: any) => {
   const route = FALLBACK_ROUTES.find((r) => r.id === t.route_id);
   const startTime = t.start_time ?? t.start_minutes ?? 360;
-  const endTime = t.end_time ?? t.end_minutes ?? (startTime + 30);
+  const endTime = t.end_time ?? t.end_minutes ?? startTime + 30;
   const tripCode = t.trip_code || t.trip_number || `TR-${t.id?.slice(0, 6)}`;
 
   return {
@@ -205,7 +207,7 @@ export const FALLBACK_TRIPS: FallbackTrip[] = (rawData.trips || []).map((t: any)
     endMinutes: endTime,
     startTime,
     endTime,
-    durationMin: t.duration_min ?? (endTime - startTime),
+    durationMin: t.duration_min ?? endTime - startTime,
     distanceKm: t.distance_km || route?.distanceKm || "10.00",
     origin: t.origin || route?.origin || "Salem Central",
     destination: t.destination || route?.destination || "Destination Terminus",

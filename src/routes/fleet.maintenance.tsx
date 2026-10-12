@@ -53,8 +53,11 @@ export const Route = createFileRoute("/fleet/maintenance")({
   },
   head: () => ({
     meta: [
-      { title: "Fleet Maintenance Bays — TransitOS" },
-      { name: "description", content: "Scheduled servicing, docking bay tracking and defect remediation." },
+      { title: "Fleet Maintenance Bays: TransitOS" },
+      {
+        name: "description",
+        content: "Scheduled servicing, docking bay tracking and defect remediation.",
+      },
     ],
   }),
   component: MaintenancePage,
@@ -80,14 +83,14 @@ function MaintenancePage() {
   const busesInMaintenance = busesList.filter((b) => b.status === "maintenance");
   const busesRequiringMaintenance = busesList.filter((b) => b.status === "breakdown");
   const availableBuses = busesList.filter(
-    (b) => b.status === "available" || b.status === "assigned" || b.status === "in-service"
+    (b) => b.status === "available" || b.status === "assigned" || b.status === "in-service",
   );
 
   // Filter available buses for the selection dialog
   const filteredAvailableBuses = availableBuses.filter(
     (b) =>
       b.registrationNumber.toLowerCase().includes(search.toLowerCase()) ||
-      (b.fleetNumber || "").toLowerCase().includes(search.toLowerCase())
+      (b.fleetNumber || "").toLowerCase().includes(search.toLowerCase()),
   );
 
   // Status mutation
@@ -110,9 +113,7 @@ function MaintenancePage() {
   });
 
   const fleetHealthPercent =
-    busesList.length > 0
-      ? Math.round((availableBuses.length / busesList.length) * 100)
-      : 100;
+    busesList.length > 0 ? Math.round((availableBuses.length / busesList.length) * 100) : 100;
 
   return (
     <AppShell
@@ -136,23 +137,34 @@ function MaintenancePage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-primary flex flex-col justify-between">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Fleet Readiness</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider">
+                Fleet Readiness
+              </span>
               <Gauge className="size-4 text-primary" />
             </div>
             <div className="mt-2 flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold font-mono text-primary">{fleetHealthPercent}%</span>
+              <span className="text-2xl font-bold font-mono text-primary">
+                {fleetHealthPercent}%
+              </span>
               <span className="text-[10px] text-muted-foreground">operational rate</span>
             </div>
           </div>
 
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-warning flex flex-col justify-between">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[10px] font-bold uppercase tracking-wider">In Docking (Bays)</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider">
+                In Docking (Bays)
+              </span>
               <Wrench className="size-4 text-warning" />
             </div>
             <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-bold font-mono text-warning">{busesInMaintenance.length}</span>
-              <Badge variant="outline" className="border-warning/30 text-warning bg-warning/5 text-[9px] font-mono">
+              <span className="text-2xl font-bold font-mono text-warning">
+                {busesInMaintenance.length}
+              </span>
+              <Badge
+                variant="outline"
+                className="border-warning/30 text-warning bg-warning/5 text-[9px] font-mono"
+              >
                 Active Bay
               </Badge>
             </div>
@@ -160,12 +172,19 @@ function MaintenancePage() {
 
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-destructive flex flex-col justify-between">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Defects / Breakdowns</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider">
+                Defects / Breakdowns
+              </span>
               <AlertTriangle className="size-4 text-destructive" />
             </div>
             <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-bold font-mono text-destructive">{busesRequiringMaintenance.length}</span>
-              <Badge variant="outline" className="border-destructive/30 text-destructive bg-destructive/5 text-[9px] font-mono">
+              <span className="text-2xl font-bold font-mono text-destructive">
+                {busesRequiringMaintenance.length}
+              </span>
+              <Badge
+                variant="outline"
+                className="border-destructive/30 text-destructive bg-destructive/5 text-[9px] font-mono"
+              >
                 Action Req
               </Badge>
             </div>
@@ -173,12 +192,18 @@ function MaintenancePage() {
 
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-success flex flex-col justify-between">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[10px] font-bold uppercase tracking-wider">Available Fleet</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider">
+                Available Fleet
+              </span>
               <CheckCircle2 className="size-4 text-success" />
             </div>
             <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-bold font-mono text-success">{availableBuses.length}</span>
-              <span className="text-[10px] text-muted-foreground font-mono">of {busesList.length} total</span>
+              <span className="text-2xl font-bold font-mono text-success">
+                {availableBuses.length}
+              </span>
+              <span className="text-[10px] text-muted-foreground font-mono">
+                of {busesList.length} total
+              </span>
             </div>
           </div>
         </div>
@@ -189,22 +214,36 @@ function MaintenancePage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-destructive">
                 <AlertTriangle className="size-4.5" />
-                <h3 className="text-sm font-bold tracking-tight">Vehicles Reporting Defects or Road Breakdowns</h3>
+                <h3 className="text-sm font-bold tracking-tight">
+                  Vehicles Reporting Defects or Road Breakdowns
+                </h3>
               </div>
-              <Badge variant="outline" className="border-destructive/40 text-destructive font-mono text-xs">
+              <Badge
+                variant="outline"
+                className="border-destructive/40 text-destructive font-mono text-xs"
+              >
                 {busesRequiringMaintenance.length} Grounded
               </Badge>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 pt-1">
               {busesRequiringMaintenance.map((bus) => (
-                <div key={bus.id} className="p-3.5 rounded-xl border border-destructive/30 bg-card/80 flex items-center justify-between">
+                <div
+                  key={bus.id}
+                  className="p-3.5 rounded-xl border border-destructive/30 bg-card/80 flex items-center justify-between"
+                >
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-xs text-foreground font-mono">{bus.registrationNumber}</span>
-                      <Badge variant="outline" className="text-[9px] font-mono">{bus.fleetNumber}</Badge>
+                      <span className="font-bold text-xs text-foreground font-mono">
+                        {bus.registrationNumber}
+                      </span>
+                      <Badge variant="outline" className="text-[9px] font-mono">
+                        {bus.fleetNumber}
+                      </Badge>
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{bus.busType} · {bus.depot}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {bus.busType} · {bus.depot}
+                    </p>
                   </div>
                   {canManage && (
                     <Button
@@ -230,8 +269,12 @@ function MaintenancePage() {
                 <Wrench className="size-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold tracking-tight text-foreground">Currently Docked for Servicing</h3>
-                <p className="text-[11px] text-muted-foreground">Depot mechanics inspection and overhaul bay</p>
+                <h3 className="text-sm font-bold tracking-tight text-foreground">
+                  Currently Docked for Servicing
+                </h3>
+                <p className="text-[11px] text-muted-foreground">
+                  Depot mechanics inspection and overhaul bay
+                </p>
               </div>
             </div>
             <Badge variant="outline" className="font-mono text-xs">
@@ -240,12 +283,16 @@ function MaintenancePage() {
           </div>
 
           {isLoading ? (
-            <div className="py-16 text-center text-xs text-muted-foreground">Loading maintenance database...</div>
+            <div className="py-16 text-center text-xs text-muted-foreground">
+              Loading maintenance database...
+            </div>
           ) : busesInMaintenance.length === 0 ? (
             <div className="py-16 text-center text-xs text-muted-foreground flex flex-col items-center justify-center">
               <ShieldCheck className="size-8 text-emerald-500/60 mb-2" />
               <p className="font-semibold text-foreground">All Bays Clear</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">No vehicles currently docked for scheduled or emergency overhaul.</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                No vehicles currently docked for scheduled or emergency overhaul.
+              </p>
             </div>
           ) : (
             <Table>
@@ -256,18 +303,30 @@ function MaintenancePage() {
                   <TableHead className="text-xs font-bold">Bus Type</TableHead>
                   <TableHead className="text-xs font-bold">Depot Location</TableHead>
                   <TableHead className="text-xs font-bold">Status</TableHead>
-                  {canManage && <TableHead className="text-right text-xs font-bold">Actions</TableHead>}
+                  {canManage && (
+                    <TableHead className="text-right text-xs font-bold">Actions</TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {busesInMaintenance.map((bus) => (
-                  <TableRow key={bus.id} className="border-border/40 hover:bg-muted/40 transition-colors">
-                    <TableCell className="font-semibold text-primary font-mono text-xs">{bus.fleetNumber}</TableCell>
-                    <TableCell className="font-mono text-xs font-bold">{bus.registrationNumber}</TableCell>
+                  <TableRow
+                    key={bus.id}
+                    className="border-border/40 hover:bg-muted/40 transition-colors"
+                  >
+                    <TableCell className="font-semibold text-primary font-mono text-xs">
+                      {bus.fleetNumber}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs font-bold">
+                      {bus.registrationNumber}
+                    </TableCell>
                     <TableCell className="text-xs">{bus.busType}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{bus.depot}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-[9px] font-mono uppercase font-bold">
+                      <Badge
+                        variant="outline"
+                        className="bg-warning/10 text-warning border-warning/30 text-[9px] font-mono uppercase font-bold"
+                      >
                         Maintenance
                       </Badge>
                     </TableCell>
@@ -277,9 +336,7 @@ function MaintenancePage() {
                           variant="outline"
                           size="sm"
                           className="h-7 text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold"
-                          onClick={() =>
-                            statusMutation.mutate({ id: bus.id, status: "available" })
-                          }
+                          onClick={() => statusMutation.mutate({ id: bus.id, status: "available" })}
                           disabled={statusMutation.isPending}
                         >
                           <CheckCircle className="mr-1 size-3.5" />
@@ -327,8 +384,12 @@ function MaintenancePage() {
                   className="flex items-center justify-between p-2 rounded-lg hover:bg-card border border-transparent hover:border-border transition-all"
                 >
                   <div className="text-xs">
-                    <span className="font-bold font-mono text-foreground">{bus.registrationNumber}</span>
-                    <span className="text-[10px] text-muted-foreground ml-2 font-mono">({bus.fleetNumber || bus.busType})</span>
+                    <span className="font-bold font-mono text-foreground">
+                      {bus.registrationNumber}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground ml-2 font-mono">
+                      ({bus.fleetNumber || bus.busType})
+                    </span>
                   </div>
                   <Button
                     size="sm"

@@ -32,13 +32,10 @@ function FleetAnalyticsPage() {
   // Query
   const { data: fleetStats = [], isLoading } = useQuery({
     queryKey: ["fleet-analytics-data", depotFilter],
-    queryFn: () =>
-      getFleetAnalytics(depotFilter === "all" ? undefined : { depot: depotFilter }),
+    queryFn: () => getFleetAnalytics(depotFilter === "all" ? undefined : { depot: depotFilter }),
   });
 
-  const filteredStats = fleetStats.filter(
-    (b) => depotFilter === "all" || b.depot === depotFilter
-  );
+  const filteredStats = fleetStats.filter((b) => depotFilter === "all" || b.depot === depotFilter);
 
   return (
     <AppShell
@@ -47,7 +44,9 @@ function FleetAnalyticsPage() {
       actions={
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link to="/analytics"><ArrowLeft className="mr-2 size-3.5" /> Back</Link>
+            <Link to="/analytics">
+              <ArrowLeft className="mr-2 size-3.5" /> Back
+            </Link>
           </Button>
         </div>
       }
@@ -78,9 +77,13 @@ function FleetAnalyticsPage() {
           </h3>
 
           {isLoading ? (
-            <div className="py-20 text-center text-xs text-muted-foreground">Loading vehicle utilization...</div>
+            <div className="py-20 text-center text-xs text-muted-foreground">
+              Loading vehicle utilization...
+            </div>
           ) : filteredStats.length === 0 ? (
-            <div className="py-20 text-center text-xs text-muted-foreground italic">No fleet records matching depot filter.</div>
+            <div className="py-20 text-center text-xs text-muted-foreground italic">
+              No fleet records matching depot filter.
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -90,7 +93,9 @@ function FleetAnalyticsPage() {
                   <TableHead>Current Status</TableHead>
                   <TableHead className="text-right">Trips Operated</TableHead>
                   <TableHead className="text-right">Operating Hours</TableHead>
-                  <TableHead className="text-right text-primary font-bold">Utilization Rate</TableHead>
+                  <TableHead className="text-right text-primary font-bold">
+                    Utilization Rate
+                  </TableHead>
                   <TableHead className="text-right">Breakdowns Count</TableHead>
                 </TableRow>
               </TableHeader>
@@ -100,10 +105,18 @@ function FleetAnalyticsPage() {
                     <TableCell className="font-bold text-xs">{b.registrationNumber}</TableCell>
                     <TableCell className="text-xs">{b.depot}</TableCell>
                     <TableCell className="text-xs uppercase font-mono">{b.status}</TableCell>
-                    <TableCell className="text-right text-xs font-mono">{b.tripsOperated}</TableCell>
-                    <TableCell className="text-right text-xs font-mono">{b.operatedHours} hrs</TableCell>
-                    <TableCell className="text-right text-xs font-mono font-bold text-primary">{b.utilizationRate}%</TableCell>
-                    <TableCell className="text-right text-xs font-mono text-destructive">{b.breakdownsCount}</TableCell>
+                    <TableCell className="text-right text-xs font-mono">
+                      {b.tripsOperated}
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-mono">
+                      {b.operatedHours} hrs
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-mono font-bold text-primary">
+                      {b.utilizationRate}%
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-mono text-destructive">
+                      {b.breakdownsCount}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

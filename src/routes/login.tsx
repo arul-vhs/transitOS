@@ -1,7 +1,7 @@
-import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
+import { createFileRoute, redirect, useRouter, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Bus, Loader2, Lock, Mail } from "lucide-react";
+import { Bus, Loader2, Lock, Mail, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/login")({
   },
   head: () => ({
     meta: [
-      { title: "Sign In — TransitOS" },
+      { title: "Sign In: TransitOS" },
       { name: "description", content: "Sign in to your TransitOS account." },
     ],
   }),
@@ -66,12 +66,17 @@ function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8 bg-[radial-gradient(circle_at_top_right,var(--color-accent),transparent_45%)]">
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center text-center">
+          <Link
+            to="/landing"
+            className="mb-4 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
+          >
+            <ArrowLeft className="size-3.5" />
+            <span>Back to TransitOS Overview</span>
+          </Link>
           <div className="flex size-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Bus className="size-6 animate-pulse" />
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold tracking-tight text-foreground">
-            TransitOS
-          </h2>
+          <h2 className="mt-6 text-3xl font-extrabold tracking-tight text-foreground">TransitOS</h2>
           <p className="mt-1.5 text-sm text-muted-foreground">
             Intelligent Transport Operations Platform
           </p>
@@ -139,7 +144,10 @@ function LoginPage() {
                   onChange={(e) => setRememberMe(e.target.checked)}
                   disabled={loading}
                 />
-                <Label htmlFor="remember-me" className="text-xs text-muted-foreground select-none cursor-pointer">
+                <Label
+                  htmlFor="remember-me"
+                  className="text-xs text-muted-foreground select-none cursor-pointer"
+                >
                   Remember my session
                 </Label>
               </div>
@@ -180,7 +188,9 @@ function LoginPage() {
                   className="rounded-lg border border-border/80 bg-background/50 hover:bg-muted/70 hover:border-primary/40 px-2.5 py-1.5 text-left text-xs transition-colors flex flex-col cursor-pointer"
                 >
                   <span className="font-semibold text-foreground text-[11px]">{account.label}</span>
-                  <span className="font-mono text-[9px] text-muted-foreground truncate">{account.email}</span>
+                  <span className="font-mono text-[9px] text-muted-foreground truncate">
+                    {account.email}
+                  </span>
                 </button>
               ))}
             </div>

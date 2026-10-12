@@ -5,6 +5,7 @@ TransitOS provides a server-side operational intelligence dashboard querying Pos
 ## Performance Scoping
 
 All analytics queries derive the active tenant context directly from the verified session context on the server side:
+
 - **Tenant Scoping**: All queries append `WHERE tenant_id = verifiedSessionTenantId`.
 - **No Client Input Overrides**: The client is never allowed to supply `tenantId` in request payloads.
 - **SQL Aggregations**: Uses Drizzle `sql` operators alongside standard grouping (`GROUP BY`, `COUNT`, `SUM`, `AVG`) to aggregate metrics at the database level rather than buffering tables into browser memory.

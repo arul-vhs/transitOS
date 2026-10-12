@@ -62,7 +62,9 @@ function RoutesAnalyticsPage() {
       actions={
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link to="/analytics"><ArrowLeft className="mr-2 size-3.5" /> Back</Link>
+            <Link to="/analytics">
+              <ArrowLeft className="mr-2 size-3.5" /> Back
+            </Link>
           </Button>
         </div>
       }
@@ -94,9 +96,13 @@ function RoutesAnalyticsPage() {
           </h3>
 
           {isLoading ? (
-            <div className="py-20 text-center text-xs text-muted-foreground">Loading route metrics...</div>
+            <div className="py-20 text-center text-xs text-muted-foreground">
+              Loading route metrics...
+            </div>
           ) : sortedList.length === 0 ? (
-            <div className="py-20 text-center text-xs text-muted-foreground italic">No route statistics for the selected service date.</div>
+            <div className="py-20 text-center text-xs text-muted-foreground italic">
+              No route statistics for the selected service date.
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -116,12 +122,24 @@ function RoutesAnalyticsPage() {
                   <TableRow key={r.routeId}>
                     <TableCell className="font-bold text-xs">{r.routeCode}</TableCell>
                     <TableCell className="text-xs">{r.routeName}</TableCell>
-                    <TableCell className="text-right text-xs font-mono">{r.tripsScheduled}</TableCell>
-                    <TableCell className="text-right text-xs font-mono text-success">{r.tripsCompleted}</TableCell>
-                    <TableCell className="text-right text-xs font-mono text-destructive">{r.tripsCancelled}</TableCell>
-                    <TableCell className="text-right text-xs font-mono">{r.completionRate}%</TableCell>
-                    <TableCell className="text-right text-xs font-mono font-bold text-primary">{r.onTimeRate}%</TableCell>
-                    <TableCell className="text-right text-xs font-mono">{r.averageDelay} mins</TableCell>
+                    <TableCell className="text-right text-xs font-mono">
+                      {r.tripsScheduled}
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-mono text-success">
+                      {r.tripsCompleted}
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-mono text-destructive">
+                      {r.tripsCancelled}
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-mono">
+                      {r.completionRate}%
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-mono font-bold text-primary">
+                      {r.onTimeRate}%
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-mono">
+                      {r.averageDelay} mins
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

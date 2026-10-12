@@ -17,17 +17,17 @@ function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: numbe
 
   const a =
     Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-    Math.cos(phi1) *
-      Math.cos(phi2) *
-      Math.sin(deltaLambda / 2) *
-      Math.sin(deltaLambda / 2);
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c;
 }
 
 // Spatially interpolates a LineString coordinates array into equidistant points
-function interpolateLineString(coords: [number, number][], intervalMeters = 80): [number, number][] {
+function interpolateLineString(
+  coords: [number, number][],
+  intervalMeters = 80,
+): [number, number][] {
   if (coords.length === 0) return [];
   const result: [number, number][] = [coords[0]!];
   let carry = 0;
@@ -93,8 +93,8 @@ export async function getRoutesImpl(filters?: {
           like(routes.code, pattern),
           like(routes.name, pattern),
           like(routes.origin, pattern),
-          like(routes.destination, pattern)
-        )!
+          like(routes.destination, pattern),
+        )!,
       );
     }
 
@@ -115,7 +115,7 @@ export async function getRoutesImpl(filters?: {
           ...r,
           stopsCount: routeStops.length,
         };
-      })
+      }),
     );
 
     return routesWithStopsCount;
@@ -134,7 +134,7 @@ export async function getRoutesImpl(filters?: {
           r.code.toLowerCase().includes(q) ||
           r.name.toLowerCase().includes(q) ||
           r.origin.toLowerCase().includes(q) ||
-          r.destination.toLowerCase().includes(q)
+          r.destination.toLowerCase().includes(q),
       );
     }
     return result as any;
@@ -249,7 +249,7 @@ export async function updateRouteImpl(
     peakFrequency?: number;
     offPeakFrequency?: number;
     geometryGeojson?: any;
-  }
+  },
 ) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "routes.manage");
@@ -336,9 +336,7 @@ export async function deleteRouteImpl(id: string) {
   });
   if (!route) throw new Error("Route not found");
 
-  await db
-    .delete(routes)
-    .where(and(eq(routes.id, id), eq(routes.tenantId, currentUser.tenantId)));
+  await db.delete(routes).where(and(eq(routes.id, id), eq(routes.tenantId, currentUser.tenantId)));
 
   // Audit log
   await db.insert(auditLogs).values({
@@ -368,7 +366,7 @@ export async function getRouteStopsImpl(routeId: string) {
       .orderBy(asc(stops.sequence));
   } catch (err) {
     const fallback = FALLBACK_STOPS.filter((s) => s.routeId === routeId).sort(
-      (a, b) => a.sequenceOrder - b.sequenceOrder
+      (a, b) => a.sequenceOrder - b.sequenceOrder,
     );
     return fallback.map((s) => ({
       id: s.id,
@@ -400,8 +398,10 @@ export async function createStopImpl(data: {
 
   const latNum = Number(data.latitude);
   const lngNum = Number(data.longitude);
-  if (isNaN(latNum) || latNum < -90 || latNum > 90) throw new Error("Latitude must be between -90 and 90");
-  if (isNaN(lngNum) || lngNum < -180 || lngNum > 180) throw new Error("Longitude must be between -180 and 180");
+  if (isNaN(latNum) || latNum < -90 || latNum > 90)
+    throw new Error("Latitude must be between -90 and 90");
+  if (isNaN(lngNum) || lngNum < -180 || lngNum > 180)
+    throw new Error("Longitude must be between -180 and 180");
   if (!data.sequence || data.sequence <= 0) throw new Error("Sequence must be a positive integer");
 
   // Check for duplicate sequence and reorder if needed to make space
@@ -456,7 +456,7 @@ export async function updateStopImpl(
     sequence: number;
     latitude: string;
     longitude: string;
-  }
+  },
 ) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "routes.manage");
@@ -469,8 +469,10 @@ export async function updateStopImpl(
   if (!data.name) throw new Error("Stop name is required");
   const latNum = Number(data.latitude);
   const lngNum = Number(data.longitude);
-  if (isNaN(latNum) || latNum < -90 || latNum > 90) throw new Error("Latitude must be between -90 and 90");
-  if (isNaN(lngNum) || lngNum < -180 || lngNum > 180) throw new Error("Longitude must be between -180 and 180");
+  if (isNaN(latNum) || latNum < -90 || latNum > 90)
+    throw new Error("Latitude must be between -90 and 90");
+  if (isNaN(lngNum) || lngNum < -180 || lngNum > 180)
+    throw new Error("Longitude must be between -180 and 180");
 
   const [updatedStop] = await db
     .update(stops)
@@ -504,9 +506,7 @@ export async function deleteStopImpl(id: string) {
   });
   if (!stopRecord) throw new Error("Stop not found");
 
-  await db
-    .delete(stops)
-    .where(and(eq(stops.id, id), eq(stops.tenantId, currentUser.tenantId)));
+  await db.delete(stops).where(and(eq(stops.id, id), eq(stops.tenantId, currentUser.tenantId)));
 
   // Renumber remaining stops sequence sequentially
   const remainingStops = await db
@@ -517,10 +517,7 @@ export async function deleteStopImpl(id: string) {
 
   let index = 1;
   for (const s of remainingStops) {
-    await db
-      .update(stops)
-      .set({ sequence: index })
-      .where(eq(stops.id, s.id));
+    await db.update(stops).set({ sequence: index }).where(eq(stops.id, s.id));
     index++;
   }
 
@@ -545,7 +542,13 @@ export async function reorderStopsImpl(routeId: string, stopIds: string[]) {
     await db
       .update(stops)
       .set({ sequence: index })
-      .where(and(eq(stops.id, stopId), eq(stops.routeId, routeId), eq(stops.tenantId, currentUser.tenantId)));
+      .where(
+        and(
+          eq(stops.id, stopId),
+          eq(stops.routeId, routeId),
+          eq(stops.tenantId, currentUser.tenantId),
+        ),
+      );
     index++;
   }
 
@@ -597,7 +600,7 @@ export async function analyzeRouteOverlapImpl(proposedGeojson: any) {
       proposedCoords[i]![1],
       proposedCoords[i]![0],
       proposedCoords[i + 1]![1],
-      proposedCoords[i + 1]![0]
+      proposedCoords[i + 1]![0],
     );
   }
   const proposedTotalDistKm = proposedTotalDist / 1000;
@@ -609,8 +612,8 @@ export async function analyzeRouteOverlapImpl(proposedGeojson: any) {
     .where(
       and(
         eq(routes.tenantId, currentUser.tenantId),
-        or(eq(routes.status, "active"), eq(routes.status, "draft"))!
-      )
+        or(eq(routes.status, "active"), eq(routes.status, "draft"))!,
+      ),
     );
 
   const overlapThresholdMeters = 50; // Tolerance is 50 meters
@@ -649,9 +652,9 @@ export async function analyzeRouteOverlapImpl(proposedGeojson: any) {
       const overlapDistanceKm = overlapPercentage * proposedTotalDistKm;
 
       let severity: "LOW" | "MEDIUM" | "HIGH" = "LOW";
-      if (overlapPercentage > 0.40) {
+      if (overlapPercentage > 0.4) {
         severity = "HIGH";
-      } else if (overlapPercentage > 0.10) {
+      } else if (overlapPercentage > 0.1) {
         severity = "MEDIUM";
       }
 

@@ -29,6 +29,7 @@ TransitOS uses a secure, stateless **JWT Session Cookie** approach integrated di
 ```
 
 ### Key Security Configurations
+
 - **HttpOnly**: Session cookie is inaccessible to client-side JavaScript (`document.cookie` cannot read it), preventing cross-site scripting (XSS) session hijacking.
 - **SameSite=Lax**: Cookie is sent on same-site requests and top-level cross-site navigations, protecting against cross-site request forgery (CSRF).
 - **Secure**: In production environments, the cookie is marked `Secure`, requiring an encrypted HTTPS connection.
@@ -39,6 +40,7 @@ TransitOS uses a secure, stateless **JWT Session Cookie** approach integrated di
 ## 2. Session Payload & Database Lookup
 
 The token payload contains:
+
 ```json
 {
   "userId": "uuid-value",
@@ -50,12 +52,13 @@ The token payload contains:
 ```
 
 On every authenticated server action or page transition:
+
 1. The server function `getCurrentUser()` decodes and verifies the token.
 2. It queries PostgreSQL:
    ```typescript
    const user = await db.query.users.findFirst({
      where: eq(users.id, session.userId),
-     with: { tenant: true }
+     with: { tenant: true },
    });
    ```
 3. It confirms that the user exists and their associated organization status is `"active"`.
@@ -68,31 +71,49 @@ TransitOS implements six distinct roles, each mapped to specific granular permis
 
 ```typescript
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
-  PLATFORM_ADMIN: [ /* Access to all features */ ],
+  PLATFORM_ADMIN: [/* Access to all features */],
   ORGANIZATION_ADMIN: [
-    "organization.view", "organization.manage",
-    "users.view", "users.manage",
-    "fleet.view", "fleet.manage",
-    "crew.view", "crew.manage",
-    "routes.view", "routes.manage",
-    "schedule.view", "schedule.generate", "schedule.modify", "schedule.publish",
-    "reschedule.view", "reschedule.execute", "reschedule.approve",
-    "analytics.view", "audit.view"
+    "organization.view",
+    "organization.manage",
+    "users.view",
+    "users.manage",
+    "fleet.view",
+    "fleet.manage",
+    "crew.view",
+    "crew.manage",
+    "routes.view",
+    "routes.manage",
+    "schedule.view",
+    "schedule.generate",
+    "schedule.modify",
+    "schedule.publish",
+    "reschedule.view",
+    "reschedule.execute",
+    "reschedule.approve",
+    "analytics.view",
+    "audit.view",
   ],
   SCHEDULER: [
-    "fleet.view", "crew.view", "routes.view",
-    "schedule.view", "schedule.generate", "schedule.modify", "schedule.publish",
-    "reschedule.view", "reschedule.execute", "analytics.view"
+    "fleet.view",
+    "crew.view",
+    "routes.view",
+    "schedule.view",
+    "schedule.generate",
+    "schedule.modify",
+    "schedule.publish",
+    "reschedule.view",
+    "reschedule.execute",
+    "analytics.view",
   ],
-  ROUTE_PLANNER: [
-    "routes.view", "routes.manage", "fleet.view", "crew.view", "analytics.view"
-  ],
+  ROUTE_PLANNER: ["routes.view", "routes.manage", "fleet.view", "crew.view", "analytics.view"],
   DEPOT_MANAGER: [
-    "fleet.view", "crew.view", "schedule.view", "reschedule.view", "reschedule.execute"
+    "fleet.view",
+    "crew.view",
+    "schedule.view",
+    "reschedule.view",
+    "reschedule.execute",
   ],
-  MANAGEMENT: [
-    "schedule.view", "routes.view", "fleet.view", "crew.view", "analytics.view"
-  ]
+  MANAGEMENT: ["schedule.view", "routes.view", "fleet.view", "crew.view", "analytics.view"],
 };
 ```
 
@@ -108,10 +129,7 @@ Tenant isolation is strictly enforced **on the server**. We do not trust the cli
 
 ```typescript
 // Enforces that only Salem Transport Corporation records are returned
-const busesList = await db
-  .select()
-  .from(buses)
-  .where(withTenant(buses, currentUser.tenantId));
+const busesList = await db.select().from(buses).where(withTenant(buses, currentUser.tenantId));
 ```
 
 ---
@@ -121,6 +139,7 @@ const busesList = await db
 Audit logs are recorded in the `audit_logs` database table. Password attempts are **never** logged to protect credential leaks.
 
 Logged Events:
+
 - **`LOGIN_SUCCESS`**: Logged with user ID, tenant ID, and email.
 - **`LOGIN_FAILURE`**: Logged with email and matching tenant/user context if resolved.
 - **`LOGOUT`**: Logged with user ID, tenant ID, and email.

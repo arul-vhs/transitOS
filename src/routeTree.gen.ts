@@ -11,9 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
+import { Route as LandingRouteImport } from './routes/landing'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SimulationRouteImport } from './routes/simulation'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AnalyticsIndexRouteImport } from './routes/analytics.index'
 import { Route as AnalyticsCrewRouteImport } from './routes/analytics.crew'
 import { Route as AnalyticsFleetRouteImport } from './routes/analytics.fleet'
@@ -43,9 +46,19 @@ const AnalyticsRoute = AnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LandingRoute = LandingRouteImport.update({
+  id: '/landing',
+  path: '/landing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -56,6 +69,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const SimulationRoute = SimulationRouteImport.update({
   id: '/simulation',
   path: '/simulation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnalyticsIndexRoute = AnalyticsIndexRouteImport.update({
@@ -152,9 +170,12 @@ const SchedulingOptimizerRoute = SchedulingOptimizerRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRouteWithChildren
+  '/landing': typeof LandingRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/simulation': typeof SimulationRoute
+  '/terms': typeof TermsRoute
   '/analytics/crew': typeof AnalyticsCrewRoute
   '/analytics/fleet': typeof AnalyticsFleetRoute
   '/analytics/incidents': typeof AnalyticsIncidentsRoute
@@ -176,9 +197,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/landing': typeof LandingRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/simulation': typeof SimulationRoute
+  '/terms': typeof TermsRoute
   '/analytics/crew': typeof AnalyticsCrewRoute
   '/analytics/fleet': typeof AnalyticsFleetRoute
   '/analytics/incidents': typeof AnalyticsIncidentsRoute
@@ -202,9 +226,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRouteWithChildren
+  '/landing': typeof LandingRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/simulation': typeof SimulationRoute
+  '/terms': typeof TermsRoute
   '/analytics/crew': typeof AnalyticsCrewRoute
   '/analytics/fleet': typeof AnalyticsFleetRoute
   '/analytics/incidents': typeof AnalyticsIncidentsRoute
@@ -229,9 +256,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/analytics'
+    | '/landing'
     | '/login'
+    | '/privacy'
     | '/settings'
     | '/simulation'
+    | '/terms'
     | '/analytics/crew'
     | '/analytics/fleet'
     | '/analytics/incidents'
@@ -253,9 +283,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/landing'
     | '/login'
+    | '/privacy'
     | '/settings'
     | '/simulation'
+    | '/terms'
     | '/analytics/crew'
     | '/analytics/fleet'
     | '/analytics/incidents'
@@ -278,9 +311,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/analytics'
+    | '/landing'
     | '/login'
+    | '/privacy'
     | '/settings'
     | '/simulation'
+    | '/terms'
     | '/analytics/crew'
     | '/analytics/fleet'
     | '/analytics/incidents'
@@ -304,9 +340,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AnalyticsRoute: typeof AnalyticsRouteWithChildren
+  LandingRoute: typeof LandingRoute
   LoginRoute: typeof LoginRoute
+  PrivacyRoute: typeof PrivacyRoute
   SettingsRoute: typeof SettingsRoute
   SimulationRoute: typeof SimulationRoute
+  TermsRoute: typeof TermsRoute
   CrewAvailabilityRoute: typeof CrewAvailabilityRoute
   CrewConductorsRoute: typeof CrewConductorsRoute
   CrewDriversRoute: typeof CrewDriversRoute
@@ -337,11 +376,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/landing': {
+      id: '/landing'
+      path: '/landing'
+      fullPath: '/landing'
+      preLoaderRoute: typeof LandingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -356,6 +409,13 @@ declare module '@tanstack/react-router' {
       path: '/simulation'
       fullPath: '/simulation'
       preLoaderRoute: typeof SimulationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analytics/': {
@@ -512,9 +572,12 @@ const AnalyticsRouteWithChildren = AnalyticsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AnalyticsRoute: AnalyticsRouteWithChildren,
+  LandingRoute: LandingRoute,
   LoginRoute: LoginRoute,
+  PrivacyRoute: PrivacyRoute,
   SettingsRoute: SettingsRoute,
   SimulationRoute: SimulationRoute,
+  TermsRoute: TermsRoute,
   CrewAvailabilityRoute: CrewAvailabilityRoute,
   CrewConductorsRoute: CrewConductorsRoute,
   CrewDriversRoute: CrewDriversRoute,

@@ -10,7 +10,7 @@ function formatMinutesToTime(totalMin: number): string {
 export function generateExplanations(
   unassignedTripIds: string[],
   input: OptimizerInput,
-  candidatesMap: Map<string, CandidateSet>
+  candidatesMap: Map<string, CandidateSet>,
 ): { tripId: string; tripCode: string; reason: string }[] {
   return unassignedTripIds.map((tripId) => {
     const trip = input.trips.find((t) => t.id === tripId)!;
@@ -42,25 +42,33 @@ export function generateExplanations(
 
       // Check if drivers are resting
       const driversUnderRest = input.drivers.filter(
-        (d) => d.status === "available" && d.restUntil > trip.startTime
+        (d) => d.status === "available" && d.restUntil > trip.startTime,
       );
-      
+
       const allDriversResting = driversUnderRest.length === input.drivers.length;
-      const licenseCategoryMismatches = compatibleDrivers.filter(d => {
+      const licenseCategoryMismatches = compatibleDrivers.filter((d) => {
         // Find if category is incompat
-        const hpvDrivers = input.drivers.filter(drv => drv.licenseCategory?.includes("Heavy") || drv.licenseCategory?.includes("HPV"));
+        const hpvDrivers = input.drivers.filter(
+          (drv) => drv.licenseCategory?.includes("Heavy") || drv.licenseCategory?.includes("HPV"),
+        );
         return hpvDrivers.length === 0;
       });
 
-      if (driversUnderRest.length > 0 && compatibleDrivers.every((d) => d.restUntil > trip.startTime)) {
+      if (
+        driversUnderRest.length > 0 &&
+        compatibleDrivers.every((d) => d.restUntil > trip.startTime)
+      ) {
         const nextAvailableRest = Math.min(...compatibleDrivers.map((d) => d.restUntil));
         reason = `No driver available. Drivers exist, but they are under mandatory rest until ${formatMinutesToTime(
-          nextAvailableRest
+          nextAvailableRest,
         )}.`;
       } else {
         // Check turnaround transitions
         const potentialDuties = input.trips.filter(
-          (t) => t.id !== trip.id && t.serviceDate === trip.serviceDate && t.endTime > trip.startTime - input.configuration.MIN_TURNAROUND_MINUTES
+          (t) =>
+            t.id !== trip.id &&
+            t.serviceDate === trip.serviceDate &&
+            t.endTime > trip.startTime - input.configuration.MIN_TURNAROUND_MINUTES,
         );
 
         if (potentialDuties.length > 0) {

@@ -91,14 +91,24 @@ export interface RouterContext {
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async ({ location }) => {
-    // Skip protection checks for the login page to prevent redirect loops
-    if (location.pathname === "/login") {
-      return { user: undefined };
+    // Skip protection checks for public pages
+    const publicPages = ["/login", "/landing", "/privacy", "/terms"];
+    if (publicPages.includes(location.pathname)) {
+      try {
+        const user = await getCurrentUserFn();
+        return { user: user ?? undefined };
+      } catch {
+        return { user: undefined };
+      }
     }
 
     try {
       const user = await getCurrentUserFn();
       if (!user) {
+        // Direct unauthenticated visitors on root "/" straight to the landing page
+        if (location.pathname === "/") {
+          throw redirect({ to: "/landing" });
+        }
         throw redirect({
           to: "/login",
           search: {
@@ -112,6 +122,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       if (err?.message === "Redirect" || err?.status === 302 || err?.status === 307) {
         throw err;
       }
+      if (location.pathname === "/") {
+        throw redirect({ to: "/landing" });
+      }
       throw redirect({
         to: "/login",
       });
@@ -121,33 +134,50 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "TransitOS Dashboard — Salem Transport Corporation" },
+      { title: "TransitOS: Municipal Transit Scheduling & Fleet Operations" },
       {
         name: "description",
         content:
-          "Operations overview for Salem City corridors: fleet, crew, routes and automated schedule generation.",
+          "Operations management platform for municipal transit networks: automated timetable solving, GIS corridor audits, crew duty compliance, and incident recovery.",
       },
       { name: "author", content: "TransitOS" },
-      { property: "og:title", content: "TransitOS Dashboard — Salem Transport Corporation" },
+      {
+        property: "og:title",
+        content: "TransitOS: Municipal Transit Scheduling & Fleet Operations",
+      },
       {
         property: "og:description",
-        content: "Operations overview for Salem City corridors: fleet, crew, routes and automated schedule generation.",
+        content:
+          "Operations management platform for municipal transit networks: automated timetable solving, GIS corridor audits, crew duty compliance, and incident recovery.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "TransitOS Dashboard — Salem Transport Corporation" },
-      { name: "twitter:description", content: "Operations overview for Salem City corridors: fleet, crew, routes and automated schedule generation." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d041b90887e7a711faa065e0fda47a56/id-preview-cd6ee54a--58367c15-2ef6-4ecd-a290-483f899f251d.lovable.app-1786603811558.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d041b90887e7a711faa065e0fda47a56/id-preview-cd6ee54a--58367c15-2ef6-4ecd-a290-483f899f251d.lovable.app-1786603811558.png" },
+      {
+        name: "twitter:title",
+        content: "TransitOS: Municipal Transit Scheduling & Fleet Operations",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Operations management platform for municipal transit networks: automated timetable solving, GIS corridor audits, crew duty compliance, and incident recovery.",
+      },
+      {
+        property: "og:image",
+        content: "/logo.svg",
+      },
+      {
+        name: "twitter:image",
+        content: "/logo.svg",
+      },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
-      { rel: "icon", href: "/logo.svg", type: "image/svg+xml" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: "alternate icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "apple-touch-icon", href: "/logo.svg" },
       { rel: "manifest", href: "/site.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },

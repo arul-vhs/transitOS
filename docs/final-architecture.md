@@ -1,4 +1,3 @@
-
 # TransitOS Complete Final System Architecture
 
 This document maps the complete system architecture of the TransitOS multi-tenant SaaS platform.
@@ -20,7 +19,7 @@ This document maps the complete system architecture of the TransitOS multi-tenan
 graph TD
   Client[React SPA Router] <--> RPC[TanStack Start Server Functions]
   RPC <--> DB[(PostgreSQL + Drizzle ORM)]
-  
+
   subgraph Server Layers
     RPC --> Auth[Auth Session Guard]
     RPC --> OptEngine[Schedule Optimizer Engine]
@@ -44,7 +43,7 @@ erDiagram
   tenants ||--o{ incidents : owns
   tenants ||--o{ audit_logs : owns
   tenants ||--o{ operational_events : owns
-  
+
   duties ||--o{ duty_trips : assigns
   trips ||--o{ duty_trips : maps
   incidents ||--o{ incident_impacts : has
@@ -57,6 +56,7 @@ erDiagram
 ## 4. Multi-Tenancy & Security Isolation
 
 Every database query routes through the server context helper `withTenant(dbQuery)` to enforce scope bounds:
+
 - **Tenant Isolation**: Injects `eq(table.tenantId, session.tenantId)` to all queries.
 - **RBAC Matrix**: Enforced both on route levels (`beforeLoad` router guards) and server functions mutations.
 - **Audit Logs**: Logs administrative operations (e.g. `OPTIMIZATION_PUBLISHED`, `ANALYTICS_EXPORT`) into the `audit_logs` table.

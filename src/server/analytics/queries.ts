@@ -30,14 +30,18 @@ export async function getServiceMetricsImpl(filters: {
   });
 
   const scheduledCount = allTrips.length;
-  const completedCount = allTrips.filter((t) => t.status.toLowerCase() === "completed" || t.status.toLowerCase() === "recovered").length;
+  const completedCount = allTrips.filter(
+    (t) => t.status.toLowerCase() === "completed" || t.status.toLowerCase() === "recovered",
+  ).length;
   const cancelledCount = allTrips.filter((t) => t.status.toLowerCase() === "cancelled").length;
   const delayedCount = allTrips.filter((t) => (t.departureVariance || 0) > 5).length;
 
   const completionRate = scheduledCount > 0 ? (completedCount / scheduledCount) * 100 : 0;
   const cancellationRate = scheduledCount > 0 ? (cancelledCount / scheduledCount) * 100 : 0;
-  
-  const completedTrips = allTrips.filter((t) => t.status.toLowerCase() === "completed" || t.status.toLowerCase() === "recovered");
+
+  const completedTrips = allTrips.filter(
+    (t) => t.status.toLowerCase() === "completed" || t.status.toLowerCase() === "recovered",
+  );
   const onTimeCount = completedTrips.filter((t) => Math.abs(t.departureVariance || 0) <= 5).length;
   const onTimeRate = completedCount > 0 ? (onTimeCount / completedCount) * 100 : 0;
 
@@ -114,12 +118,18 @@ export async function getRouteAnalyticsImpl(filters: { serviceDate?: string }) {
   return routeList.map((r) => {
     const rTrips = tripList.filter((t) => t.routeId === r.id);
     const scheduled = rTrips.length;
-    const completed = rTrips.filter((t) => t.status === "completed" || t.status === "RECOVERED").length;
+    const completed = rTrips.filter(
+      (t) => t.status === "completed" || t.status === "RECOVERED",
+    ).length;
     const cancelled = rTrips.filter((t) => t.status === "CANCELLED").length;
 
     const completionRate = scheduled > 0 ? (completed / scheduled) * 100 : 0;
-    const completedTrips = rTrips.filter((t) => t.status === "completed" || t.status === "RECOVERED");
-    const onTimeCount = completedTrips.filter((t) => Math.abs(t.departureVariance || 0) <= 5).length;
+    const completedTrips = rTrips.filter(
+      (t) => t.status === "completed" || t.status === "RECOVERED",
+    );
+    const onTimeCount = completedTrips.filter(
+      (t) => Math.abs(t.departureVariance || 0) <= 5,
+    ).length;
     const onTimeRate = completed > 0 ? (onTimeCount / completed) * 100 : 0;
 
     const delays = completedTrips.map((t) => t.departureVariance || 0).filter((v) => v > 0);
@@ -167,10 +177,11 @@ export async function getFleetAnalyticsImpl(filters: { depot?: string }) {
     });
 
     const totalAvailableMinutes = 480; // 8 hours duty cycle
-    const utilization = totalAvailableMinutes > 0 ? (operatedMinutes / totalAvailableMinutes) * 100 : 0;
+    const utilization =
+      totalAvailableMinutes > 0 ? (operatedMinutes / totalAvailableMinutes) * 100 : 0;
 
     const breakdowns = incidentList.filter(
-      (inc) => inc.resourceId === bus.id && inc.type === "BUS_BREAKDOWN"
+      (inc) => inc.resourceId === bus.id && inc.type === "BUS_BREAKDOWN",
     ).length;
 
     const maintenanceMinutes = bus.status === "maintenance" ? 180 : 0;
@@ -207,7 +218,7 @@ export async function getCrewAnalyticsImpl() {
   return crewList.map((cMember) => {
     // Count duties
     const memberDuties = todayDuties.filter(
-      (d) => d.driverId === cMember.id || d.conductorId === cMember.id
+      (d) => d.driverId === cMember.id || d.conductorId === cMember.id,
     );
 
     let dutyMinutes = 0;
@@ -216,7 +227,7 @@ export async function getCrewAnalyticsImpl() {
     });
 
     const handovers = todayDuties.filter((d) =>
-      d.crewSegments?.some((s) => s.driverId === cMember.id || s.conductorId === cMember.id)
+      d.crewSegments?.some((s) => s.driverId === cMember.id || s.conductorId === cMember.id),
     ).length;
 
     const totalAvailableMinutes = 480;
@@ -244,8 +255,10 @@ export async function getIncidentAnalyticsImpl() {
   });
 
   const totalIncidents = incidentList.length;
-  const resolved = incidentList.filter((i) => i.status === "RESOLVED" || i.status === "APPLIED").length;
-  
+  const resolved = incidentList.filter(
+    (i) => i.status === "RESOLVED" || i.status === "APPLIED",
+  ).length;
+
   const recoverySuccessRate = totalIncidents > 0 ? (resolved / totalIncidents) * 100 : 100;
 
   // Group by type

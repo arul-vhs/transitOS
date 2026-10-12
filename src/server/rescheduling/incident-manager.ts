@@ -105,7 +105,7 @@ export async function getIncidentsImpl(data: { serviceDate: string }) {
   const list = await db.query.incidents.findMany({
     where: and(
       eq(incidents.tenantId, currentUser.tenantId),
-      eq(incidents.serviceDate, data.serviceDate)
+      eq(incidents.serviceDate, data.serviceDate),
     ),
     orderBy: desc(incidents.reportedAt),
     with: {

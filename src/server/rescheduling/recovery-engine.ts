@@ -42,7 +42,7 @@ export async function generateRecoveryProposalsImpl(incidentId: string) {
     where: and(
       eq(reschedulingRuns.incidentId, incidentId),
       eq(reschedulingRuns.tenantId, tenantId),
-      not(eq(reschedulingRuns.status, "APPLIED"))
+      not(eq(reschedulingRuns.status, "APPLIED")),
     ),
   });
 
@@ -89,14 +89,17 @@ export async function generateRecoveryProposalsImpl(incidentId: string) {
     // Filter trips that fall within the recovery window (Affected Region A)
     // Trips outside this window are frozen (Frozen Region U)
     const affectedTrips = allTrips.filter(
-      (t) => t.startTime >= impactStart && t.startTime <= impactEnd
+      (t) => t.startTime >= impactStart && t.startTime <= impactEnd,
     );
     const frozenTrips = allTrips.filter(
-      (t) => t.startTime < impactStart || t.startTime > impactEnd
+      (t) => t.startTime < impactStart || t.startTime > impactEnd,
     );
 
     // Map original assignments for objective comparison
-    const originalAssignmentsMap = new Map<string, { busId: string; driverId: string; conductorId: string }>();
+    const originalAssignmentsMap = new Map<
+      string,
+      { busId: string; driverId: string; conductorId: string }
+    >();
     const originalBusesUsedSet = new Set<string>();
 
     allDuties.forEach((d) => {
@@ -113,8 +116,16 @@ export async function generateRecoveryProposalsImpl(incidentId: string) {
     // Capture snapshot of resource availabilities
     const resourceSnapshot = {
       buses: allBuses.map((b) => ({ id: b.id, status: b.status })),
-      crew: allCrew.map((c) => ({ id: c.id, status: c.status, restUntil: Number(c.restUntil ?? 0) })),
-      trips: allTrips.map((t) => ({ id: t.id, startTime: Number(t.startTime ?? 0), status: t.status })),
+      crew: allCrew.map((c) => ({
+        id: c.id,
+        status: c.status,
+        restUntil: Number(c.restUntil ?? 0),
+      })),
+      trips: allTrips.map((t) => ({
+        id: t.id,
+        startTime: Number(t.startTime ?? 0),
+        status: t.status,
+      })),
     };
 
     // 4. Generate Option A (Balanced Recovery objective)
@@ -138,9 +149,7 @@ export async function generateRecoveryProposalsImpl(incidentId: string) {
     });
 
     // Helper: run solver under constraints config
-    const runSolverOption = (
-      overrideConfig: any
-    ): OptimizerResult => {
+    const runSolverOption = (overrideConfig: any): OptimizerResult => {
       const solverInput: OptimizerInput = {
         serviceDate: incidentObj.serviceDate,
         trips: affectedTrips.map((t) => ({
@@ -216,14 +225,14 @@ export async function generateRecoveryProposalsImpl(incidentId: string) {
       resA.duties,
       resA.tripsUnassigned,
       originalAssignmentsMap,
-      originalBusesUsedSet
+      originalBusesUsedSet,
     );
 
     const explA = generateRecoveryExplanation(
       resA.duties,
       resA.unassignedTrips,
       originalAssignmentsMap,
-      incidentObj as any
+      incidentObj as any,
     );
 
     // OPTION B: Minimize Cancellations (High penalty on cancellations, dispatches spares aggressively)
@@ -237,14 +246,14 @@ export async function generateRecoveryProposalsImpl(incidentId: string) {
       resB.duties,
       resB.tripsUnassigned,
       originalAssignmentsMap,
-      originalBusesUsedSet
+      originalBusesUsedSet,
     );
 
     const explB = generateRecoveryExplanation(
       resB.duties,
       resB.unassignedTrips,
       originalAssignmentsMap,
-      incidentObj as any
+      incidentObj as any,
     );
 
     // OPTION C: Minimize Resource Changes (High penalty on new buses and crew change)
@@ -259,14 +268,14 @@ export async function generateRecoveryProposalsImpl(incidentId: string) {
       resC.duties,
       resC.tripsUnassigned,
       originalAssignmentsMap,
-      originalBusesUsedSet
+      originalBusesUsedSet,
     );
 
     const explC = generateRecoveryExplanation(
       resC.duties,
       resC.unassignedTrips,
       originalAssignmentsMap,
-      incidentObj as any
+      incidentObj as any,
     );
 
     // Write proposals transactionally
@@ -277,7 +286,10 @@ export async function generateRecoveryProposalsImpl(incidentId: string) {
         proposalNumber: 1,
         status: "PROPOSED",
         objectiveScore: String(scoreA.score),
-        tripsRecovered: scoreA.cancellationsCount === 0 ? affectedTrips.length : affectedTrips.length - scoreA.cancellationsCount,
+        tripsRecovered:
+          scoreA.cancellationsCount === 0
+            ? affectedTrips.length
+            : affectedTrips.length - scoreA.cancellationsCount,
         tripsUnassigned: scoreA.cancellationsCount,
         busesUsed: resA.busesUsed,
         crewChanges: scoreA.crewChangesCount,
@@ -294,7 +306,10 @@ export async function generateRecoveryProposalsImpl(incidentId: string) {
         proposalNumber: 2,
         status: "PROPOSED",
         objectiveScore: String(scoreB.score),
-        tripsRecovered: scoreB.cancellationsCount === 0 ? affectedTrips.length : affectedTrips.length - scoreB.cancellationsCount,
+        tripsRecovered:
+          scoreB.cancellationsCount === 0
+            ? affectedTrips.length
+            : affectedTrips.length - scoreB.cancellationsCount,
         tripsUnassigned: scoreB.cancellationsCount,
         busesUsed: resB.busesUsed,
         crewChanges: scoreB.crewChangesCount,
@@ -311,7 +326,10 @@ export async function generateRecoveryProposalsImpl(incidentId: string) {
         proposalNumber: 3,
         status: "PROPOSED",
         objectiveScore: String(scoreC.score),
-        tripsRecovered: scoreC.cancellationsCount === 0 ? affectedTrips.length : affectedTrips.length - scoreC.cancellationsCount,
+        tripsRecovered:
+          scoreC.cancellationsCount === 0
+            ? affectedTrips.length
+            : affectedTrips.length - scoreC.cancellationsCount,
         tripsUnassigned: scoreC.cancellationsCount,
         busesUsed: resC.busesUsed,
         crewChanges: scoreC.crewChangesCount,
@@ -400,27 +418,33 @@ export async function approveRecoveryProposalImpl(data: { proposalId: string }) 
     const crewMap = new Map(currentCrew.map((c) => [c.id, c]));
     const tripMap = new Map(currentTrips.map((t) => [t.id, t]));
 
-    const busChanged = Array.isArray(snap.buses) && snap.buses.some((sb: any) => {
-      const cb = busMap.get(sb.id);
-      if (!cb) return true;
-      return sb.status !== cb.status;
-    });
+    const busChanged =
+      Array.isArray(snap.buses) &&
+      snap.buses.some((sb: any) => {
+        const cb = busMap.get(sb.id);
+        if (!cb) return true;
+        return sb.status !== cb.status;
+      });
 
-    const crewChanged = Array.isArray(snap.crew) && snap.crew.some((sc: any) => {
-      const cc = crewMap.get(sc.id);
-      if (!cc) return true;
-      const restUntilSnap = Number(sc.restUntil ?? 0);
-      const restUntilCurrent = Number(cc.restUntil ?? 0);
-      return sc.status !== cc.status || restUntilSnap !== restUntilCurrent;
-    });
+    const crewChanged =
+      Array.isArray(snap.crew) &&
+      snap.crew.some((sc: any) => {
+        const cc = crewMap.get(sc.id);
+        if (!cc) return true;
+        const restUntilSnap = Number(sc.restUntil ?? 0);
+        const restUntilCurrent = Number(cc.restUntil ?? 0);
+        return sc.status !== cc.status || restUntilSnap !== restUntilCurrent;
+      });
 
-    const tripsChanged = Array.isArray(snap.trips) && snap.trips.some((st: any) => {
-      const ct = tripMap.get(st.id);
-      if (!ct) return true;
-      const startTimeSnap = Number(st.startTime ?? 0);
-      const startTimeCurrent = Number(ct.startTime ?? 0);
-      return st.status !== ct.status || startTimeSnap !== startTimeCurrent;
-    });
+    const tripsChanged =
+      Array.isArray(snap.trips) &&
+      snap.trips.some((st: any) => {
+        const ct = tripMap.get(st.id);
+        if (!ct) return true;
+        const startTimeSnap = Number(st.startTime ?? 0);
+        const startTimeCurrent = Number(ct.startTime ?? 0);
+        return st.status !== ct.status || startTimeSnap !== startTimeCurrent;
+      });
 
     if (busChanged || crewChanged || tripsChanged) {
       await db.insert(auditLogs).values({
@@ -430,7 +454,9 @@ export async function approveRecoveryProposalImpl(data: { proposalId: string }) 
         action: "RECOVERY_REJECTED",
         details: `Recovery rejected: Operational state changed since this recovery was generated.`,
       });
-      throw new Error("Operational state changed since this recovery was generated. Please regenerate.");
+      throw new Error(
+        "Operational state changed since this recovery was generated. Please regenerate.",
+      );
     }
   }
 
@@ -440,7 +466,9 @@ export async function approveRecoveryProposalImpl(data: { proposalId: string }) 
   await db.transaction(async (tx) => {
     // 1. Identify which trips were re-optimized inside the recovery window
     const affectedTripIds = (prop.proposalData as OptimizerResult).assignments.map((a) => a.tripId);
-    const unassignedTripIds = (prop.proposalData as OptimizerResult).unassignedTrips.map((u) => u.tripId);
+    const unassignedTripIds = (prop.proposalData as OptimizerResult).unassignedTrips.map(
+      (u) => u.tripId,
+    );
     const totalTargetTripIds = [...affectedTripIds, ...unassignedTripIds];
 
     if (totalTargetTripIds.length > 0) {
@@ -538,7 +566,9 @@ export async function approveRecoveryProposalImpl(data: { proposalId: string }) 
     await tx
       .update(recoveryProposals)
       .set({ status: "REJECTED" })
-      .where(and(eq(recoveryProposals.runId, runObj.id), not(eq(recoveryProposals.id, data.proposalId))));
+      .where(
+        and(eq(recoveryProposals.runId, runObj.id), not(eq(recoveryProposals.id, data.proposalId))),
+      );
 
     await tx
       .update(reschedulingRuns)

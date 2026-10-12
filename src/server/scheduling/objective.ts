@@ -3,7 +3,7 @@ import { ProposedDuty, OptimizerInput } from "./types";
 export function calculateObjectiveScore(
   duties: ProposedDuty[],
   unassignedTripsCount: number,
-  input: OptimizerInput
+  input: OptimizerInput,
 ): number {
   const cfg = input.configuration;
 

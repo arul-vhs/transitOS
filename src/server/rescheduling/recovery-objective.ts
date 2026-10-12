@@ -14,7 +14,7 @@ export function calculateRecoveryObjectiveScore(
   proposedDuties: ProposedDuty[],
   unassignedTripsCount: number,
   originalAssignmentsMap: Map<string, { busId: string; driverId: string; conductorId: string }>,
-  originalBusesUsedSet: Set<string>
+  originalBusesUsedSet: Set<string>,
 ): {
   score: number;
   delayMinutes: number;
@@ -53,7 +53,7 @@ export function calculateRecoveryObjectiveScore(
 
         if (d.dutyType === "UNLINKED") {
           const seg = d.crewSegments.find(
-            (s) => t.sequence >= s.sequence // simplistically map segments by sequence bounds
+            (s) => t.sequence >= s.sequence, // simplistically map segments by sequence bounds
           );
           if (seg) {
             currentDriverId = seg.driverId;
@@ -92,7 +92,7 @@ export function calculateRecoveryObjectiveScore(
   proposedDuties.forEach((d) => {
     // Sum delays (simulated based on turnaround compression below 10 mins)
     for (let i = 0; i < d.trips.length - 1; i++) {
-      const gap = d.trips[i+1]!.sequence - d.trips[i]!.sequence; // simplified gap
+      const gap = d.trips[i + 1]!.sequence - d.trips[i]!.sequence; // simplified gap
       if (gap < 0) {
         delayMinutes += Math.abs(gap);
       }
@@ -101,11 +101,7 @@ export function calculateRecoveryObjectiveScore(
   const delayPenalty = delayMinutes * cfg.DELAY_WEIGHT;
 
   const totalScore =
-    cancellationPenalty +
-    newBusPenalty +
-    disruptionPenalty +
-    handoverPenalty +
-    delayPenalty;
+    cancellationPenalty + newBusPenalty + disruptionPenalty + handoverPenalty + delayPenalty;
 
   return {
     score: Math.round(totalScore),

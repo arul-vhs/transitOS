@@ -16,7 +16,7 @@ const _createIncident = createServerFn({ method: "POST" })
       expectedEndTime: number | null;
       location: string | null;
       description: string | null;
-    }) => data
+    }) => data,
   )
   .handler(async ({ data }) => {
     const { createIncidentImpl } = await import("../server/rescheduling/incident-manager");
@@ -34,7 +34,9 @@ const _getIncidents = createServerFn({ method: "GET" })
     return await getIncidentsImpl(data);
   });
 
-export const getIncidents = async (data: { serviceDate: string } | { data: { serviceDate: string } }) => {
+export const getIncidents = async (
+  data: { serviceDate: string } | { data: { serviceDate: string } },
+) => {
   return await _getIncidents(toServerFnArgs(data)!);
 };
 
@@ -63,7 +65,8 @@ export const resolveIncident = async (incidentId: string | { data: string }) => 
 const _generateRecoveryProposals = createServerFn({ method: "POST" })
   .validator((incidentId: string) => incidentId)
   .handler(async ({ data }) => {
-    const { generateRecoveryProposalsImpl } = await import("../server/rescheduling/recovery-engine");
+    const { generateRecoveryProposalsImpl } =
+      await import("../server/rescheduling/recovery-engine");
     return await generateRecoveryProposalsImpl(data);
   });
 
@@ -79,7 +82,7 @@ const _approveRecoveryProposal = createServerFn({ method: "POST" })
   });
 
 export const approveRecoveryProposal = async (
-  payload: { proposalId: string } | { data: { proposalId: string } }
+  payload: { proposalId: string } | { data: { proposalId: string } },
 ) => {
   return await _approveRecoveryProposal(toServerFnArgs(payload)!);
 };

@@ -12,10 +12,10 @@ export function checkCrewStatus(crewMember: Crew): boolean {
 
 export function checkDriverLicense(driver: Crew, serviceDateStr: string): boolean {
   if (!driver.licenseExpiry) return false;
-  
+
   const serviceDate = new Date(serviceDateStr);
   const expiryDate = new Date(driver.licenseExpiry);
-  
+
   // Clean time components
   serviceDate.setHours(0, 0, 0, 0);
   expiryDate.setHours(0, 0, 0, 0);
@@ -30,10 +30,11 @@ export function checkLicenseCategory(driver: Crew, busType: string | null): bool
   // - Standard Diesel Leyland requires Commercial Bus Licence or HPV
   // - Midi Bus Feeder can use any license
   if (!busType) return true;
-  
+
   const category = driver.licenseCategory || "";
   const isDoubleDecker = busType.toLowerCase().includes("double-decker");
-  const isLeyland = busType.toLowerCase().includes("leyland") || busType.toLowerCase().includes("standard");
+  const isLeyland =
+    busType.toLowerCase().includes("leyland") || busType.toLowerCase().includes("standard");
 
   if (isDoubleDecker) {
     return category.includes("Heavy Passenger Vehicle") || category.includes("HPV");
@@ -57,7 +58,7 @@ export function checkCrewRest(crewMember: Crew, startTime: number): boolean {
 export function checkTurnaround(
   tripA: Trip,
   tripB: Trip,
-  config: { MIN_TURNAROUND_MINUTES: number }
+  config: { MIN_TURNAROUND_MINUTES: number },
 ): { feasible: boolean; gap: number } {
   const gap = tripB.startTime - tripA.endTime;
   if (gap < 0) {
@@ -83,7 +84,7 @@ export function checkTurnaround(
 export function checkDutyDuration(
   startTime: number,
   endTime: number,
-  config: { MAX_DUTY_HOURS: number }
+  config: { MAX_DUTY_HOURS: number },
 ): boolean {
   const duration = endTime - startTime;
   const maxMinutes = config.MAX_DUTY_HOURS * 60;

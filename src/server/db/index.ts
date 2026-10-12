@@ -15,13 +15,16 @@ const pglite = new PGlite(dataDir);
 async function initPglite() {
   await pglite.waitReady;
   const tableCheck = await pglite.query(
-    "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'tenants';"
+    "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'tenants';",
   );
   if (!tableCheck.rows || tableCheck.rows.length === 0) {
     console.log("[DB] Initializing PGlite PostgreSQL tables and seed data...");
     const migrationsDir = path.join(process.cwd(), "src/server/db/migrations");
     if (fs.existsSync(migrationsDir)) {
-      const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith(".sql")).sort();
+      const files = fs
+        .readdirSync(migrationsDir)
+        .filter((f) => f.endsWith(".sql"))
+        .sort();
       for (const file of files) {
         const sqlContent = fs.readFileSync(path.join(migrationsDir, file), "utf-8");
         const statements = sqlContent.split("--> statement-breakpoint");
@@ -47,7 +50,7 @@ async function initPglite() {
   }
 }
 
-initPglite().catch(err => console.error("[DB Init Error]:", err));
+initPglite().catch((err) => console.error("[DB Init Error]:", err));
 
 export const db = drizzlePglite(pglite, { schema });
 

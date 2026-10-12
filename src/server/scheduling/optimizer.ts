@@ -82,7 +82,10 @@ export async function generateOptimizedScheduleImpl(data: {
       dbRunInserted = true;
     }
   } catch (insertErr) {
-    console.warn("Could not persist optimization run record into database (operating in resilient mode):", insertErr);
+    console.warn(
+      "Could not persist optimization run record into database (operating in resilient mode):",
+      insertErr,
+    );
   }
 
   try {
@@ -118,7 +121,10 @@ export async function generateOptimizedScheduleImpl(data: {
         where: eq(crew.tenantId, tenantId),
       });
     } catch (queryErr) {
-      console.warn("Database query error loading optimizer resources, utilizing comprehensive fallback data:", queryErr);
+      console.warn(
+        "Database query error loading optimizer resources, utilizing comprehensive fallback data:",
+        queryErr,
+      );
     }
 
     // Fall back to pre-seeded static data if database is empty or offline
@@ -190,7 +196,7 @@ export async function generateOptimizedScheduleImpl(data: {
         routeId: t.routeId,
         direction: t.direction || "OUTBOUND",
         startTime: t.startTime ?? 360,
-        endTime: t.endTime ?? (t.startTime + 30),
+        endTime: t.endTime ?? t.startTime + 30,
         durationMin: t.durationMin ?? 30,
         distanceKm: t.distanceKm || "10.00",
         origin: t.origin || "Origin",
@@ -289,7 +295,10 @@ export async function generateOptimizedScheduleImpl(data: {
           details: `Generated schedule: Covered ${result.tripsCovered}/${result.assignments.length + result.tripsUnassigned} trips in ${duration}s`,
         });
       } catch (updateErr) {
-        console.warn("Could not update optimization run in database, proceeding with result:", updateErr);
+        console.warn(
+          "Could not update optimization run in database, proceeding with result:",
+          updateErr,
+        );
       }
     }
 
@@ -329,7 +338,10 @@ export async function getOptimizationRunImpl(runId: string) {
 
   try {
     const run = await db.query.optimizationRuns.findFirst({
-      where: and(eq(optimizationRuns.id, runId), eq(optimizationRuns.tenantId, currentUser.tenantId)),
+      where: and(
+        eq(optimizationRuns.id, runId),
+        eq(optimizationRuns.tenantId, currentUser.tenantId),
+      ),
     });
 
     if (run) return run;
@@ -360,10 +372,7 @@ export async function getOptimizationRunImpl(runId: string) {
   };
 }
 
-export async function publishScheduleImpl(data: {
-  runId: string;
-  proposal: OptimizerResult;
-}) {
+export async function publishScheduleImpl(data: { runId: string; proposal: OptimizerResult }) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "schedule.publish");
 

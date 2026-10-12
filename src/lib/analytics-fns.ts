@@ -9,19 +9,17 @@ const _getServiceMetrics = createServerFn({ method: "GET" })
   });
 
 export const getServiceMetrics = async (
-  filters?: { serviceDate?: string; routeId?: string; busId?: string } | { data?: { serviceDate?: string; routeId?: string; busId?: string } }
+  filters?:
+    | { serviceDate?: string; routeId?: string; busId?: string }
+    | { data?: { serviceDate?: string; routeId?: string; busId?: string } },
 ) => {
   return await _getServiceMetrics(toServerFnArgs(filters));
 };
 
 const _getPlanVsActual = createServerFn({ method: "GET" })
   .validator(
-    (filters?: {
-      routeId?: string;
-      busId?: string;
-      status?: string;
-      serviceDate?: string;
-    }) => filters
+    (filters?: { routeId?: string; busId?: string; status?: string; serviceDate?: string }) =>
+      filters,
   )
   .handler(async ({ data }) => {
     const { getPlanVsActualImpl } = await import("../server/analytics/queries");
@@ -40,7 +38,7 @@ const _getRouteAnalytics = createServerFn({ method: "GET" })
   });
 
 export const getRouteAnalytics = async (
-  filters?: { serviceDate?: string } | { data?: { serviceDate?: string } }
+  filters?: { serviceDate?: string } | { data?: { serviceDate?: string } },
 ) => {
   return await _getRouteAnalytics(toServerFnArgs(filters));
 };
@@ -53,7 +51,7 @@ const _getFleetAnalytics = createServerFn({ method: "GET" })
   });
 
 export const getFleetAnalytics = async (
-  filters?: { depot?: string } | { data?: { depot?: string } }
+  filters?: { depot?: string } | { data?: { depot?: string } },
 ) => {
   return await _getFleetAnalytics(toServerFnArgs(filters));
 };

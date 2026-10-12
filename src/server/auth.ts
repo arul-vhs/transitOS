@@ -5,7 +5,8 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { users, tenants, auditLogs } from "./db/schema";
 
-const SECRET = process.env.SESSION_SECRET || "dev-session-secret-keys-for-transitos-platform-32-chars";
+const SECRET =
+  process.env.SESSION_SECRET || "dev-session-secret-keys-for-transitos-platform-32-chars";
 const COOKIE_NAME = "transitOS_session";
 
 export interface SessionPayload {
@@ -35,7 +36,11 @@ export function getSessionFromRequest(): SessionPayload | null {
     if (!token) return null;
     const session = jwt.verify(token, SECRET) as SessionPayload;
     if (session) {
-      if (!session.tenantId || session.tenantId === "ten-salem-transport" || session.tenantId.length < 30) {
+      if (
+        !session.tenantId ||
+        session.tenantId === "ten-salem-transport" ||
+        session.tenantId.length < 30
+      ) {
         session.tenantId = REAL_TENANT_ID;
       }
       if (session.userId && OLD_USER_ID_MAP[session.userId]) {
@@ -48,7 +53,19 @@ export function getSessionFromRequest(): SessionPayload | null {
   }
 }
 
-const DEMO_ACCOUNTS: Record<string, { id: string; email: string; name: string; role: string; tenantId: string; tenantName: string; tenantSlug: string; depotName: string }> = {
+const DEMO_ACCOUNTS: Record<
+  string,
+  {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    tenantId: string;
+    tenantName: string;
+    tenantSlug: string;
+    depotName: string;
+  }
+> = {
   "admin@salemtransport.demo": {
     id: "59c3c165-8fcd-4490-b126-c286ffa64700",
     email: "admin@salemtransport.demo",
@@ -119,9 +136,10 @@ export async function getCurrentUser() {
   const session = getSessionFromRequest();
   if (!session) return null;
 
-  const cleanTenantId = (!session.tenantId || session.tenantId === "ten-salem-transport" || session.tenantId.length < 30)
-    ? REAL_TENANT_ID
-    : session.tenantId;
+  const cleanTenantId =
+    !session.tenantId || session.tenantId === "ten-salem-transport" || session.tenantId.length < 30
+      ? REAL_TENANT_ID
+      : session.tenantId;
   const cleanUserId = OLD_USER_ID_MAP[session.userId] || session.userId;
 
   try {
@@ -129,8 +147,8 @@ export async function getCurrentUser() {
     const user = await db.query.users.findFirst({
       where: eq(users.id, cleanUserId),
       with: {
-        tenant: true
-      }
+        tenant: true,
+      },
     });
 
     if (user) {
@@ -156,7 +174,7 @@ export async function getCurrentUser() {
 
   // Resilient fallback using session payload and demo directory
   const demo = Object.values(DEMO_ACCOUNTS).find(
-    (u) => u.id === cleanUserId || u.email.toLowerCase() === session.email?.toLowerCase()
+    (u) => u.id === cleanUserId || u.email.toLowerCase() === session.email?.toLowerCase(),
   );
   if (demo) return demo;
 
@@ -220,8 +238,8 @@ export async function loginFnImpl(credentials: { email: string; password?: strin
     const user = await db.query.users.findFirst({
       where: eq(users.email, cleanEmail),
       with: {
-        tenant: true
-      }
+        tenant: true,
+      },
     });
 
     if (user) {
@@ -266,7 +284,7 @@ export async function loginFnImpl(credentials: { email: string; password?: strin
             name: user.name,
             role: user.role,
             tenantId: user.tenantId,
-          }
+          },
         };
       }
     }
@@ -303,7 +321,7 @@ export async function loginFnImpl(credentials: { email: string; password?: strin
         name: demoUser.name,
         role: demoUser.role,
         tenantId: demoUser.tenantId,
-      }
+      },
     };
   }
 

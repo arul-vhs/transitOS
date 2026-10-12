@@ -2,14 +2,19 @@ import { createServerFn } from "@tanstack/react-start";
 import { toServerFnArgs } from "./server-fn-utils";
 
 const _getTrips = createServerFn({ method: "GET" })
-  .validator((filters?: { serviceDate?: string; routeId?: string; status?: string; direction?: string }) => filters)
+  .validator(
+    (filters?: { serviceDate?: string; routeId?: string; status?: string; direction?: string }) =>
+      filters,
+  )
   .handler(async ({ data }) => {
     const { getTripsImpl } = await import("../server/scheduling-ops");
     return await getTripsImpl(data);
   });
 
 export const getTrips = async (
-  filters?: { serviceDate?: string; routeId?: string; status?: string; direction?: string } | { data?: { serviceDate?: string; routeId?: string; status?: string; direction?: string } }
+  filters?:
+    | { serviceDate?: string; routeId?: string; status?: string; direction?: string }
+    | { data?: { serviceDate?: string; routeId?: string; status?: string; direction?: string } },
 ) => {
   return await _getTrips(toServerFnArgs(filters));
 };
@@ -33,7 +38,7 @@ const _createTrip = createServerFn({ method: "POST" })
       serviceDate: string;
       direction?: string;
       status?: string;
-    }) => data
+    }) => data,
   )
   .handler(async ({ data }) => {
     const { createTripImpl } = await import("../server/scheduling-ops");
@@ -54,7 +59,7 @@ const _updateTrip = createServerFn({ method: "POST" })
         direction?: string;
         status?: string;
       };
-    }) => payload
+    }) => payload,
   )
   .handler(async ({ data }) => {
     const { updateTripImpl } = await import("../server/scheduling-ops");
@@ -85,7 +90,7 @@ const _generateTrips = createServerFn({ method: "POST" })
       endTime: number;
       frequency: number;
       direction?: string;
-    }) => data
+    }) => data,
   )
   .handler(async ({ data }) => {
     const { generateTripsImpl } = await import("../server/scheduling-ops");
@@ -104,7 +109,9 @@ const _getDuties = createServerFn({ method: "GET" })
   });
 
 export const getDuties = async (
-  filters?: { serviceDate?: string; status?: string } | { data?: { serviceDate?: string; status?: string } }
+  filters?:
+    | { serviceDate?: string; status?: string }
+    | { data?: { serviceDate?: string; status?: string } },
 ) => {
   return await _getDuties(toServerFnArgs(filters));
 };
@@ -121,13 +128,7 @@ export const getDuty = async (id: string | { data: string }) => {
 };
 
 const _createDuty = createServerFn({ method: "POST" })
-  .validator(
-    (data: {
-      dutyCode: string;
-      dutyType: string;
-      serviceDate: string;
-    }) => data
-  )
+  .validator((data: { dutyCode: string; dutyType: string; serviceDate: string }) => data)
   .handler(async ({ data }) => {
     const { createDutyImpl } = await import("../server/scheduling-ops");
     return await createDutyImpl(data);
@@ -150,7 +151,7 @@ const _updateDuty = createServerFn({ method: "POST" })
         driverId?: string | null;
         conductorId?: string | null;
       };
-    }) => payload
+    }) => payload,
   )
   .handler(async ({ data }) => {
     const { updateDutyImpl } = await import("../server/scheduling-ops");
@@ -180,7 +181,7 @@ const _addTripToDuty = createServerFn({ method: "POST" })
   });
 
 export const addTripToDuty = async (
-  payload: { dutyId: string; tripId: string } | { data: { dutyId: string; tripId: string } }
+  payload: { dutyId: string; tripId: string } | { data: { dutyId: string; tripId: string } },
 ) => {
   return await _addTripToDuty(toServerFnArgs(payload)!);
 };
@@ -193,7 +194,7 @@ const _removeTripFromDuty = createServerFn({ method: "POST" })
   });
 
 export const removeTripFromDuty = async (
-  payload: { dutyId: string; tripId: string } | { data: { dutyId: string; tripId: string } }
+  payload: { dutyId: string; tripId: string } | { data: { dutyId: string; tripId: string } },
 ) => {
   return await _removeTripFromDuty(toServerFnArgs(payload)!);
 };
@@ -206,18 +207,15 @@ const _assignBusToDuty = createServerFn({ method: "POST" })
   });
 
 export const assignBusToDuty = async (
-  payload: { dutyId: string; busId: string | null } | { data: { dutyId: string; busId: string | null } }
+  payload:
+    { dutyId: string; busId: string | null } | { data: { dutyId: string; busId: string | null } },
 ) => {
   return await _assignBusToDuty(toServerFnArgs(payload)!);
 };
 
 const _assignCrewToDuty = createServerFn({ method: "POST" })
   .validator(
-    (payload: {
-      dutyId: string;
-      driverId: string | null;
-      conductorId: string | null;
-    }) => payload
+    (payload: { dutyId: string; driverId: string | null; conductorId: string | null }) => payload,
   )
   .handler(async ({ data }) => {
     const { assignCrewToDutyImpl } = await import("../server/scheduling-ops");
@@ -237,7 +235,7 @@ export const assignCrewToDuty = async (
           driverId: string | null;
           conductorId: string | null;
         };
-      }
+      },
 ) => {
   return await _assignCrewToDuty(toServerFnArgs(payload)!);
 };
@@ -250,7 +248,7 @@ const _createCrewHandover = createServerFn({ method: "POST" })
       conductorId: string;
       startTime: number;
       endTime: number;
-    }) => data
+    }) => data,
   )
   .handler(async ({ data }) => {
     const { createCrewHandoverImpl } = await import("../server/scheduling-ops");
@@ -282,7 +280,7 @@ const _validateDuty = createServerFn({ method: "POST" })
         conductorId?: string | null;
         dutyType?: string;
       };
-    }) => payload
+    }) => payload,
   )
   .handler(async ({ data }) => {
     const { validateDutyImpl } = await import("../server/scheduling-ops");

@@ -5,6 +5,7 @@ TransitOS tracks scheduled service plans against actual live operation records.
 ## Extended Trip Parameters
 
 The `trips` table stores the following values:
+
 - **`plannedStart`**: Scheduled trip departure (minutes from midnight).
 - **`actualStart`**: Actual recorded departure (minutes from midnight).
 - **`plannedEnd`**: Scheduled trip arrival (minutes from midnight).
@@ -19,5 +20,6 @@ The `trips` table stores the following values:
 ## On-Time Tolerance
 
 The default variance tolerance is configured to **5 minutes**.
+
 - If $\text{departureVariance} \le 5$, the status is marked **ON_TIME**.
 - If $\text{departureVariance} > 5$, the status is marked **DELAYED**.

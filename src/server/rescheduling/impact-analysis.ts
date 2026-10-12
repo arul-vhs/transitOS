@@ -9,7 +9,14 @@ export interface ImpactSummary {
   busId: string | null;
   driverId: string | null;
   conductorId: string | null;
-  impactType: "BUS_LOST" | "CREW_LOST" | "DELAYED" | "CANCELLED" | "TURNAROUND_VIOLATION" | "CREW_REST_CONFLICT" | "UNASSIGNED";
+  impactType:
+    | "BUS_LOST"
+    | "CREW_LOST"
+    | "DELAYED"
+    | "CANCELLED"
+    | "TURNAROUND_VIOLATION"
+    | "CREW_REST_CONFLICT"
+    | "UNASSIGNED";
   impactLevel: "DIRECT" | "DOWNSTREAM" | "SECONDARY";
   reason: string;
 }
@@ -52,7 +59,7 @@ export async function analyzeIncidentImpactImpl(incident: {
       (imp) =>
         imp.tripId === item.tripId &&
         imp.dutyId === item.dutyId &&
-        imp.impactType === item.impactType
+        imp.impactType === item.impactType,
     );
     if (!exists) {
       impacts.push(item);
@@ -116,7 +123,11 @@ export async function analyzeIncidentImpactImpl(incident: {
   }
 
   // 2. DRIVER_ABSENT or CONDUCTOR_ABSENT
-  if (incident.type === "DRIVER_ABSENT" || incident.type === "CONDUCTOR_ABSENT" || incident.type === "CREW_EMERGENCY") {
+  if (
+    incident.type === "DRIVER_ABSENT" ||
+    incident.type === "CONDUCTOR_ABSENT" ||
+    incident.type === "CREW_EMERGENCY"
+  ) {
     const targetCrewId = incident.resourceId;
     if (targetCrewId) {
       // Find all duties/segments where this crew member is assigned
@@ -127,7 +138,7 @@ export async function analyzeIncidentImpactImpl(incident: {
         return d.crewSegments?.some(
           (seg) =>
             (incident.type === "DRIVER_ABSENT" && seg.driverId === targetCrewId) ||
-            (incident.type === "CONDUCTOR_ABSENT" && seg.conductorId === targetCrewId)
+            (incident.type === "CONDUCTOR_ABSENT" && seg.conductorId === targetCrewId),
         );
       });
 
@@ -205,7 +216,10 @@ export async function analyzeIncidentImpactImpl(incident: {
               impactLevel: "DOWNSTREAM",
               reason: `Downstream impact: Delayed by ${accumulatedDelay} mins due to previous trip delay.`,
             });
-          } else if (newGap < SCHEDULING_CONFIG.MIN_TURNAROUND_MINUTES && currentTrip.routeId !== prevTrip.routeId) {
+          } else if (
+            newGap < SCHEDULING_CONFIG.MIN_TURNAROUND_MINUTES &&
+            currentTrip.routeId !== prevTrip.routeId
+          ) {
             // Turnaround buffer violation!
             addImpact({
               tripId: currentTrip.id,
@@ -245,7 +259,8 @@ export async function analyzeIncidentImpactImpl(incident: {
   if (incident.type === "ROUTE_BLOCKED" && incident.routeId) {
     const endBlockTime = incident.expectedEndTime || 1440; // Default to end of day if null
     const routeTrips = dayTrips.filter(
-      (t) => t.routeId === incident.routeId && t.startTime >= startTime && t.startTime <= endBlockTime
+      (t) =>
+        t.routeId === incident.routeId && t.startTime >= startTime && t.startTime <= endBlockTime,
     );
 
     routeTrips.forEach((t) => {

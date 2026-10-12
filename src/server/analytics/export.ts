@@ -86,17 +86,15 @@ export async function exportAnalyticsCsvImpl(type: string): Promise<string> {
       String(b.breakdownsCount),
     ]);
   } else if (type === "incidents") {
-    headers = [
-      "Total Incidents",
-      "Recovery Success Rate %",
-      "Avg Recovery Time (mins)",
-    ];
+    headers = ["Total Incidents", "Recovery Success Rate %", "Avg Recovery Time (mins)"];
     const data = await getIncidentAnalyticsImpl();
-    rows = [[
-      String(data.totalIncidents),
-      `${data.recoverySuccessRate}%`,
-      `${data.averageRecoveryTimeMins}m`,
-    ]];
+    rows = [
+      [
+        String(data.totalIncidents),
+        `${data.recoverySuccessRate}%`,
+        `${data.averageRecoveryTimeMins}m`,
+      ],
+    ];
   } else if (type === "recovery") {
     headers = [
       "Run ID",
@@ -123,9 +121,7 @@ export async function exportAnalyticsCsvImpl(type: string): Promise<string> {
 
   // Generate CSV String buffer
   const headerLine = headers.join(",");
-  const dataLines = rows.map((r) =>
-    r.map((val) => `"${val.replace(/"/g, '""')}"`).join(",")
-  );
+  const dataLines = rows.map((r) => r.map((val) => `"${val.replace(/"/g, '""')}"`).join(","));
   const csvBuffer = [headerLine, ...dataLines].join("\n");
 
   // Log ANALTICS_EXPORT action in Drizzle transaction!

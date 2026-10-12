@@ -5,6 +5,7 @@ The TransitOS Optimization Model defines the decision variables, hard constraint
 ## Decision Variables
 
 The optimizer makes discrete decisions for each scheduled trip `t`:
+
 - **`trip -> bus`**: The assigned bus `b`.
 - **`trip -> driver`**: The assigned driver `d`.
 - **`trip -> conductor`**: The assigned conductor `c`.
@@ -15,6 +16,7 @@ The optimizer makes discrete decisions for each scheduled trip `t`:
 ## Hard Constraints
 
 The solver enforces that these rules are never violated:
+
 1. **Trip Coverage**: Feasible trips are assigned. Unfeasible ones are left unassigned (no fake/invalid assignments).
 2. **Bus Overlap**: A single vehicle cannot be assigned to overlapping trips.
 3. **Crew Overlap**: Drivers and conductors cannot operate overlapping assignments.

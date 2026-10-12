@@ -1,6 +1,16 @@
 import { eq, and, or, like, asc, not, ne } from "drizzle-orm";
 import { db } from "./db";
-import { routes, stops, trips, duties, dutyTrips, dutyCrewSegments, buses, crew, auditLogs } from "./db/schema";
+import {
+  routes,
+  stops,
+  trips,
+  duties,
+  dutyTrips,
+  dutyCrewSegments,
+  buses,
+  crew,
+  auditLogs,
+} from "./db/schema";
 import { requireAuth, requirePermission } from "./auth";
 import { SCHEDULING_CONFIG } from "../lib/transit/config";
 import { FALLBACK_TRIPS, FALLBACK_DUTIES, FALLBACK_ROUTES } from "./db/fallback-data";
@@ -143,12 +153,7 @@ export async function createTripImpl(data: {
   const existingTrips = await db
     .select()
     .from(trips)
-    .where(
-      and(
-        eq(trips.tenantId, currentUser.tenantId),
-        like(trips.tripCode, `${baseCode}%`)
-      )
-    );
+    .where(and(eq(trips.tenantId, currentUser.tenantId), like(trips.tripCode, `${baseCode}%`)));
 
   let finalCode = baseCode;
   if (existingTrips.length > 0) {
@@ -193,7 +198,7 @@ export async function updateTripImpl(
     serviceDate: string;
     direction?: string;
     status?: string;
-  }
+  },
 ) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "schedule.modify");
@@ -274,7 +279,11 @@ export async function generateTripsImpl(data: {
   if (!data.routeId) throw new Error("Route is required");
   if (!data.serviceDate) throw new Error("Service date is required");
   if (!data.frequency || data.frequency <= 0) throw new Error("Frequency must be greater than 0");
-  if (data.startTime === undefined || data.endTime === undefined || data.startTime >= data.endTime) {
+  if (
+    data.startTime === undefined ||
+    data.endTime === undefined ||
+    data.startTime >= data.endTime
+  ) {
     throw new Error("End time must be after start time");
   }
 
@@ -361,7 +370,12 @@ export async function getDutiesImpl(filters?: { serviceDate?: string; status?: s
           })
           .from(dutyCrewSegments)
           .leftJoin(crew, eq(dutyCrewSegments.driverId, crew.id))
-          .where(and(eq(dutyCrewSegments.dutyId, d.id), eq(dutyCrewSegments.tenantId, currentUser.tenantId)))
+          .where(
+            and(
+              eq(dutyCrewSegments.dutyId, d.id),
+              eq(dutyCrewSegments.tenantId, currentUser.tenantId),
+            ),
+          )
           .orderBy(asc(dutyCrewSegments.sequence));
 
         // Resolve base crew name details for visual grids
@@ -390,7 +404,7 @@ export async function getDutiesImpl(filters?: { serviceDate?: string; status?: s
           trips: tripsList,
           crewSegments: crewSegmentsList,
         };
-      })
+      }),
     );
   } catch (err) {
     let result = FALLBACK_DUTIES.map((d) => ({
@@ -470,7 +484,9 @@ export async function getDutyImpl(id: string) {
     })
     .from(dutyCrewSegments)
     .leftJoin(crew, eq(dutyCrewSegments.driverId, crew.id))
-    .where(and(eq(dutyCrewSegments.dutyId, id), eq(dutyCrewSegments.tenantId, currentUser.tenantId)))
+    .where(
+      and(eq(dutyCrewSegments.dutyId, id), eq(dutyCrewSegments.tenantId, currentUser.tenantId)),
+    )
     .orderBy(asc(dutyCrewSegments.sequence));
 
   return {
@@ -534,7 +550,7 @@ export async function updateDutyImpl(
     busId?: string | null;
     driverId?: string | null;
     conductorId?: string | null;
-  }
+  },
 ) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "schedule.modify");
@@ -608,9 +624,7 @@ export async function deleteDutyImpl(id: string) {
   });
   if (!duty) throw new Error("Duty not found");
 
-  await db
-    .delete(duties)
-    .where(and(eq(duties.id, id), eq(duties.tenantId, currentUser.tenantId)));
+  await db.delete(duties).where(and(eq(duties.id, id), eq(duties.tenantId, currentUser.tenantId)));
 
   // Audit log
   await db.insert(auditLogs).values({
@@ -634,20 +648,14 @@ async function recalculateDutyTimes(dutyId: string, tenantId: string) {
     .orderBy(asc(trips.startTime));
 
   if (assignedTrips.length === 0) {
-    await db
-      .update(duties)
-      .set({ startTime: 0, endTime: 0 })
-      .where(eq(duties.id, dutyId));
+    await db.update(duties).set({ startTime: 0, endTime: 0 }).where(eq(duties.id, dutyId));
     return;
   }
 
   const start = assignedTrips[0]!.startTime;
   const end = assignedTrips[assignedTrips.length - 1]!.endTime;
 
-  await db
-    .update(duties)
-    .set({ startTime: start, endTime: end })
-    .where(eq(duties.id, dutyId));
+  await db.update(duties).set({ startTime: start, endTime: end }).where(eq(duties.id, dutyId));
 }
 
 export async function addTripToDutyImpl(dutyId: string, tripId: string) {
@@ -725,9 +733,7 @@ export async function removeTripFromDutyImpl(dutyId: string, tripId: string) {
   });
   if (!duty) throw new Error("Duty not found");
 
-  await db
-    .delete(dutyTrips)
-    .where(and(eq(dutyTrips.dutyId, dutyId), eq(dutyTrips.tripId, tripId)));
+  await db.delete(dutyTrips).where(and(eq(dutyTrips.dutyId, dutyId), eq(dutyTrips.tripId, tripId)));
 
   // Re-sequence
   const allTrips = await db
@@ -767,10 +773,7 @@ export async function assignBusToDutyImpl(dutyId: string, busId: string | null) 
   });
   if (!duty) throw new Error("Duty not found");
 
-  await db
-    .update(duties)
-    .set({ busId, updatedAt: new Date() })
-    .where(eq(duties.id, dutyId));
+  await db.update(duties).set({ busId, updatedAt: new Date() }).where(eq(duties.id, dutyId));
 
   // Audit log
   await db.insert(auditLogs).values({
@@ -787,7 +790,7 @@ export async function assignBusToDutyImpl(dutyId: string, busId: string | null) 
 export async function assignCrewToDutyImpl(
   dutyId: string,
   driverId: string | null,
-  conductorId: string | null
+  conductorId: string | null,
 ) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "schedule.modify");
@@ -865,7 +868,9 @@ export async function clearHandoverSegmentsImpl(dutyId: string) {
 
   await db
     .delete(dutyCrewSegments)
-    .where(and(eq(dutyCrewSegments.dutyId, dutyId), eq(dutyCrewSegments.tenantId, currentUser.tenantId)));
+    .where(
+      and(eq(dutyCrewSegments.dutyId, dutyId), eq(dutyCrewSegments.tenantId, currentUser.tenantId)),
+    );
 
   return { success: true };
 }
@@ -881,7 +886,7 @@ export async function validateDutyImpl(
     driverId?: string | null;
     conductorId?: string | null;
     dutyType?: string;
-  }
+  },
 ) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "schedule.view");
@@ -893,7 +898,8 @@ export async function validateDutyImpl(
 
   const busId = overrides?.busId !== undefined ? overrides.busId : duty.busId;
   const driverId = overrides?.driverId !== undefined ? overrides.driverId : duty.driverId;
-  const conductorId = overrides?.conductorId !== undefined ? overrides.conductorId : duty.conductorId;
+  const conductorId =
+    overrides?.conductorId !== undefined ? overrides.conductorId : duty.conductorId;
   const dutyType = overrides?.dutyType || duty.dutyType;
 
   // Load trips associated with this duty
@@ -925,7 +931,9 @@ export async function validateDutyImpl(
   if (busId) {
     const activeBus = await db.query.buses.findFirst({ where: eq(buses.id, busId) });
     if (activeBus && activeBus.status !== "available" && activeBus.status !== "assigned") {
-      issues.push(`Bus ${activeBus.registrationNumber} is marked "${activeBus.status}" and unavailable.`);
+      issues.push(
+        `Bus ${activeBus.registrationNumber} is marked "${activeBus.status}" and unavailable.`,
+      );
     }
 
     // Check overlaps with other duties on same service day
@@ -937,23 +945,28 @@ export async function validateDutyImpl(
           eq(duties.tenantId, currentUser.tenantId),
           eq(duties.serviceDate, duty.serviceDate),
           eq(duties.busId, busId),
-          ne(duties.id, dutyId)
-        )
+          ne(duties.id, dutyId),
+        ),
       );
 
     for (const ob of otherDutiesWithBus) {
       if (dutyStart < ob.endTime && dutyEnd > ob.startTime) {
         issues.push(
           `Bus conflict: Already assigned to Duty ${ob.dutyCode} (${formatMinutesToTime(
-            ob.startTime
-          )} - ${formatMinutesToTime(ob.endTime)}).`
+            ob.startTime,
+          )} - ${formatMinutesToTime(ob.endTime)}).`,
         );
       }
     }
   }
 
   // Helper function to validate crew members
-  const validateCrewMember = async (crewId: string, label: "Driver" | "Conductor", cStart: number, cEnd: number) => {
+  const validateCrewMember = async (
+    crewId: string,
+    label: "Driver" | "Conductor",
+    cStart: number,
+    cEnd: number,
+  ) => {
     const member = await db.query.crew.findFirst({ where: eq(crew.id, crewId) });
     if (!member) return;
 
@@ -963,9 +976,7 @@ export async function validateDutyImpl(
 
     if (cStart < member.restUntil) {
       issues.push(
-        `${label} ${member.name} requires rest until ${formatMinutesToTime(
-          member.restUntil
-        )}.`
+        `${label} ${member.name} requires rest until ${formatMinutesToTime(member.restUntil)}.`,
       );
     }
 
@@ -978,23 +989,27 @@ export async function validateDutyImpl(
           eq(duties.tenantId, currentUser.tenantId),
           eq(duties.serviceDate, duty.serviceDate),
           or(eq(duties.driverId, crewId), eq(duties.conductorId, crewId))!,
-          ne(duties.id, dutyId)
-        )
+          ne(duties.id, dutyId),
+        ),
       );
 
     for (const od of otherCrewDuties) {
       if (cStart < od.endTime && cEnd > od.startTime) {
         issues.push(
           `${label} ${member.name} is already assigned to Duty ${od.dutyCode} (${formatMinutesToTime(
-            od.startTime
-          )} - ${formatMinutesToTime(od.endTime)}).`
+            od.startTime,
+          )} - ${formatMinutesToTime(od.endTime)}).`,
         );
       }
     }
 
     // Overlap checks with crew handover segments in other unlinked duties
     const otherCrewSegments = await db
-      .select({ dutyCode: duties.dutyCode, startTime: dutyCrewSegments.startTime, endTime: dutyCrewSegments.endTime })
+      .select({
+        dutyCode: duties.dutyCode,
+        startTime: dutyCrewSegments.startTime,
+        endTime: dutyCrewSegments.endTime,
+      })
       .from(dutyCrewSegments)
       .innerJoin(duties, eq(dutyCrewSegments.dutyId, duties.id))
       .where(
@@ -1002,16 +1017,16 @@ export async function validateDutyImpl(
           eq(dutyCrewSegments.tenantId, currentUser.tenantId),
           eq(duties.serviceDate, duty.serviceDate),
           or(eq(dutyCrewSegments.driverId, crewId), eq(dutyCrewSegments.conductorId, crewId))!,
-          ne(dutyCrewSegments.dutyId, dutyId)
-        )
+          ne(dutyCrewSegments.dutyId, dutyId),
+        ),
       );
 
     for (const seg of otherCrewSegments) {
       if (cStart < seg.endTime && cEnd > seg.startTime) {
         issues.push(
           `${label} ${member.name} is already assigned to handover segment in Duty ${seg.dutyCode} (${formatMinutesToTime(
-            seg.startTime
-          )} - ${formatMinutesToTime(seg.endTime)}).`
+            seg.startTime,
+          )} - ${formatMinutesToTime(seg.endTime)}).`,
         );
       }
     }
@@ -1030,7 +1045,12 @@ export async function validateDutyImpl(
     const segments = await db
       .select()
       .from(dutyCrewSegments)
-      .where(and(eq(dutyCrewSegments.dutyId, dutyId), eq(dutyCrewSegments.tenantId, currentUser.tenantId)))
+      .where(
+        and(
+          eq(dutyCrewSegments.dutyId, dutyId),
+          eq(dutyCrewSegments.tenantId, currentUser.tenantId),
+        ),
+      )
       .orderBy(asc(dutyCrewSegments.sequence));
 
     if (segments.length === 0) {
@@ -1041,7 +1061,9 @@ export async function validateDutyImpl(
       const segmentsEnd = segments[segments.length - 1]!.endTime;
 
       if (segmentsStart > dutyStart || segmentsEnd < dutyEnd) {
-        issues.push("Crew handover segments do not fully cover the schedule timeline of assigned trips.");
+        issues.push(
+          "Crew handover segments do not fully cover the schedule timeline of assigned trips.",
+        );
       }
 
       // Check gap gaps or overlaps in segments
@@ -1051,8 +1073,8 @@ export async function validateDutyImpl(
         if (segA.endTime !== segB.startTime) {
           issues.push(
             `Crew segments sequence gap: Segment ${segA.sequence} ends at ${formatMinutesToTime(
-              segA.endTime
-            )} but Segment ${segB.sequence} starts at ${formatMinutesToTime(segB.startTime)}.`
+              segA.endTime,
+            )} but Segment ${segB.sequence} starts at ${formatMinutesToTime(segB.startTime)}.`,
           );
         }
       }
@@ -1082,7 +1104,7 @@ export async function validateDutyImpl(
       if (tripA.routeId !== tripB.routeId) {
         if (turnaroundGap < SCHEDULING_CONFIG.MIN_TURNAROUND_MINUTES) {
           issues.push(
-            `Turnaround violation between ${tripA.tripCode} and ${tripB.tripCode}: Only ${turnaroundGap} minutes turnaround available; minimum required is ${SCHEDULING_CONFIG.MIN_TURNAROUND_MINUTES} minutes.`
+            `Turnaround violation between ${tripA.tripCode} and ${tripB.tripCode}: Only ${turnaroundGap} minutes turnaround available; minimum required is ${SCHEDULING_CONFIG.MIN_TURNAROUND_MINUTES} minutes.`,
           );
         }
       }
@@ -1095,8 +1117,8 @@ export async function validateDutyImpl(
   if (dutyDuration > maxDutyMinutes) {
     issues.push(
       `Duty duration exceeds continuous work limit: Active timeline spans ${formatMinutesToTime(
-        dutyDuration
-      )} (Max limit allowed: ${SCHEDULING_CONFIG.MAX_DUTY_HOURS} hours).`
+        dutyDuration,
+      )} (Max limit allowed: ${SCHEDULING_CONFIG.MAX_DUTY_HOURS} hours).`,
     );
   }
 

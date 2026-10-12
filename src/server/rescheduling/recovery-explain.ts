@@ -5,7 +5,7 @@ export function generateRecoveryExplanation(
   proposedDuties: ProposedDuty[],
   unassignedTrips: { tripId: string; tripCode: string; reason: string }[],
   originalAssignmentsMap: Map<string, { busId: string; driverId: string; conductorId: string }>,
-  incident: IncidentRecord
+  incident: IncidentRecord,
 ): string {
   const parts: string[] = [];
 
@@ -42,7 +42,10 @@ export function generateRecoveryExplanation(
   }
 
   if (unassignedTrips.length > 0) {
-    const cancelledCodes = unassignedTrips.map((u) => u.tripCode).slice(0, 3).join(", ");
+    const cancelledCodes = unassignedTrips
+      .map((u) => u.tripCode)
+      .slice(0, 3)
+      .join(", ");
     const moreText = unassignedTrips.length > 3 ? ` +${unassignedTrips.length - 3} more` : "";
     parts.push(`${unassignedTrips.length} trip(s) cancelled (${cancelledCodes}${moreText}).`);
   } else {
@@ -51,4 +54,3 @@ export function generateRecoveryExplanation(
 
   return parts.join(" ");
 }
-

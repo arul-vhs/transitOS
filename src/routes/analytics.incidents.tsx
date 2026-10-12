@@ -38,7 +38,9 @@ function IncidentsAnalyticsPage() {
       actions={
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link to="/analytics"><ArrowLeft className="mr-2 size-3.5" /> Back</Link>
+            <Link to="/analytics">
+              <ArrowLeft className="mr-2 size-3.5" /> Back
+            </Link>
           </Button>
         </div>
       }
@@ -51,21 +53,29 @@ function IncidentsAnalyticsPage() {
           </h3>
 
           {statsLoading ? (
-            <div className="text-xs text-muted-foreground py-10 text-center">Loading summaries...</div>
+            <div className="text-xs text-muted-foreground py-10 text-center">
+              Loading summaries...
+            </div>
           ) : (
             <div className="space-y-4">
               <div className="p-4 border rounded bg-secondary/5 space-y-2">
                 <div className="flex justify-between text-xs">
                   <span>Total Incidents Reported:</span>
-                  <span className="font-bold text-foreground font-mono">{incidentStats.totalIncidents}</span>
+                  <span className="font-bold text-foreground font-mono">
+                    {incidentStats.totalIncidents}
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span>Recovery Success Rate:</span>
-                  <span className="font-bold text-success font-mono">{incidentStats.recoverySuccessRate}%</span>
+                  <span className="font-bold text-success font-mono">
+                    {incidentStats.recoverySuccessRate}%
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span>Avg Solve Runtime:</span>
-                  <span className="font-bold text-primary font-mono">{incidentStats.averageRecoveryTimeMins}s</span>
+                  <span className="font-bold text-primary font-mono">
+                    {incidentStats.averageRecoveryTimeMins}s
+                  </span>
                 </div>
               </div>
 
@@ -91,9 +101,13 @@ function IncidentsAnalyticsPage() {
           </h3>
 
           {runsLoading ? (
-            <div className="py-20 text-center text-xs text-muted-foreground">Loading solver logs...</div>
+            <div className="py-20 text-center text-xs text-muted-foreground">
+              Loading solver logs...
+            </div>
           ) : recoveryStats.length === 0 ? (
-            <div className="py-20 text-center text-xs text-muted-foreground italic">No recovery runs recorded.</div>
+            <div className="py-20 text-center text-xs text-muted-foreground italic">
+              No recovery runs recorded.
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -108,15 +122,28 @@ function IncidentsAnalyticsPage() {
               </TableHeader>
               <TableBody>
                 {recoveryStats.map((r: any) => {
-                  const successRate = r.tripsAffected > 0 ? Math.round((r.tripsRecovered / r.tripsAffected) * 100) : 100;
+                  const successRate =
+                    r.tripsAffected > 0
+                      ? Math.round((r.tripsRecovered / r.tripsAffected) * 100)
+                      : 100;
                   return (
                     <TableRow key={r.runId}>
                       <TableCell className="text-xs font-mono">{r.serviceDate}</TableCell>
-                      <TableCell className="text-xs uppercase font-mono">{r.incidentType}</TableCell>
-                      <TableCell className="text-right text-xs font-mono">{r.tripsAffected}</TableCell>
-                      <TableCell className="text-right text-xs font-mono text-success">{r.tripsRecovered}</TableCell>
-                      <TableCell className="text-right text-xs font-mono text-destructive">{r.tripsUnassigned}</TableCell>
-                      <TableCell className="text-right text-xs font-mono font-bold">{successRate}%</TableCell>
+                      <TableCell className="text-xs uppercase font-mono">
+                        {r.incidentType}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-mono">
+                        {r.tripsAffected}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-mono text-success">
+                        {r.tripsRecovered}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-mono text-destructive">
+                        {r.tripsUnassigned}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-mono font-bold">
+                        {successRate}%
+                      </TableCell>
                     </TableRow>
                   );
                 })}

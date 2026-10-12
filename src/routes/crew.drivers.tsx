@@ -75,8 +75,11 @@ export const Route = createFileRoute("/crew/drivers")({
   },
   head: () => ({
     meta: [
-      { title: "Driver Roster & Profile — TransitOS" },
-      { name: "description", content: "Driver registry, HPV licensing compliance, availability timeline and shift logs." },
+      { title: "Driver Roster & Profile: TransitOS" },
+      {
+        name: "description",
+        content: "Driver registry, HPV licensing compliance, availability timeline and shift logs.",
+      },
     ],
   }),
   component: DriversPage,
@@ -225,7 +228,9 @@ function DriversPage() {
     setFormRestUntil(formatMinutesToTime(driver.restUntil));
     setFormLicenseCategory(driver.licenseCategory || "Heavy Passenger Vehicle (HPV)");
     setFormLicenseExpiry(
-      driver.licenseExpiry ? new Date(driver.licenseExpiry).toISOString().split("T")[0]! : "2028-12-31"
+      driver.licenseExpiry
+        ? new Date(driver.licenseExpiry).toISOString().split("T")[0]!
+        : "2028-12-31",
     );
     setIsEditOpen(true);
   };
@@ -298,23 +303,33 @@ function DriversPage() {
         {/* 1. METRICS OVERVIEW */}
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
           <div className="glass-card p-4 rounded-xl border flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Drivers</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Total Drivers
+            </span>
             <span className="text-2xl font-bold font-mono mt-1 text-foreground">{totalCount}</span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-success flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Available</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Available
+            </span>
             <span className="text-2xl font-bold font-mono mt-1 text-success">{availableCount}</span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-primary flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">On Active Duty</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              On Active Duty
+            </span>
             <span className="text-2xl font-bold font-mono mt-1 text-primary">{onDutyCount}</span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-warning flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Mandatory Rest</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Mandatory Rest
+            </span>
             <span className="text-2xl font-bold font-mono mt-1 text-warning">{restingCount}</span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-destructive flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">On Leave</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              On Leave
+            </span>
             <span className="text-2xl font-bold font-mono mt-1 text-destructive">{leaveCount}</span>
           </div>
         </div>
@@ -367,7 +382,9 @@ function DriversPage() {
         {/* 3. DRIVER TABLE */}
         <div className="glass-panel overflow-hidden">
           {isLoading ? (
-            <div className="py-16 text-center text-xs text-muted-foreground">Loading driver registry...</div>
+            <div className="py-16 text-center text-xs text-muted-foreground">
+              Loading driver registry...
+            </div>
           ) : driversList.length === 0 ? (
             <div className="py-16 text-center text-xs text-muted-foreground">
               No drivers found matching current search.
@@ -388,13 +405,22 @@ function DriversPage() {
               </TableHeader>
               <TableBody>
                 {driversList.map((driver) => (
-                  <TableRow key={driver.id} className="border-border/40 hover:bg-muted/40 transition-colors">
-                    <TableCell className="font-semibold text-primary font-mono text-xs">{driver.employeeId}</TableCell>
+                  <TableRow
+                    key={driver.id}
+                    className="border-border/40 hover:bg-muted/40 transition-colors"
+                  >
+                    <TableCell className="font-semibold text-primary font-mono text-xs">
+                      {driver.employeeId}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2.5">
                         <Avatar className="size-7">
                           <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
-                            {driver.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                            {driver.name
+                              .split(" ")
+                              .map((n: string) => n[0])
+                              .join("")
+                              .toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <span className="font-bold text-xs text-foreground">{driver.name}</span>
@@ -424,19 +450,52 @@ function DriversPage() {
                             statusMutation.mutate({ id: driver.id, status: val })
                           }
                         >
-                          <SelectTrigger className={cn("h-7 w-28 text-[10px] font-semibold uppercase tracking-wider border", getStatusBadgeClass(driver.status))}>
+                          <SelectTrigger
+                            className={cn(
+                              "h-7 w-28 text-[10px] font-semibold uppercase tracking-wider border",
+                              getStatusBadgeClass(driver.status),
+                            )}
+                          >
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="available" className="text-xs uppercase text-emerald-600">Available</SelectItem>
-                            <SelectItem value="on-duty" className="text-xs uppercase text-primary">On Duty</SelectItem>
-                            <SelectItem value="resting" className="text-xs uppercase text-amber-600">Resting</SelectItem>
-                            <SelectItem value="leave" className="text-xs uppercase text-destructive">Leave</SelectItem>
-                            <SelectItem value="unavailable" className="text-xs uppercase text-muted-foreground">Unavailable</SelectItem>
+                            <SelectItem
+                              value="available"
+                              className="text-xs uppercase text-emerald-600"
+                            >
+                              Available
+                            </SelectItem>
+                            <SelectItem value="on-duty" className="text-xs uppercase text-primary">
+                              On Duty
+                            </SelectItem>
+                            <SelectItem
+                              value="resting"
+                              className="text-xs uppercase text-amber-600"
+                            >
+                              Resting
+                            </SelectItem>
+                            <SelectItem
+                              value="leave"
+                              className="text-xs uppercase text-destructive"
+                            >
+                              Leave
+                            </SelectItem>
+                            <SelectItem
+                              value="unavailable"
+                              className="text-xs uppercase text-muted-foreground"
+                            >
+                              Unavailable
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       ) : (
-                        <Badge variant="outline" className={cn("text-[9px] font-semibold uppercase font-mono", getStatusBadgeClass(driver.status))}>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[9px] font-semibold uppercase font-mono",
+                            getStatusBadgeClass(driver.status),
+                          )}
+                        >
                           {driver.status.replace("-", " ")}
                         </Badge>
                       )}
@@ -448,9 +507,13 @@ function DriversPage() {
                           Rest ends {formatMinutesToTime(driver.restUntil)}
                         </span>
                       ) : driver.status === "available" ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">Ready (from {formatMinutesToTime(driver.availableFrom)})</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">
+                          Ready (from {formatMinutesToTime(driver.availableFrom)})
+                        </span>
                       ) : driver.status === "on-duty" ? (
-                        <span className="text-primary font-medium text-[11px]">On Active Route</span>
+                        <span className="text-primary font-medium text-[11px]">
+                          On Active Route
+                        </span>
                       ) : (
                         <span className="text-muted-foreground text-[11px]">Off Shift</span>
                       )}
@@ -504,13 +567,27 @@ function DriversPage() {
                 <div className="flex items-center gap-3.5">
                   <Avatar className="size-14 ring-2 ring-primary/30 shadow-md">
                     <AvatarFallback className="text-base font-bold bg-primary text-primary-foreground">
-                      {selectedDriverDetails.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                      {selectedDriverDetails.name
+                        .split(" ")
+                        .map((n: string) => n[0])
+                        .join("")
+                        .toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="text-base font-bold text-foreground">{selectedDriverDetails.name}</h3>
-                    <p className="font-mono text-xs text-primary font-semibold">{selectedDriverDetails.employeeId}</p>
-                    <Badge variant="outline" className={cn("mt-1 text-[9px] font-mono uppercase font-bold", getStatusBadgeClass(selectedDriverDetails.status))}>
+                    <h3 className="text-base font-bold text-foreground">
+                      {selectedDriverDetails.name}
+                    </h3>
+                    <p className="font-mono text-xs text-primary font-semibold">
+                      {selectedDriverDetails.employeeId}
+                    </p>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "mt-1 text-[9px] font-mono uppercase font-bold",
+                        getStatusBadgeClass(selectedDriverDetails.status),
+                      )}
+                    >
                       {selectedDriverDetails.status}
                     </Badge>
                   </div>
@@ -519,11 +596,17 @@ function DriversPage() {
                 <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-border/60 font-mono">
                   <div>
                     <span className="text-[10px] uppercase text-muted-foreground">Depot Base</span>
-                    <p className="font-medium text-foreground text-[11px] truncate">{selectedDriverDetails.depot}</p>
+                    <p className="font-medium text-foreground text-[11px] truncate">
+                      {selectedDriverDetails.depot}
+                    </p>
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase text-muted-foreground">License Type</span>
-                    <p className="font-medium text-foreground text-[11px] truncate">{selectedDriverDetails.licenseCategory || "HPV Regular"}</p>
+                    <span className="text-[10px] uppercase text-muted-foreground">
+                      License Type
+                    </span>
+                    <p className="font-medium text-foreground text-[11px] truncate">
+                      {selectedDriverDetails.licenseCategory || "HPV Regular"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -541,17 +624,23 @@ function DriversPage() {
                     <span className="font-bold text-foreground">32 / 48 hrs</span>
                   </div>
                   <Progress value={66} className="h-2 bg-secondary" />
-                  <p className="text-[10px] text-muted-foreground">16 hours driving buffer remaining this weekly wave.</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    16 hours driving buffer remaining this weekly wave.
+                  </p>
                 </div>
 
                 <div className="p-2.5 rounded-lg border border-border/60 bg-secondary/20 space-y-1 text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Earliest Available:</span>
-                    <span className="font-mono font-bold">{formatMinutesToTime(selectedDriverDetails.availableFrom)}</span>
+                    <span className="font-mono font-bold">
+                      {formatMinutesToTime(selectedDriverDetails.availableFrom)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Mandatory Rest Until:</span>
-                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{formatMinutesToTime(selectedDriverDetails.restUntil)}</span>
+                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                      {formatMinutesToTime(selectedDriverDetails.restUntil)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -564,7 +653,8 @@ function DriversPage() {
                 </h4>
                 <div className="p-4 rounded-xl border border-dashed border-border/70 text-center text-xs text-muted-foreground bg-secondary/10">
                   <CheckCircle2 className="size-6 text-emerald-500/60 mx-auto mb-1" />
-                  Roster wave compliant. Active sign-on recorded for Salem Central morning peak corridor.
+                  Roster wave compliant. Active sign-on recorded for Salem Central morning peak
+                  corridor.
                 </div>
               </div>
             </div>
@@ -624,7 +714,9 @@ function DriversPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Heavy Passenger Vehicle (HPV)">Heavy Passenger Vehicle (HPV)</SelectItem>
+                      <SelectItem value="Heavy Passenger Vehicle (HPV)">
+                        Heavy Passenger Vehicle (HPV)
+                      </SelectItem>
                       <SelectItem value="Commercial Bus Licence">Commercial Bus Licence</SelectItem>
                     </SelectContent>
                   </Select>
@@ -670,10 +762,19 @@ function DriversPage() {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)} className="text-xs">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateOpen(false)}
+                className="text-xs"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createMutation.isPending} className="bg-primary text-primary-foreground text-xs font-semibold">
+              <Button
+                type="submit"
+                disabled={createMutation.isPending}
+                className="bg-primary text-primary-foreground text-xs font-semibold"
+              >
                 {createMutation.isPending ? "Creating..." : "Save Driver"}
               </Button>
             </DialogFooter>
@@ -746,10 +847,19 @@ function DriversPage() {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} className="text-xs">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditOpen(false)}
+                className="text-xs"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateMutation.isPending} className="bg-primary text-primary-foreground text-xs font-semibold">
+              <Button
+                type="submit"
+                disabled={updateMutation.isPending}
+                className="bg-primary text-primary-foreground text-xs font-semibold"
+              >
                 {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>

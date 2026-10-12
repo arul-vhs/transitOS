@@ -67,12 +67,30 @@ const conductorNames = [
 ];
 
 const busRegistrations = [
-  "TN-30-N-0412", "TN-30-N-0589", "TN-30-N-0631", "TN-30-N-0744",
-  "TN-30-N-0812", "TN-30-N-0955", "TN-27-N-1102", "TN-30-AA-1420",
-  "TN-30-N-1205", "TN-30-N-1342", "TN-30-N-1488", "TN-27-N-1590",
-  "TN-30-AA-2101", "TN-30-N-1677", "TN-30-N-2108", "TN-30-N-2254",
-  "TN-30-N-2390", "TN-27-N-2412", "TN-30-AA-3150", "TN-30-N-3120",
-  "TN-30-N-3285", "TN-30-N-3341", "TN-27-N-3450", "TN-30-AA-4201",
+  "TN-30-N-0412",
+  "TN-30-N-0589",
+  "TN-30-N-0631",
+  "TN-30-N-0744",
+  "TN-30-N-0812",
+  "TN-30-N-0955",
+  "TN-27-N-1102",
+  "TN-30-AA-1420",
+  "TN-30-N-1205",
+  "TN-30-N-1342",
+  "TN-30-N-1488",
+  "TN-27-N-1590",
+  "TN-30-AA-2101",
+  "TN-30-N-1677",
+  "TN-30-N-2108",
+  "TN-30-N-2254",
+  "TN-30-N-2390",
+  "TN-27-N-2412",
+  "TN-30-AA-3150",
+  "TN-30-N-3120",
+  "TN-30-N-3285",
+  "TN-30-N-3341",
+  "TN-27-N-3450",
+  "TN-30-AA-4201",
 ];
 
 const depots = ["Meyyanur Depot", "Johnsonpet Depot", "Hasthampatti Depot", "Steel Plant Depot"];
@@ -81,7 +99,13 @@ export const BUSES: Bus[] = busRegistrations.map((reg, i) => ({
   id: `B${String(i + 1).padStart(3, "0")}`,
   registrationNumber: reg,
   depot: depots[i % depots.length]!,
-  status: (i === 6 ? "maintenance" : i === 13 ? "breakdown" : i === 18 ? "out-of-service" : "available") as any,
+  status: (i === 6
+    ? "maintenance"
+    : i === 13
+      ? "breakdown"
+      : i === 18
+        ? "out-of-service"
+        : "available") as any,
   availableFrom: minutes(5, 30),
 }));
 
@@ -113,7 +137,14 @@ export const ROUTES: TransitRoute[] = [
     lengthKm: 7.2,
     durationMin: 25,
     dailyTrips: 12,
-    stops: stops(["Town Bus Stand", "Collectorate", "Four Roads", "Five Roads", "Suramangalam", "Salem Junction"]),
+    stops: stops([
+      "Town Bus Stand",
+      "Collectorate",
+      "Four Roads",
+      "Five Roads",
+      "Suramangalam",
+      "Salem Junction",
+    ]),
   },
   {
     id: "R13",
@@ -122,7 +153,15 @@ export const ROUTES: TransitRoute[] = [
     lengthKm: 12.8,
     durationMin: 40,
     dailyTrips: 10,
-    stops: stops(["Town Bus Stand", "Collectorate", "Sundar Lodge", "Hasthampatti Roundana", "Gorimedu (Arts College)", "Kannankurichi Lake", "Yercaud Foothills"]),
+    stops: stops([
+      "Town Bus Stand",
+      "Collectorate",
+      "Sundar Lodge",
+      "Hasthampatti Roundana",
+      "Gorimedu (Arts College)",
+      "Kannankurichi Lake",
+      "Yercaud Foothills",
+    ]),
   },
   {
     id: "R4",
@@ -131,7 +170,14 @@ export const ROUTES: TransitRoute[] = [
     lengthKm: 6.5,
     durationMin: 22,
     dailyTrips: 10,
-    stops: stops(["Town Bus Stand", "Shevapet Market", "Gugai Handloom Colony", "Dadagapatti", "Trichy Main Road", "Kondalampatti Roundana"]),
+    stops: stops([
+      "Town Bus Stand",
+      "Shevapet Market",
+      "Gugai Handloom Colony",
+      "Dadagapatti",
+      "Trichy Main Road",
+      "Kondalampatti Roundana",
+    ]),
   },
   {
     id: "R33",
@@ -140,7 +186,15 @@ export const ROUTES: TransitRoute[] = [
     lengthKm: 14.6,
     durationMin: 45,
     dailyTrips: 8,
-    stops: stops(["MGR Central Bus Stand", "Meyyanur", "Five Roads", "Salem Junction", "Mamangam", "Jagir Ammapalayam", "Steel Plant Township"]),
+    stops: stops([
+      "MGR Central Bus Stand",
+      "Meyyanur",
+      "Five Roads",
+      "Salem Junction",
+      "Mamangam",
+      "Jagir Ammapalayam",
+      "Steel Plant Township",
+    ]),
   },
   {
     id: "R8",
@@ -149,7 +203,15 @@ export const ROUTES: TransitRoute[] = [
     lengthKm: 10.2,
     durationMin: 32,
     dailyTrips: 8,
-    stops: stops(["MGR Central Bus Stand", "Five Roads", "Four Roads", "Town Bus Stand", "Pattai Koil", "Ammapet Main Road", "Ammapet Colony Terminus"]),
+    stops: stops([
+      "MGR Central Bus Stand",
+      "Five Roads",
+      "Four Roads",
+      "Town Bus Stand",
+      "Pattai Koil",
+      "Ammapet Main Road",
+      "Ammapet Colony Terminus",
+    ]),
   },
   {
     id: "R74",
@@ -158,7 +220,15 @@ export const ROUTES: TransitRoute[] = [
     lengthKm: 16.5,
     durationMin: 50,
     dailyTrips: 8,
-    stops: stops(["Town Bus Stand", "Four Roads", "MGR Central Bus Stand", "Mamangam", "Karuppur (Periyar Univ)", "Toll Gate (Omalur)", "Omalur Town Bus Stand"]),
+    stops: stops([
+      "Town Bus Stand",
+      "Four Roads",
+      "MGR Central Bus Stand",
+      "Mamangam",
+      "Karuppur (Periyar Univ)",
+      "Toll Gate (Omalur)",
+      "Omalur Town Bus Stand",
+    ]),
   },
   {
     id: "R55",
@@ -167,7 +237,14 @@ export const ROUTES: TransitRoute[] = [
     lengthKm: 8.4,
     durationMin: 28,
     dailyTrips: 8,
-    stops: stops(["MGR Central Bus Stand", "Meyyanur", "Four Roads", "Gugai Handloom Colony", "Annathanapatti", "Seelanaickenpatti Bypass"]),
+    stops: stops([
+      "MGR Central Bus Stand",
+      "Meyyanur",
+      "Four Roads",
+      "Gugai Handloom Colony",
+      "Annathanapatti",
+      "Seelanaickenpatti Bypass",
+    ]),
   },
   {
     id: "R2A",
@@ -176,20 +253,28 @@ export const ROUTES: TransitRoute[] = [
     lengthKm: 15.2,
     durationMin: 48,
     dailyTrips: 8,
-    stops: stops(["Salem Junction", "Suramangalam", "Five Roads", "Four Roads", "Town Bus Stand", "Ammapet Main Road", "Udayapatti", "Ayothiapattinam Bus Stand"]),
+    stops: stops([
+      "Salem Junction",
+      "Suramangalam",
+      "Five Roads",
+      "Four Roads",
+      "Town Bus Stand",
+      "Ammapet Main Road",
+      "Udayapatti",
+      "Ayothiapattinam Bus Stand",
+    ]),
   },
 ];
 
 export const busById = (id: string) => BUSES.find((b) => b.id === id);
-export const crewById = (id: string) =>
-  [...DRIVERS, ...CONDUCTORS].find((c) => c.id === id);
+export const crewById = (id: string) => [...DRIVERS, ...CONDUCTORS].find((c) => c.id === id);
 export const routeById = (id: string) => ROUTES.find((r) => r.id === id);
 
 export const busLabel = (id: string) => busById(id)?.registrationNumber ?? id;
 export const crewLabel = (id: string) => crewById(id)?.name ?? id;
 export const routeLabel = (id: string) => routeById(id)?.code ?? id;
 
-/** Constraint constants — the same values an OR-Tools model would receive. */
+/** Constraint constants - the same values an OR-Tools model would receive. */
 export const CONSTRAINTS = {
   maxDutyMinutes: 300,
   minRestMinutes: 30,

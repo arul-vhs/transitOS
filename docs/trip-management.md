@@ -7,6 +7,7 @@ The Trip Management module implements the database schema, business logic, and u
 A **Trip** represents a single journey of a vehicle along a specific route in a single direction starting at a specific time.
 
 Trips are stored in the `trips` database table:
+
 - **`id`**: Unique UUID primary key.
 - **`tenantId`**: Tenant isolation key.
 - **`routeId`**: Foreign key to the Route.
@@ -21,6 +22,7 @@ Trips are stored in the `trips` database table:
 ## Timetable Generation Engine
 
 Rather than manual scheduling alone, the system supports a **Frequency-Based Timetable Generator**:
+
 - Planners configure:
   - Route Corridor
   - Service Date

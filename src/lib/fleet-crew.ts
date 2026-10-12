@@ -10,7 +10,9 @@ const _getBuses = createServerFn({ method: "GET" })
   });
 
 export const getBuses = async (
-  filters?: { status?: string; depot?: string; search?: string } | { data?: { status?: string; depot?: string; search?: string } }
+  filters?:
+    | { status?: string; depot?: string; search?: string }
+    | { data?: { status?: string; depot?: string; search?: string } },
 ) => {
   return await _getBuses(toServerFnArgs(filters));
 };
@@ -36,7 +38,7 @@ const _createBus = createServerFn({ method: "POST" })
       depot: string;
       status: string;
       availableFrom?: number;
-    }) => data
+    }) => data,
   )
   .handler(async ({ data }) => {
     const { createBusImpl } = await import("../server/fleet-crew");
@@ -64,7 +66,7 @@ export const createBus = async (
           status: string;
           availableFrom?: number;
         };
-      }
+      },
 ) => {
   return await _createBus(toServerFnArgs(data)!);
 };
@@ -82,7 +84,7 @@ const _updateBus = createServerFn({ method: "POST" })
         status: string;
         availableFrom?: number;
       };
-    }) => payload
+    }) => payload,
   )
   .handler(async ({ data }) => {
     const { updateBusImpl } = await import("../server/fleet-crew");
@@ -116,7 +118,7 @@ export const updateBus = async (
             availableFrom?: number;
           };
         };
-      }
+      },
 ) => {
   return await _updateBus(toServerFnArgs(payload)! as any);
 };
@@ -129,7 +131,7 @@ const _updateBusStatus = createServerFn({ method: "POST" })
   });
 
 export const updateBusStatus = async (
-  payload: { id: string; status: string } | { data: { id: string; status: string } }
+  payload: { id: string; status: string } | { data: { id: string; status: string } },
 ) => {
   return await _updateBusStatus(toServerFnArgs(payload)!);
 };
@@ -143,7 +145,9 @@ const _getDrivers = createServerFn({ method: "GET" })
   });
 
 export const getDrivers = async (
-  filters?: { search?: string; status?: string; depot?: string } | { data?: { search?: string; status?: string; depot?: string } }
+  filters?:
+    | { search?: string; status?: string; depot?: string }
+    | { data?: { search?: string; status?: string; depot?: string } },
 ) => {
   return await _getDrivers(toServerFnArgs(filters));
 };
@@ -156,7 +160,9 @@ const _getConductors = createServerFn({ method: "GET" })
   });
 
 export const getConductors = async (
-  filters?: { search?: string; status?: string; depot?: string } | { data?: { search?: string; status?: string; depot?: string } }
+  filters?:
+    | { search?: string; status?: string; depot?: string }
+    | { data?: { search?: string; status?: string; depot?: string } },
 ) => {
   return await _getConductors(toServerFnArgs(filters));
 };
@@ -184,7 +190,7 @@ const _createCrewMember = createServerFn({ method: "POST" })
       restUntil?: number;
       licenseCategory?: string | null;
       licenseExpiry?: Date | null;
-    }) => data
+    }) => data,
   )
   .handler(async ({ data }) => {
     const { createCrewMemberImpl } = await import("../server/fleet-crew");
@@ -216,7 +222,7 @@ export const createCrewMember = async (
           licenseCategory?: string | null;
           licenseExpiry?: Date | null;
         };
-      }
+      },
 ) => {
   return await _createCrewMember(toServerFnArgs(data)!);
 };
@@ -235,7 +241,7 @@ const _updateCrewMember = createServerFn({ method: "POST" })
         licenseCategory?: string | null;
         licenseExpiry?: Date | null;
       };
-    }) => payload
+    }) => payload,
   )
   .handler(async ({ data }) => {
     const { updateCrewMemberImpl } = await import("../server/fleet-crew");
@@ -271,7 +277,7 @@ export const updateCrewMember = async (
             licenseExpiry?: Date | null;
           };
         };
-      }
+      },
 ) => {
   return await _updateCrewMember(toServerFnArgs(payload)! as any);
 };
@@ -284,7 +290,7 @@ const _updateCrewStatus = createServerFn({ method: "POST" })
   });
 
 export const updateCrewStatus = async (
-  payload: { id: string; status: string } | { data: { id: string; status: string } }
+  payload: { id: string; status: string } | { data: { id: string; status: string } },
 ) => {
   return await _updateCrewStatus(toServerFnArgs(payload)!);
 };

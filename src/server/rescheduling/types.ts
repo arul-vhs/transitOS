@@ -10,13 +10,7 @@ export type IncidentType =
   | "MANUAL_DISRUPTION";
 
 export type IncidentStatus =
-  | "OPEN"
-  | "ANALYZING"
-  | "RECOVERY_PROPOSED"
-  | "APPROVED"
-  | "APPLIED"
-  | "RESOLVED"
-  | "CANCELLED";
+  "OPEN" | "ANALYZING" | "RECOVERY_PROPOSED" | "APPROVED" | "APPLIED" | "RESOLVED" | "CANCELLED";
 
 export type ImpactType =
   | "BUS_LOST"

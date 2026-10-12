@@ -77,8 +77,11 @@ export const Route = createFileRoute("/network/routes")({
   },
   head: () => ({
     meta: [
-      { title: "Route Network — TransitOS" },
-      { name: "description", content: "Explore Salem corridors, stop sequence coordinates and overlap." },
+      { title: "Route Network: TransitOS" },
+      {
+        name: "description",
+        content: "Explore Salem corridors, stop sequence coordinates and overlap.",
+      },
     ],
   }),
   component: RoutesPage,
@@ -244,7 +247,9 @@ function RoutesPage() {
             draggable: canManage,
           });
 
-          marker.bindPopup(`<b>Stop ${stop.sequence}: ${stop.name}</b><br/>Sequence: ${stop.sequence}<br/>Drag to move stop position`);
+          marker.bindPopup(
+            `<b>Stop ${stop.sequence}: ${stop.name}</b><br/>Sequence: ${stop.sequence}<br/>Drag to move stop position`,
+          );
 
           if (canManage) {
             marker.on("dragend", async (event: any) => {
@@ -501,7 +506,7 @@ function RoutesPage() {
     createStopMutation.mutate({
       routeId: selectedRouteId,
       name: stopName,
-      sequence: Number(stopSeq || (selectedRouteDetails?.stops?.length + 1) || 1),
+      sequence: Number(stopSeq || selectedRouteDetails?.stops?.length + 1 || 1),
       latitude: stopLat,
       longitude: stopLng,
     });
@@ -558,28 +563,44 @@ function RoutesPage() {
         {/* 1. Metrics overview */}
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
           <div className="glass-card p-4 rounded-xl border flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Corridors</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Total Corridors
+            </span>
             <span className="text-2xl font-bold font-mono mt-1 text-foreground">{totalRoutes}</span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-success flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Active
+            </span>
             <span className="text-2xl font-bold font-mono mt-1 text-success">{activeRoutes}</span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-info flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Draft</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Draft
+            </span>
             <span className="text-2xl font-bold font-mono mt-1 text-info">{draftRoutes}</span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-warning flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Proposed</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Proposed
+            </span>
             <span className="text-2xl font-bold font-mono mt-1 text-warning">{proposedRoutes}</span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-primary flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Avg Length</span>
-            <span className="text-2xl font-bold font-mono mt-1 text-foreground">{avgLength} km</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Avg Length
+            </span>
+            <span className="text-2xl font-bold font-mono mt-1 text-foreground">
+              {avgLength} km
+            </span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-secondary flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Avg Duration</span>
-            <span className="text-2xl font-bold font-mono mt-1 text-foreground">{avgDuration} min</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Avg Duration
+            </span>
+            <span className="text-2xl font-bold font-mono mt-1 text-foreground">
+              {avgDuration} min
+            </span>
           </div>
         </div>
 
@@ -635,9 +656,13 @@ function RoutesPage() {
             </p>
             <div className="max-h-[540px] overflow-y-auto space-y-1.5 pr-1">
               {isLoading ? (
-                <div className="py-10 text-center text-xs text-muted-foreground">Loading corridors...</div>
+                <div className="py-10 text-center text-xs text-muted-foreground">
+                  Loading corridors...
+                </div>
               ) : routesList.length === 0 ? (
-                <div className="py-10 text-center text-xs text-muted-foreground">No corridors match filters.</div>
+                <div className="py-10 text-center text-xs text-muted-foreground">
+                  No corridors match filters.
+                </div>
               ) : (
                 routesList.map((r) => (
                   <button
@@ -647,7 +672,7 @@ function RoutesPage() {
                       "w-full rounded-xl p-3 text-left transition-all duration-150 flex items-center justify-between border cursor-pointer",
                       r.id === selectedRouteId
                         ? "bg-primary/10 border-primary shadow-xs ring-1 ring-primary/30"
-                        : "hover:bg-muted/60 bg-card/50 border-border/70"
+                        : "hover:bg-muted/60 bg-card/50 border-border/70",
                     )}
                   >
                     <div>
@@ -656,8 +681,13 @@ function RoutesPage() {
                           className="size-3 rounded-full border border-white/40 shadow-xs shrink-0"
                           style={{ backgroundColor: r.color || "#3B82F6" }}
                         />
-                        <span className="font-bold text-xs font-mono text-foreground">{r.code}</span>
-                        <Badge variant="outline" className="text-[9px] px-1 py-0 uppercase font-mono">
+                        <span className="font-bold text-xs font-mono text-foreground">
+                          {r.code}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] px-1 py-0 uppercase font-mono"
+                        >
                           {r.direction}
                         </Badge>
                       </div>
@@ -688,28 +718,45 @@ function RoutesPage() {
                         className="size-4 rounded-full border border-white"
                         style={{ backgroundColor: selectedRouteDetails.color || "#3B82F6" }}
                       ></span>
-                      <h2 className="text-lg font-bold text-foreground">{selectedRouteDetails.code}</h2>
-                      <Badge variant="secondary" className="uppercase text-[9px] h-5 px-1 font-semibold">
+                      <h2 className="text-lg font-bold text-foreground">
+                        {selectedRouteDetails.code}
+                      </h2>
+                      <Badge
+                        variant="secondary"
+                        className="uppercase text-[9px] h-5 px-1 font-semibold"
+                      >
                         {selectedRouteDetails.direction}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-0.5">{selectedRouteDetails.name}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {selectedRouteDetails.name}
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     {canManage && (
                       <>
                         <Select
                           value={selectedRouteDetails.status}
-                          onValueChange={(val) => statusMutation.mutate({ id: selectedRouteDetails.id, status: val })}
+                          onValueChange={(val) =>
+                            statusMutation.mutate({ id: selectedRouteDetails.id, status: val })
+                          }
                         >
                           <SelectTrigger className="h-8 w-[120px] text-xs uppercase font-semibold bg-background/50">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="active" className="text-xs uppercase">Active</SelectItem>
-                            <SelectItem value="draft" className="text-xs uppercase">Draft</SelectItem>
-                            <SelectItem value="proposed" className="text-xs uppercase">Proposed</SelectItem>
-                            <SelectItem value="suspended" className="text-xs uppercase">Suspended</SelectItem>
+                            <SelectItem value="active" className="text-xs uppercase">
+                              Active
+                            </SelectItem>
+                            <SelectItem value="draft" className="text-xs uppercase">
+                              Draft
+                            </SelectItem>
+                            <SelectItem value="proposed" className="text-xs uppercase">
+                              Proposed
+                            </SelectItem>
+                            <SelectItem value="suspended" className="text-xs uppercase">
+                              Suspended
+                            </SelectItem>
                           </SelectContent>
                         </Select>
 
@@ -739,7 +786,8 @@ function RoutesPage() {
                       <Map className="size-3.5" /> Map Network
                     </TabsTrigger>
                     <TabsTrigger value="stops" className="flex items-center gap-1">
-                      <ListOrdered className="size-3.5" /> Stops CRUD ({selectedRouteDetails.stops?.length || 0})
+                      <ListOrdered className="size-3.5" /> Stops CRUD (
+                      {selectedRouteDetails.stops?.length || 0})
                     </TabsTrigger>
                     <TabsTrigger value="overlap" className="flex items-center gap-1">
                       <Waypoints className="size-3.5" /> Overlap Analysis
@@ -747,11 +795,19 @@ function RoutesPage() {
                   </TabsList>
 
                   {/* Map Tab */}
-                  <TabsContent value="map" forceMount className={cn("mt-4", activeTab !== "map" && "hidden")}>
+                  <TabsContent
+                    value="map"
+                    forceMount
+                    className={cn("mt-4", activeTab !== "map" && "hidden")}
+                  >
                     <section className="panel overflow-hidden">
                       <div className="bg-secondary/40 px-4 py-2 text-xs text-muted-foreground flex justify-between items-center">
                         <span>Salem OpenStreetMap grid</span>
-                        {canManage && <span className="text-primary font-medium">Draggable Stop Pins Mode Active</span>}
+                        {canManage && (
+                          <span className="text-primary font-medium">
+                            Draggable Stop Pins Mode Active
+                          </span>
+                        )}
                       </div>
                       <div ref={mapRef} className="h-[400px] w-full bg-accent/20 z-0"></div>
                     </section>
@@ -784,16 +840,26 @@ function RoutesPage() {
                                 <TableHead>Stop Name</TableHead>
                                 <TableHead>Latitude</TableHead>
                                 <TableHead>Longitude</TableHead>
-                                {canManage && <TableHead className="w-[180px] text-right">Actions</TableHead>}
+                                {canManage && (
+                                  <TableHead className="w-[180px] text-right">Actions</TableHead>
+                                )}
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               {selectedRouteDetails.stops.map((stop: any, idx: number) => (
                                 <TableRow key={stop.id}>
-                                  <TableCell className="font-mono font-bold text-primary">{stop.sequence}</TableCell>
-                                  <TableCell className="font-semibold text-sm">{stop.name}</TableCell>
-                                  <TableCell className="font-mono text-xs">{Number(stop.latitude).toFixed(6)}</TableCell>
-                                  <TableCell className="font-mono text-xs">{Number(stop.longitude).toFixed(6)}</TableCell>
+                                  <TableCell className="font-mono font-bold text-primary">
+                                    {stop.sequence}
+                                  </TableCell>
+                                  <TableCell className="font-semibold text-sm">
+                                    {stop.name}
+                                  </TableCell>
+                                  <TableCell className="font-mono text-xs">
+                                    {Number(stop.latitude).toFixed(6)}
+                                  </TableCell>
+                                  <TableCell className="font-mono text-xs">
+                                    {Number(stop.longitude).toFixed(6)}
+                                  </TableCell>
                                   {canManage && (
                                     <TableCell className="text-right">
                                       <div className="flex justify-end gap-1.5">
@@ -802,7 +868,12 @@ function RoutesPage() {
                                           size="icon"
                                           className="h-8 w-8 text-muted-foreground"
                                           disabled={idx === 0}
-                                          onClick={() => shiftStopSequenceMutation.mutate({ stop, direction: "up" })}
+                                          onClick={() =>
+                                            shiftStopSequenceMutation.mutate({
+                                              stop,
+                                              direction: "up",
+                                            })
+                                          }
                                         >
                                           <ArrowUpDown className="size-3.5 rotate-180" />
                                           <span className="sr-only">Move Up</span>
@@ -812,7 +883,12 @@ function RoutesPage() {
                                           size="icon"
                                           className="h-8 w-8 text-muted-foreground"
                                           disabled={idx === selectedRouteDetails.stops.length - 1}
-                                          onClick={() => shiftStopSequenceMutation.mutate({ stop, direction: "down" })}
+                                          onClick={() =>
+                                            shiftStopSequenceMutation.mutate({
+                                              stop,
+                                              direction: "down",
+                                            })
+                                          }
                                         >
                                           <ArrowUpDown className="size-3.5" />
                                           <span className="sr-only">Move Down</span>
@@ -849,7 +925,8 @@ function RoutesPage() {
                         <div>
                           <h3 className="text-sm font-semibold">Geometric Overlap Analysis</h3>
                           <p className="text-xs text-muted-foreground">
-                            Calculates corridor overlap against other active corridors in this tenant registry.
+                            Calculates corridor overlap against other active corridors in this
+                            tenant registry.
                           </p>
                         </div>
                         <Button size="sm" onClick={() => runOverlapCheck()}>
@@ -865,31 +942,61 @@ function RoutesPage() {
                         <div className="space-y-4">
                           <div className="grid gap-4 sm:grid-cols-2">
                             {overlapResults.map((result: any) => (
-                              <div key={result.routeId} className="panel p-3 border-l-4 space-y-2 bg-secondary/15" style={{ borderLeftColor: result.severity === "HIGH" ? "var(--color-destructive)" : result.severity === "MEDIUM" ? "var(--color-warning)" : "var(--color-success)" }}>
+                              <div
+                                key={result.routeId}
+                                className="panel p-3 border-l-4 space-y-2 bg-secondary/15"
+                                style={{
+                                  borderLeftColor:
+                                    result.severity === "HIGH"
+                                      ? "var(--color-destructive)"
+                                      : result.severity === "MEDIUM"
+                                        ? "var(--color-warning)"
+                                        : "var(--color-success)",
+                                }}
+                              >
                                 <div className="flex justify-between items-start">
                                   <div>
-                                    <p className="text-sm font-bold text-foreground">{result.routeCode}</p>
-                                    <p className="text-xs text-muted-foreground">{result.routeName}</p>
+                                    <p className="text-sm font-bold text-foreground">
+                                      {result.routeCode}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {result.routeName}
+                                    </p>
                                   </div>
-                                  <Badge className={result.severity === "HIGH" ? "bg-destructive/15 text-destructive border-destructive/25" : result.severity === "MEDIUM" ? "bg-warning/15 text-warning border-warning/25" : "bg-success/15 text-success border-success/25"}>
+                                  <Badge
+                                    className={
+                                      result.severity === "HIGH"
+                                        ? "bg-destructive/15 text-destructive border-destructive/25"
+                                        : result.severity === "MEDIUM"
+                                          ? "bg-warning/15 text-warning border-warning/25"
+                                          : "bg-success/15 text-success border-success/25"
+                                    }
+                                  >
                                     {result.severity}
                                   </Badge>
                                 </div>
                                 <div className="flex justify-between text-xs pt-1">
-                                  <span>Overlap length: <b>{result.overlapDistanceKm} km</b></span>
-                                  <span>Overlap ratio: <b>{result.overlapPercentage}%</b></span>
+                                  <span>
+                                    Overlap length: <b>{result.overlapDistanceKm} km</b>
+                                  </span>
+                                  <span>
+                                    Overlap ratio: <b>{result.overlapPercentage}%</b>
+                                  </span>
                                 </div>
                               </div>
                             ))}
                           </div>
 
-                          {overlapResults.some((r: any) => r.severity === "HIGH" || r.severity === "MEDIUM") && (
+                          {overlapResults.some(
+                            (r: any) => r.severity === "HIGH" || r.severity === "MEDIUM",
+                          ) && (
                             <div className="flex items-start gap-2.5 rounded-lg border border-warning/25 bg-warning/5 px-4 py-3 text-sm text-warning font-medium">
                               <AlertTriangle className="size-4 mt-0.5 shrink-0" />
                               <div>
                                 <p>Moderate/High Corridor Overlaps Detected</p>
                                 <p className="text-xs text-warning/80 font-normal mt-0.5">
-                                  Multiple segments of this route conflict with existing corridors. Consider adjusting the corridor coordinates or stop placements.
+                                  Multiple segments of this route conflict with existing corridors.
+                                  Consider adjusting the corridor coordinates or stop placements.
                                 </p>
                               </div>
                             </div>
@@ -902,7 +1009,8 @@ function RoutesPage() {
               </>
             ) : (
               <div className="panel py-20 text-center text-muted-foreground text-sm">
-                No route selected. Select a route from the sidebar registry or create a new proposed corridor.
+                No route selected. Select a route from the sidebar registry or create a new proposed
+                corridor.
               </div>
             )}
           </div>
@@ -918,12 +1026,15 @@ function RoutesPage() {
             <DialogHeader>
               <DialogTitle>Create Route Corridor</DialogTitle>
               <DialogDescription>
-                Add a new transit route profile. Planners can draw the route points on the planner map afterwards.
+                Add a new transit route profile. Planners can draw the route points on the planner
+                map afterwards.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="code" className="text-right">Route Code</Label>
+                <Label htmlFor="code" className="text-right">
+                  Route Code
+                </Label>
                 <Input
                   id="code"
                   value={formCode}
@@ -934,7 +1045,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">Route Name</Label>
+                <Label htmlFor="name" className="text-right">
+                  Route Name
+                </Label>
                 <Input
                   id="name"
                   value={formName}
@@ -945,7 +1058,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="origin" className="text-right">Origin</Label>
+                <Label htmlFor="origin" className="text-right">
+                  Origin
+                </Label>
                 <Input
                   id="origin"
                   value={formOrigin}
@@ -955,7 +1070,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="destination" className="text-right">Destination</Label>
+                <Label htmlFor="destination" className="text-right">
+                  Destination
+                </Label>
                 <Input
                   id="destination"
                   value={formDestination}
@@ -965,7 +1082,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="length" className="text-right">Length (Km)</Label>
+                <Label htmlFor="length" className="text-right">
+                  Length (Km)
+                </Label>
                 <Input
                   id="length"
                   value={formLengthKm}
@@ -975,7 +1094,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="duration" className="text-right text-xs">Duration (Min)</Label>
+                <Label htmlFor="duration" className="text-right text-xs">
+                  Duration (Min)
+                </Label>
                 <Input
                   id="duration"
                   type="number"
@@ -986,7 +1107,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="direction" className="text-right">Direction</Label>
+                <Label htmlFor="direction" className="text-right">
+                  Direction
+                </Label>
                 <Select value={formDirection} onValueChange={setFormDirection}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue />
@@ -999,7 +1122,9 @@ function RoutesPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="color" className="text-right">Map Color</Label>
+                <Label htmlFor="color" className="text-right">
+                  Map Color
+                </Label>
                 <Input
                   id="color"
                   type="color"
@@ -1010,7 +1135,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="status" className="text-right">Status</Label>
+                <Label htmlFor="status" className="text-right">
+                  Status
+                </Label>
                 <Select value={formStatus} onValueChange={setFormStatus}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue />
@@ -1047,7 +1174,9 @@ function RoutesPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editCode" className="text-right">Route Code</Label>
+                <Label htmlFor="editCode" className="text-right">
+                  Route Code
+                </Label>
                 <Input
                   id="editCode"
                   value={formCode}
@@ -1057,7 +1186,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editName" className="text-right">Route Name</Label>
+                <Label htmlFor="editName" className="text-right">
+                  Route Name
+                </Label>
                 <Input
                   id="editName"
                   value={formName}
@@ -1067,7 +1198,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editOrigin" className="text-right">Origin</Label>
+                <Label htmlFor="editOrigin" className="text-right">
+                  Origin
+                </Label>
                 <Input
                   id="editOrigin"
                   value={formOrigin}
@@ -1076,7 +1209,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editDestination" className="text-right">Destination</Label>
+                <Label htmlFor="editDestination" className="text-right">
+                  Destination
+                </Label>
                 <Input
                   id="editDestination"
                   value={formDestination}
@@ -1085,7 +1220,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editLength" className="text-right">Length (Km)</Label>
+                <Label htmlFor="editLength" className="text-right">
+                  Length (Km)
+                </Label>
                 <Input
                   id="editLength"
                   value={formLengthKm}
@@ -1095,7 +1232,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editDuration" className="text-right text-xs">Duration (Min)</Label>
+                <Label htmlFor="editDuration" className="text-right text-xs">
+                  Duration (Min)
+                </Label>
                 <Input
                   id="editDuration"
                   type="number"
@@ -1106,7 +1245,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editDirection" className="text-right">Direction</Label>
+                <Label htmlFor="editDirection" className="text-right">
+                  Direction
+                </Label>
                 <Select value={formDirection} onValueChange={setFormDirection}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue />
@@ -1119,7 +1260,9 @@ function RoutesPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editColor" className="text-right">Map Color</Label>
+                <Label htmlFor="editColor" className="text-right">
+                  Map Color
+                </Label>
                 <Input
                   id="editColor"
                   type="color"
@@ -1149,12 +1292,15 @@ function RoutesPage() {
             <DialogHeader>
               <DialogTitle>Add Stop Node</DialogTitle>
               <DialogDescription>
-                Assign a stop location and sequencing order to route corridor `{selectedRouteDetails?.code}`.
+                Assign a stop location and sequencing order to route corridor `
+                {selectedRouteDetails?.code}`.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="stopName" className="text-right">Stop Name</Label>
+                <Label htmlFor="stopName" className="text-right">
+                  Stop Name
+                </Label>
                 <Input
                   id="stopName"
                   value={stopName}
@@ -1165,7 +1311,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="stopSeq" className="text-right text-xs">Seq. Order</Label>
+                <Label htmlFor="stopSeq" className="text-right text-xs">
+                  Seq. Order
+                </Label>
                 <Input
                   id="stopSeq"
                   type="number"
@@ -1177,7 +1325,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="stopLat" className="text-right">Latitude</Label>
+                <Label htmlFor="stopLat" className="text-right">
+                  Latitude
+                </Label>
                 <Input
                   id="stopLat"
                   value={stopLat}
@@ -1188,7 +1338,9 @@ function RoutesPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="stopLng" className="text-right">Longitude</Label>
+                <Label htmlFor="stopLng" className="text-right">
+                  Longitude
+                </Label>
                 <Input
                   id="stopLng"
                   value={stopLng}

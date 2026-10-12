@@ -51,7 +51,7 @@ export const Route = createFileRoute("/crew/availability")({
   },
   head: () => ({
     meta: [
-      { title: "Crew Availability Matrix — TransitOS" },
+      { title: "Crew Availability Matrix: TransitOS" },
       { name: "description", content: "Visual crew availability, shift waves and rest timelines." },
     ],
   }),

@@ -1,12 +1,23 @@
 import { db } from "./index";
-import { tenants, buses, crew, routes, stops, trips, duties, dutyTrips, dutyCrewSegments, users } from "./schema";
+import {
+  tenants,
+  buses,
+  crew,
+  routes,
+  stops,
+  trips,
+  duties,
+  dutyTrips,
+  dutyCrewSegments,
+  users,
+} from "./schema";
 import { sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 const minutes = (h: number, m = 0) => h * 60 + m;
 
 async function main() {
-  console.log("🌱 Starting real-world Salem City database seeding...");
+  console.log("[SEED] Starting real-world Salem City database seeding...");
 
   // 1. Clear existing data in reverse order of foreign key relationships
   console.log("Cleaning existing database records...");
@@ -26,10 +37,13 @@ async function main() {
 
   // 2. Seed Tenant: Salem Transport Corporation
   console.log("Seeding tenant: Salem Transport Corporation...");
-  const [tenant] = await db.insert(tenants).values({
-    name: "Salem Transport Corporation",
-    slug: "salem-transport",
-  }).returning();
+  const [tenant] = await db
+    .insert(tenants)
+    .values({
+      name: "Salem Transport Corporation",
+      slug: "salem-transport",
+    })
+    .returning();
 
   const tenantId = tenant!.id;
 
@@ -37,12 +51,48 @@ async function main() {
   console.log("Seeding users...");
   const pw = await bcrypt.hash("password123", 10);
   const userValues = [
-    { tenantId, name: "System Admin", email: "admin@salemtransport.demo", passwordHash: pw, role: "ORGANIZATION_ADMIN" },
-    { tenantId, name: "Platform Admin", email: "platform@salemtransport.demo", passwordHash: pw, role: "PLATFORM_ADMIN" },
-    { tenantId, name: "Roster Planner", email: "planner@salemtransport.demo", passwordHash: pw, role: "ROUTE_PLANNER" },
-    { tenantId, name: "Chief Scheduler", email: "scheduler@salemtransport.demo", passwordHash: pw, role: "SCHEDULER" },
-    { tenantId, name: "Depot Manager", email: "depot@salemtransport.demo", passwordHash: pw, role: "DEPOT_MANAGER" },
-    { tenantId, name: "Management Executive", email: "management@salemtransport.demo", passwordHash: pw, role: "MANAGEMENT" },
+    {
+      tenantId,
+      name: "System Admin",
+      email: "admin@salemtransport.demo",
+      passwordHash: pw,
+      role: "ORGANIZATION_ADMIN",
+    },
+    {
+      tenantId,
+      name: "Platform Admin",
+      email: "platform@salemtransport.demo",
+      passwordHash: pw,
+      role: "PLATFORM_ADMIN",
+    },
+    {
+      tenantId,
+      name: "Roster Planner",
+      email: "planner@salemtransport.demo",
+      passwordHash: pw,
+      role: "ROUTE_PLANNER",
+    },
+    {
+      tenantId,
+      name: "Chief Scheduler",
+      email: "scheduler@salemtransport.demo",
+      passwordHash: pw,
+      role: "SCHEDULER",
+    },
+    {
+      tenantId,
+      name: "Depot Manager",
+      email: "depot@salemtransport.demo",
+      passwordHash: pw,
+      role: "DEPOT_MANAGER",
+    },
+    {
+      tenantId,
+      name: "Management Executive",
+      email: "management@salemtransport.demo",
+      passwordHash: pw,
+      role: "MANAGEMENT",
+    },
   ];
   await db.insert(users).values(userValues);
   console.log(`Seeded ${userValues.length} users.`);
@@ -51,36 +101,204 @@ async function main() {
   console.log("Seeding Salem city bus fleet...");
   const busDefs = [
     // Meyyanur Depot (Depot-1, adjoining MGR Central Bus Stand)
-    { reg: "TN-30-N-0412", fleet: "SLM-MY-101", depot: "Meyyanur Depot", type: "Ashok Leyland 210 HP BS-VI Viking", cap: 48, status: "available" },
-    { reg: "TN-30-N-0589", fleet: "SLM-MY-102", depot: "Meyyanur Depot", type: "Ashok Leyland Semi-Low Floor SLF", cap: 42, status: "available" },
-    { reg: "TN-30-N-0631", fleet: "SLM-MY-103", depot: "Meyyanur Depot", type: "Tata Marcopolo Starbus Ultra", cap: 32, status: "available" },
-    { reg: "TN-30-N-0744", fleet: "SLM-MY-104", depot: "Meyyanur Depot", type: "Ashok Leyland 210 HP BS-VI Viking", cap: 48, status: "assigned" },
-    { reg: "TN-30-N-0812", fleet: "SLM-MY-105", depot: "Meyyanur Depot", type: "Ashok Leyland Semi-Low Floor SLF", cap: 42, status: "assigned" },
-    { reg: "TN-30-N-0955", fleet: "SLM-MY-106", depot: "Meyyanur Depot", type: "Tata Marcopolo Starbus Ultra", cap: 32, status: "available" },
-    { reg: "TN-27-N-1102", fleet: "SLM-MY-107", depot: "Meyyanur Depot", type: "Ashok Leyland Suburban Liner", cap: 52, status: "maintenance" },
-    { reg: "TN-30-AA-1420", fleet: "SLM-MY-108", depot: "Meyyanur Depot", type: "Ashok Leyland 210 HP BS-VI Viking", cap: 48, status: "available" },
+    {
+      reg: "TN-30-N-0412",
+      fleet: "SLM-MY-101",
+      depot: "Meyyanur Depot",
+      type: "Ashok Leyland 210 HP BS-VI Viking",
+      cap: 48,
+      status: "available",
+    },
+    {
+      reg: "TN-30-N-0589",
+      fleet: "SLM-MY-102",
+      depot: "Meyyanur Depot",
+      type: "Ashok Leyland Semi-Low Floor SLF",
+      cap: 42,
+      status: "available",
+    },
+    {
+      reg: "TN-30-N-0631",
+      fleet: "SLM-MY-103",
+      depot: "Meyyanur Depot",
+      type: "Tata Marcopolo Starbus Ultra",
+      cap: 32,
+      status: "available",
+    },
+    {
+      reg: "TN-30-N-0744",
+      fleet: "SLM-MY-104",
+      depot: "Meyyanur Depot",
+      type: "Ashok Leyland 210 HP BS-VI Viking",
+      cap: 48,
+      status: "assigned",
+    },
+    {
+      reg: "TN-30-N-0812",
+      fleet: "SLM-MY-105",
+      depot: "Meyyanur Depot",
+      type: "Ashok Leyland Semi-Low Floor SLF",
+      cap: 42,
+      status: "assigned",
+    },
+    {
+      reg: "TN-30-N-0955",
+      fleet: "SLM-MY-106",
+      depot: "Meyyanur Depot",
+      type: "Tata Marcopolo Starbus Ultra",
+      cap: 32,
+      status: "available",
+    },
+    {
+      reg: "TN-27-N-1102",
+      fleet: "SLM-MY-107",
+      depot: "Meyyanur Depot",
+      type: "Ashok Leyland Suburban Liner",
+      cap: 52,
+      status: "maintenance",
+    },
+    {
+      reg: "TN-30-AA-1420",
+      fleet: "SLM-MY-108",
+      depot: "Meyyanur Depot",
+      type: "Ashok Leyland 210 HP BS-VI Viking",
+      cap: 48,
+      status: "available",
+    },
 
     // Johnsonpet Depot (Depot-2, Town Bus Stand & central corridors)
-    { reg: "TN-30-N-1205", fleet: "SLM-JP-201", depot: "Johnsonpet Depot", type: "Ashok Leyland 210 HP BS-VI Viking", cap: 48, status: "available" },
-    { reg: "TN-30-N-1342", fleet: "SLM-JP-202", depot: "Johnsonpet Depot", type: "Ashok Leyland Semi-Low Floor SLF", cap: 42, status: "available" },
-    { reg: "TN-30-N-1488", fleet: "SLM-JP-203", depot: "Johnsonpet Depot", type: "Tata Marcopolo Starbus Ultra", cap: 32, status: "assigned" },
-    { reg: "TN-27-N-1590", fleet: "SLM-JP-204", depot: "Johnsonpet Depot", type: "Ashok Leyland 210 HP BS-VI Viking", cap: 48, status: "assigned" },
-    { reg: "TN-30-AA-2101", fleet: "SLM-JP-205", depot: "Johnsonpet Depot", type: "Ashok Leyland Semi-Low Floor SLF", cap: 42, status: "available" },
-    { reg: "TN-30-N-1677", fleet: "SLM-JP-206", depot: "Johnsonpet Depot", type: "Ashok Leyland Suburban Liner", cap: 52, status: "breakdown" },
+    {
+      reg: "TN-30-N-1205",
+      fleet: "SLM-JP-201",
+      depot: "Johnsonpet Depot",
+      type: "Ashok Leyland 210 HP BS-VI Viking",
+      cap: 48,
+      status: "available",
+    },
+    {
+      reg: "TN-30-N-1342",
+      fleet: "SLM-JP-202",
+      depot: "Johnsonpet Depot",
+      type: "Ashok Leyland Semi-Low Floor SLF",
+      cap: 42,
+      status: "available",
+    },
+    {
+      reg: "TN-30-N-1488",
+      fleet: "SLM-JP-203",
+      depot: "Johnsonpet Depot",
+      type: "Tata Marcopolo Starbus Ultra",
+      cap: 32,
+      status: "assigned",
+    },
+    {
+      reg: "TN-27-N-1590",
+      fleet: "SLM-JP-204",
+      depot: "Johnsonpet Depot",
+      type: "Ashok Leyland 210 HP BS-VI Viking",
+      cap: 48,
+      status: "assigned",
+    },
+    {
+      reg: "TN-30-AA-2101",
+      fleet: "SLM-JP-205",
+      depot: "Johnsonpet Depot",
+      type: "Ashok Leyland Semi-Low Floor SLF",
+      cap: 42,
+      status: "available",
+    },
+    {
+      reg: "TN-30-N-1677",
+      fleet: "SLM-JP-206",
+      depot: "Johnsonpet Depot",
+      type: "Ashok Leyland Suburban Liner",
+      cap: 52,
+      status: "breakdown",
+    },
 
     // Hasthampatti Depot (North Salem, Gorimedu & Yercaud foothills)
-    { reg: "TN-30-N-2108", fleet: "SLM-HP-301", depot: "Hasthampatti Depot", type: "Ashok Leyland 210 HP BS-VI Viking", cap: 48, status: "available" },
-    { reg: "TN-30-N-2254", fleet: "SLM-HP-302", depot: "Hasthampatti Depot", type: "Ashok Leyland Semi-Low Floor SLF", cap: 42, status: "available" },
-    { reg: "TN-30-N-2390", fleet: "SLM-HP-303", depot: "Hasthampatti Depot", type: "Tata Marcopolo Starbus Ultra", cap: 32, status: "assigned" },
-    { reg: "TN-27-N-2412", fleet: "SLM-HP-304", depot: "Hasthampatti Depot", type: "Ashok Leyland 210 HP BS-VI Viking", cap: 48, status: "available" },
-    { reg: "TN-30-AA-3150", fleet: "SLM-HP-305", depot: "Hasthampatti Depot", type: "Ashok Leyland Suburban Liner", cap: 52, status: "out-of-service" },
+    {
+      reg: "TN-30-N-2108",
+      fleet: "SLM-HP-301",
+      depot: "Hasthampatti Depot",
+      type: "Ashok Leyland 210 HP BS-VI Viking",
+      cap: 48,
+      status: "available",
+    },
+    {
+      reg: "TN-30-N-2254",
+      fleet: "SLM-HP-302",
+      depot: "Hasthampatti Depot",
+      type: "Ashok Leyland Semi-Low Floor SLF",
+      cap: 42,
+      status: "available",
+    },
+    {
+      reg: "TN-30-N-2390",
+      fleet: "SLM-HP-303",
+      depot: "Hasthampatti Depot",
+      type: "Tata Marcopolo Starbus Ultra",
+      cap: 32,
+      status: "assigned",
+    },
+    {
+      reg: "TN-27-N-2412",
+      fleet: "SLM-HP-304",
+      depot: "Hasthampatti Depot",
+      type: "Ashok Leyland 210 HP BS-VI Viking",
+      cap: 48,
+      status: "available",
+    },
+    {
+      reg: "TN-30-AA-3150",
+      fleet: "SLM-HP-305",
+      depot: "Hasthampatti Depot",
+      type: "Ashok Leyland Suburban Liner",
+      cap: 52,
+      status: "out-of-service",
+    },
 
     // Steel Plant Depot (Suramangalam, Mamangam & western corridors)
-    { reg: "TN-30-N-3120", fleet: "SLM-SP-401", depot: "Steel Plant Depot", type: "Ashok Leyland 210 HP BS-VI Viking", cap: 48, status: "available" },
-    { reg: "TN-30-N-3285", fleet: "SLM-SP-402", depot: "Steel Plant Depot", type: "Ashok Leyland Semi-Low Floor SLF", cap: 42, status: "available" },
-    { reg: "TN-30-N-3341", fleet: "SLM-SP-403", depot: "Steel Plant Depot", type: "Tata Marcopolo Starbus Ultra", cap: 32, status: "assigned" },
-    { reg: "TN-27-N-3450", fleet: "SLM-SP-404", depot: "Steel Plant Depot", type: "Ashok Leyland 210 HP BS-VI Viking", cap: 48, status: "assigned" },
-    { reg: "TN-30-AA-4201", fleet: "SLM-SP-405", depot: "Steel Plant Depot", type: "Ashok Leyland Suburban Liner", cap: 52, status: "available" },
+    {
+      reg: "TN-30-N-3120",
+      fleet: "SLM-SP-401",
+      depot: "Steel Plant Depot",
+      type: "Ashok Leyland 210 HP BS-VI Viking",
+      cap: 48,
+      status: "available",
+    },
+    {
+      reg: "TN-30-N-3285",
+      fleet: "SLM-SP-402",
+      depot: "Steel Plant Depot",
+      type: "Ashok Leyland Semi-Low Floor SLF",
+      cap: 42,
+      status: "available",
+    },
+    {
+      reg: "TN-30-N-3341",
+      fleet: "SLM-SP-403",
+      depot: "Steel Plant Depot",
+      type: "Tata Marcopolo Starbus Ultra",
+      cap: 32,
+      status: "assigned",
+    },
+    {
+      reg: "TN-27-N-3450",
+      fleet: "SLM-SP-404",
+      depot: "Steel Plant Depot",
+      type: "Ashok Leyland 210 HP BS-VI Viking",
+      cap: 48,
+      status: "assigned",
+    },
+    {
+      reg: "TN-30-AA-4201",
+      fleet: "SLM-SP-405",
+      depot: "Steel Plant Depot",
+      type: "Ashok Leyland Suburban Liner",
+      cap: 52,
+      status: "available",
+    },
   ];
 
   const busValues = busDefs.map((b) => ({
@@ -206,38 +424,38 @@ async function main() {
   // 6. High-Precision Salem Landmark Coordinates
   const STOP_COORDINATES: Record<string, { lat: number; lng: number }> = {
     "Town Bus Stand": { lat: 11.6528, lng: 78.1591 },
-    "Bose Maidan": { lat: 11.6542, lng: 78.1580 },
-    "Collectorate": { lat: 11.6580, lng: 78.1550 },
-    "Sundar Lodge": { lat: 11.6625, lng: 78.1560 },
+    "Bose Maidan": { lat: 11.6542, lng: 78.158 },
+    Collectorate: { lat: 11.658, lng: 78.155 },
+    "Sundar Lodge": { lat: 11.6625, lng: 78.156 },
     "Four Roads": { lat: 11.6668, lng: 78.1565 },
     "Five Roads": { lat: 11.6705, lng: 78.1437 },
     "MGR Central Bus Stand": { lat: 11.6673, lng: 78.1424 },
-    "Meyyanur": { lat: 11.6685, lng: 78.1380 },
-    "Swarnapuri": { lat: 11.6710, lng: 78.1320 },
-    "Suramangalam": { lat: 11.6718, lng: 78.1170 },
+    Meyyanur: { lat: 11.6685, lng: 78.138 },
+    Swarnapuri: { lat: 11.671, lng: 78.132 },
+    Suramangalam: { lat: 11.6718, lng: 78.117 },
     "Salem Junction": { lat: 11.6714, lng: 78.1132 },
     "Hasthampatti Roundana": { lat: 11.6795, lng: 78.1573 },
     "Gorimedu (Arts College)": { lat: 11.6965, lng: 78.1635 },
-    "Kannankurichi Lake": { lat: 11.6989, lng: 78.1790 },
+    "Kannankurichi Lake": { lat: 11.6989, lng: 78.179 },
     "Yercaud Foothills": { lat: 11.7125, lng: 78.1885 },
-    "Shevapet Market": { lat: 11.6520, lng: 78.1430 },
+    "Shevapet Market": { lat: 11.652, lng: 78.143 },
     "Gugai Handloom Colony": { lat: 11.6432, lng: 78.1508 },
-    "Dadagapatti": { lat: 11.6360, lng: 78.1480 },
-    "Trichy Main Road": { lat: 11.6315, lng: 78.1380 },
+    Dadagapatti: { lat: 11.636, lng: 78.148 },
+    "Trichy Main Road": { lat: 11.6315, lng: 78.138 },
     "Kondalampatti Roundana": { lat: 11.6305, lng: 78.1248 },
-    "Mamangam": { lat: 11.6850, lng: 78.1150 },
-    "Jagir Ammapalayam": { lat: 11.6780, lng: 78.1020 },
-    "Steel Plant Township": { lat: 11.6710, lng: 78.0940 },
-    "Pattai Koil": { lat: 11.6540, lng: 78.1710 },
+    Mamangam: { lat: 11.685, lng: 78.115 },
+    "Jagir Ammapalayam": { lat: 11.678, lng: 78.102 },
+    "Steel Plant Township": { lat: 11.671, lng: 78.094 },
+    "Pattai Koil": { lat: 11.654, lng: 78.171 },
     "Ammapet Main Road": { lat: 11.6548, lng: 78.1877 },
-    "Ammapet Colony Terminus": { lat: 11.6570, lng: 78.1950 },
-    "Karuppur (Periyar Univ)": { lat: 11.7180, lng: 78.0780 },
-    "Toll Gate (Omalur)": { lat: 11.7320, lng: 78.0580 },
+    "Ammapet Colony Terminus": { lat: 11.657, lng: 78.195 },
+    "Karuppur (Periyar Univ)": { lat: 11.718, lng: 78.078 },
+    "Toll Gate (Omalur)": { lat: 11.732, lng: 78.058 },
     "Omalur Town Bus Stand": { lat: 11.7436, lng: 78.0476 },
-    "Annathanapatti": { lat: 11.6380, lng: 78.1460 },
-    "Seelanaickenpatti Bypass": { lat: 11.6228, lng: 78.1450 },
-    "Udayapatti": { lat: 11.6620, lng: 78.2120 },
-    "Ayothiapattinam Bus Stand": { lat: 11.6745, lng: 78.2520 },
+    Annathanapatti: { lat: 11.638, lng: 78.146 },
+    "Seelanaickenpatti Bypass": { lat: 11.6228, lng: 78.145 },
+    Udayapatti: { lat: 11.662, lng: 78.212 },
+    "Ayothiapattinam Bus Stand": { lat: 11.6745, lng: 78.252 },
   };
 
   // 7. Seed Real Salem Bus Routes
@@ -252,7 +470,14 @@ async function main() {
       color: "#2563EB", // Blue
       peakFrequency: 10,
       offPeakFrequency: 15,
-      stops: ["Town Bus Stand", "Collectorate", "Four Roads", "Five Roads", "Suramangalam", "Salem Junction"],
+      stops: [
+        "Town Bus Stand",
+        "Collectorate",
+        "Four Roads",
+        "Five Roads",
+        "Suramangalam",
+        "Salem Junction",
+      ],
     },
     {
       code: "Route 13",
@@ -263,7 +488,15 @@ async function main() {
       color: "#059669", // Emerald Green
       peakFrequency: 15,
       offPeakFrequency: 30,
-      stops: ["Town Bus Stand", "Collectorate", "Sundar Lodge", "Hasthampatti Roundana", "Gorimedu (Arts College)", "Kannankurichi Lake", "Yercaud Foothills"],
+      stops: [
+        "Town Bus Stand",
+        "Collectorate",
+        "Sundar Lodge",
+        "Hasthampatti Roundana",
+        "Gorimedu (Arts College)",
+        "Kannankurichi Lake",
+        "Yercaud Foothills",
+      ],
     },
     {
       code: "Route 4",
@@ -274,7 +507,14 @@ async function main() {
       color: "#DC2626", // Red
       peakFrequency: 12,
       offPeakFrequency: 20,
-      stops: ["Town Bus Stand", "Shevapet Market", "Gugai Handloom Colony", "Dadagapatti", "Trichy Main Road", "Kondalampatti Roundana"],
+      stops: [
+        "Town Bus Stand",
+        "Shevapet Market",
+        "Gugai Handloom Colony",
+        "Dadagapatti",
+        "Trichy Main Road",
+        "Kondalampatti Roundana",
+      ],
     },
     {
       code: "Route 33",
@@ -282,10 +522,18 @@ async function main() {
       lengthKm: "14.60",
       durationMin: 45,
       direction: "UP",
-      color: "#7C3AED", // Purple
+      color: "#2563EB", // Primary Blue
       peakFrequency: 20,
       offPeakFrequency: 40,
-      stops: ["MGR Central Bus Stand", "Meyyanur", "Five Roads", "Salem Junction", "Mamangam", "Jagir Ammapalayam", "Steel Plant Township"],
+      stops: [
+        "MGR Central Bus Stand",
+        "Meyyanur",
+        "Five Roads",
+        "Salem Junction",
+        "Mamangam",
+        "Jagir Ammapalayam",
+        "Steel Plant Township",
+      ],
     },
     {
       code: "Route 8",
@@ -296,7 +544,15 @@ async function main() {
       color: "#EA580C", // Orange
       peakFrequency: 15,
       offPeakFrequency: 25,
-      stops: ["MGR Central Bus Stand", "Five Roads", "Four Roads", "Town Bus Stand", "Pattai Koil", "Ammapet Main Road", "Ammapet Colony Terminus"],
+      stops: [
+        "MGR Central Bus Stand",
+        "Five Roads",
+        "Four Roads",
+        "Town Bus Stand",
+        "Pattai Koil",
+        "Ammapet Main Road",
+        "Ammapet Colony Terminus",
+      ],
     },
     {
       code: "Route 74",
@@ -307,7 +563,15 @@ async function main() {
       color: "#0891B2", // Cyan
       peakFrequency: 20,
       offPeakFrequency: 35,
-      stops: ["Town Bus Stand", "Four Roads", "MGR Central Bus Stand", "Mamangam", "Karuppur (Periyar Univ)", "Toll Gate (Omalur)", "Omalur Town Bus Stand"],
+      stops: [
+        "Town Bus Stand",
+        "Four Roads",
+        "MGR Central Bus Stand",
+        "Mamangam",
+        "Karuppur (Periyar Univ)",
+        "Toll Gate (Omalur)",
+        "Omalur Town Bus Stand",
+      ],
     },
     {
       code: "Route 55",
@@ -318,7 +582,14 @@ async function main() {
       color: "#D97706", // Amber
       peakFrequency: 15,
       offPeakFrequency: 30,
-      stops: ["MGR Central Bus Stand", "Meyyanur", "Four Roads", "Gugai Handloom Colony", "Annathanapatti", "Seelanaickenpatti Bypass"],
+      stops: [
+        "MGR Central Bus Stand",
+        "Meyyanur",
+        "Four Roads",
+        "Gugai Handloom Colony",
+        "Annathanapatti",
+        "Seelanaickenpatti Bypass",
+      ],
     },
     {
       code: "Route 2A",
@@ -329,7 +600,16 @@ async function main() {
       color: "#DB2777", // Pink
       peakFrequency: 20,
       offPeakFrequency: 40,
-      stops: ["Salem Junction", "Suramangalam", "Five Roads", "Four Roads", "Town Bus Stand", "Ammapet Main Road", "Udayapatti", "Ayothiapattinam Bus Stand"],
+      stops: [
+        "Salem Junction",
+        "Suramangalam",
+        "Five Roads",
+        "Four Roads",
+        "Town Bus Stand",
+        "Ammapet Main Road",
+        "Udayapatti",
+        "Ayothiapattinam Bus Stand",
+      ],
     },
   ];
 
@@ -346,21 +626,24 @@ async function main() {
       coordinates: routeCoords,
     };
 
-    const [route] = await db.insert(routes).values({
-      tenantId,
-      code: r.code,
-      name: r.name,
-      origin: r.stops[0],
-      destination: r.stops[r.stops.length - 1],
-      lengthKm: r.lengthKm,
-      durationMin: r.durationMin,
-      direction: r.direction,
-      color: r.color,
-      peakFrequency: r.peakFrequency,
-      offPeakFrequency: r.offPeakFrequency,
-      status: "active",
-      geometryGeojson: geojson,
-    }).returning();
+    const [route] = await db
+      .insert(routes)
+      .values({
+        tenantId,
+        code: r.code,
+        name: r.name,
+        origin: r.stops[0],
+        destination: r.stops[r.stops.length - 1],
+        lengthKm: r.lengthKm,
+        durationMin: r.durationMin,
+        direction: r.direction,
+        color: r.color,
+        peakFrequency: r.peakFrequency,
+        offPeakFrequency: r.offPeakFrequency,
+        status: "active",
+        geometryGeojson: geojson,
+      })
+      .returning();
 
     seededRoutesMap[r.code] = route!.id;
 
@@ -445,23 +728,26 @@ async function main() {
 
   for (const t of tripsData) {
     const routeId = seededRoutesMap[t.routeCode]!;
-    const route = routeData.find(r => r.code === t.routeCode)!;
+    const route = routeData.find((r) => r.code === t.routeCode)!;
     const end = t.start + route.durationMin;
 
-    const [insertedTrip] = await db.insert(trips).values({
-      tenantId,
-      routeId,
-      tripCode: t.code,
-      direction: t.dir,
-      startTime: t.start,
-      endTime: end,
-      durationMin: route.durationMin,
-      distanceKm: route.lengthKm,
-      origin: t.dir === "OUTBOUND" ? route.stops[0]! : route.stops[route.stops.length - 1]!,
-      destination: t.dir === "OUTBOUND" ? route.stops[route.stops.length - 1]! : route.stops[0]!,
-      status: "planned",
-      serviceDate,
-    }).returning();
+    const [insertedTrip] = await db
+      .insert(trips)
+      .values({
+        tenantId,
+        routeId,
+        tripCode: t.code,
+        direction: t.dir,
+        startTime: t.start,
+        endTime: end,
+        durationMin: route.durationMin,
+        distanceKm: route.lengthKm,
+        origin: t.dir === "OUTBOUND" ? route.stops[0]! : route.stops[route.stops.length - 1]!,
+        destination: t.dir === "OUTBOUND" ? route.stops[route.stops.length - 1]! : route.stops[0]!,
+        status: "planned",
+        serviceDate,
+      })
+      .returning();
 
     seededTripsMap[t.code] = insertedTrip!.id;
   }
@@ -470,9 +756,11 @@ async function main() {
   // 9. Seed Operational Duties (14 Linked Duties, 4 Unlinked Duties)
   console.log("Seeding operational duties and crew rosters...");
 
-  const availableBuses = seededBuses.filter(b => b.status === "available" || b.status === "assigned");
-  const drivers = seededCrew.filter(c => c.role === "driver");
-  const conductors = seededCrew.filter(c => c.role === "conductor");
+  const availableBuses = seededBuses.filter(
+    (b) => b.status === "available" || b.status === "assigned",
+  );
+  const drivers = seededCrew.filter((c) => c.role === "driver");
+  const conductors = seededCrew.filter((c) => c.role === "conductor");
 
   // Pairings for Linked Duties
   const linkedDutyConfigs = [
@@ -498,18 +786,21 @@ async function main() {
     const driver = drivers[i % drivers.length]!;
     const conductor = conductors[i % conductors.length]!;
 
-    const [dutyRecord] = await db.insert(duties).values({
-      tenantId,
-      dutyCode: config.code,
-      dutyType: "LINKED",
-      serviceDate,
-      startTime: minutes(6, 0),
-      endTime: minutes(11, 30),
-      status: "assigned",
-      busId: bus.id,
-      driverId: driver.id,
-      conductorId: conductor.id,
-    }).returning();
+    const [dutyRecord] = await db
+      .insert(duties)
+      .values({
+        tenantId,
+        dutyCode: config.code,
+        dutyType: "LINKED",
+        serviceDate,
+        startTime: minutes(6, 0),
+        endTime: minutes(11, 30),
+        status: "assigned",
+        busId: bus.id,
+        driverId: driver.id,
+        conductorId: conductor.id,
+      })
+      .returning();
 
     for (let seq = 0; seq < config.trips.length; seq++) {
       const tripCode = config.trips[seq]!;
@@ -528,16 +819,19 @@ async function main() {
 
   // Unlinked Duty 1 (Route 13 Yercaud Foothills Corridor with driver handover at Town Bus Stand)
   const unlinkedBus1 = availableBuses[14 % availableBuses.length]!;
-  const [unlinkedDuty1] = await db.insert(duties).values({
-    tenantId,
-    dutyCode: "U-SLM-201",
-    dutyType: "UNLINKED",
-    serviceDate,
-    startTime: minutes(6, 15),
-    endTime: minutes(11, 30),
-    status: "published",
-    busId: unlinkedBus1.id,
-  }).returning();
+  const [unlinkedDuty1] = await db
+    .insert(duties)
+    .values({
+      tenantId,
+      dutyCode: "U-SLM-201",
+      dutyType: "UNLINKED",
+      serviceDate,
+      startTime: minutes(6, 15),
+      endTime: minutes(11, 30),
+      status: "published",
+      busId: unlinkedBus1.id,
+    })
+    .returning();
 
   const u1Trip1 = seededTripsMap["R13-0615"]!;
   const u1Trip2 = seededTripsMap["R13-0705"]!;
@@ -572,16 +866,19 @@ async function main() {
 
   // Unlinked Duty 2 (Route 2A Salem Junction ⇄ Ayothiapattinam with handover at Town Bus Stand)
   const unlinkedBus2 = availableBuses[15 % availableBuses.length]!;
-  const [unlinkedDuty2] = await db.insert(duties).values({
-    tenantId,
-    dutyCode: "U-SLM-202",
-    dutyType: "UNLINKED",
-    serviceDate,
-    startTime: minutes(6, 45),
-    endTime: minutes(10, 40),
-    status: "published",
-    busId: unlinkedBus2.id,
-  }).returning();
+  const [unlinkedDuty2] = await db
+    .insert(duties)
+    .values({
+      tenantId,
+      dutyCode: "U-SLM-202",
+      dutyType: "UNLINKED",
+      serviceDate,
+      startTime: minutes(6, 45),
+      endTime: minutes(10, 40),
+      status: "published",
+      busId: unlinkedBus2.id,
+    })
+    .returning();
 
   const u2Trip1 = seededTripsMap["R2A-0645"]!;
   const u2Trip2 = seededTripsMap["R2A-0745"]!;
@@ -614,16 +911,19 @@ async function main() {
 
   // Unlinked Duty 3 (Route 33 Steel Plant Corridor)
   const unlinkedBus3 = availableBuses[16 % availableBuses.length]!;
-  const [unlinkedDuty3] = await db.insert(duties).values({
-    tenantId,
-    dutyCode: "U-SLM-203",
-    dutyType: "UNLINKED",
-    serviceDate,
-    startTime: minutes(8, 20),
-    endTime: minutes(12, 0),
-    status: "published",
-    busId: unlinkedBus3.id,
-  }).returning();
+  const [unlinkedDuty3] = await db
+    .insert(duties)
+    .values({
+      tenantId,
+      dutyCode: "U-SLM-203",
+      dutyType: "UNLINKED",
+      serviceDate,
+      startTime: minutes(8, 20),
+      endTime: minutes(12, 0),
+      status: "published",
+      busId: unlinkedBus3.id,
+    })
+    .returning();
 
   const u3Trip1 = seededTripsMap["R33-0820"]!;
   const u3Trip2 = seededTripsMap["R33-0915"]!;
@@ -656,16 +956,19 @@ async function main() {
 
   // Unlinked Duty 4 (Route 74 Omalur Corridor)
   const unlinkedBus4 = availableBuses[17 % availableBuses.length]!;
-  const [unlinkedDuty4] = await db.insert(duties).values({
-    tenantId,
-    dutyCode: "U-SLM-204",
-    dutyType: "UNLINKED",
-    serviceDate,
-    startTime: minutes(8, 50),
-    endTime: minutes(12, 30),
-    status: "published",
-    busId: unlinkedBus4.id,
-  }).returning();
+  const [unlinkedDuty4] = await db
+    .insert(duties)
+    .values({
+      tenantId,
+      dutyCode: "U-SLM-204",
+      dutyType: "UNLINKED",
+      serviceDate,
+      startTime: minutes(8, 50),
+      endTime: minutes(12, 30),
+      status: "published",
+      busId: unlinkedBus4.id,
+    })
+    .returning();
 
   const u4Trip1 = seededTripsMap["R74-0850"]!;
   const u4Trip2 = seededTripsMap["R74-0950"]!;
@@ -697,11 +1000,11 @@ async function main() {
   ]);
 
   console.log(`Seeded 18 duties (14 linked, 4 unlinked) with realistic crew handovers.`);
-  console.log("🎉 Real-world Salem City data seeding completed successfully!");
+  console.log("[SUCCESS] Real-world Salem City data seeding completed successfully!");
   process.exit(0);
 }
 
 main().catch((err) => {
-  console.error("❌ Seeding failed with error:", err);
+  console.error("[ERROR] Seeding failed with error:", err);
   process.exit(1);
 });

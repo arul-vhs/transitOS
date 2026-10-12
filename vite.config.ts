@@ -16,4 +16,3 @@ export default defineConfig({
     preset: process.env.NITRO_PRESET || "cloudflare-pages",
   },
 });
-

@@ -56,10 +56,11 @@ export const Route = createFileRoute("/analytics/")({
   },
   head: () => ({
     meta: [
-      { title: "Operations Intelligence & Analytics — TransitOS" },
+      { title: "Operations Intelligence & Analytics: TransitOS" },
       {
         name: "description",
-        content: "Operational analytics dashboard for fleet utilization, schedule compliance, and disruption containment.",
+        content:
+          "Operational analytics dashboard for fleet utilization, schedule compliance, and disruption containment.",
       },
     ],
   }),
@@ -152,13 +153,20 @@ function AnalyticsDashboardPage() {
             <div className="grid size-6 place-items-center rounded-md bg-primary/10 text-primary">
               <SlidersHorizontal className="size-3.5" />
             </div>
-            <span>Executive Dashboard View: <strong>Salem Transport Corporation</strong></span>
+            <span>
+              Executive Dashboard View: <strong>Salem Transport Corporation</strong>
+            </span>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[10px] font-mono">
+            <Badge
+              variant="outline"
+              className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[10px] font-mono"
+            >
               ● Live Telemetry
             </Badge>
-            <Badge variant="secondary" className="uppercase text-[9px] font-mono font-bold">{userRole}</Badge>
+            <Badge variant="secondary" className="uppercase text-[9px] font-mono font-bold">
+              {userRole}
+            </Badge>
           </div>
         </div>
 
@@ -225,10 +233,13 @@ function AnalyticsDashboardPage() {
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                   <Activity className="size-4 text-primary" /> Service Reliability
                 </h3>
-                <Badge variant="outline" className="text-[9px] font-mono">94% Target</Badge>
+                <Badge variant="outline" className="text-[9px] font-mono">
+                  94% Target
+                </Badge>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Plan vs Actual departure variance, arrival timelines, and cancel ratios scoped to tenant date ranges.
+                Plan vs Actual departure variance, arrival timelines, and cancel ratios scoped to
+                tenant date ranges.
               </p>
               <div className="pt-2 space-y-1">
                 <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
@@ -252,10 +263,13 @@ function AnalyticsDashboardPage() {
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                   <Compass className="size-4 text-info" /> Route Performance
                 </h3>
-                <Badge variant="outline" className="text-[9px] font-mono">6 Corridors</Badge>
+                <Badge variant="outline" className="text-[9px] font-mono">
+                  6 Corridors
+                </Badge>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Completion rates, delay statistics, and passenger headway indexing across active Salem routes.
+                Completion rates, delay statistics, and passenger headway indexing across active
+                Salem routes.
               </p>
               <div className="pt-2 space-y-1">
                 <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
@@ -279,10 +293,13 @@ function AnalyticsDashboardPage() {
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                   <BusIcon className="size-4 text-warning" /> Fleet Utilization
                 </h3>
-                <Badge variant="outline" className="text-[9px] font-mono">84% In Use</Badge>
+                <Badge variant="outline" className="text-[9px] font-mono">
+                  84% In Use
+                </Badge>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Operating hours per bus, vehicle breakdown downtime, and maintenance inspection frequencies.
+                Operating hours per bus, vehicle breakdown downtime, and maintenance inspection
+                frequencies.
               </p>
               <div className="pt-2 space-y-1">
                 <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
@@ -306,10 +323,13 @@ function AnalyticsDashboardPage() {
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                   <Users className="size-4 text-success" /> Crew Utilization
                 </h3>
-                <Badge variant="outline" className="text-[9px] font-mono">Compliant</Badge>
+                <Badge variant="outline" className="text-[9px] font-mono">
+                  Compliant
+                </Badge>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Duty segment durations, unlinked crew segment handovers, and rest compliance checks under MV Act.
+                Duty segment durations, unlinked crew segment handovers, and rest compliance checks
+                under MV Act.
               </p>
               <div className="pt-2 space-y-1">
                 <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
@@ -333,10 +353,13 @@ function AnalyticsDashboardPage() {
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                   <AlertTriangle className="size-4 text-destructive" /> Incidents & Recovery
                 </h3>
-                <Badge variant="outline" className="text-[9px] font-mono text-emerald-600">100% Solved</Badge>
+                <Badge variant="outline" className="text-[9px] font-mono text-emerald-600">
+                  100% Solved
+                </Badge>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Disruption recovery success statistics, delay reductions, and algorithmic re-routing records.
+                Disruption recovery success statistics, delay reductions, and algorithmic re-routing
+                records.
               </p>
               <div className="pt-2 space-y-1">
                 <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
@@ -360,7 +383,9 @@ function AnalyticsDashboardPage() {
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                   <Building2 className="size-4 text-primary" /> Meyyanur Central Depot
                 </h3>
-                <Badge variant="outline" className="text-[9px] font-mono">Hub</Badge>
+                <Badge variant="outline" className="text-[9px] font-mono">
+                  Hub
+                </Badge>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Active fleet inventory, crew distribution, unassigned runs, and dispatch adherence.
@@ -371,7 +396,9 @@ function AnalyticsDashboardPage() {
                 depotStats.map((d: any) => (
                   <div key={d.depot} className="py-1.5 flex justify-between">
                     <span>{d.depot}</span>
-                    <span className="font-mono font-bold text-foreground">Util: {d.utilizationRate}%</span>
+                    <span className="font-mono font-bold text-foreground">
+                      Util: {d.utilizationRate}%
+                    </span>
                   </div>
                 ))
               ) : (
@@ -407,13 +434,23 @@ function KPICard({
   isAlert?: boolean;
 }) {
   return (
-    <div className={cn("glass-card p-4 rounded-xl border border-l-4 flex flex-col justify-between", color || "border-l-primary")}>
+    <div
+      className={cn(
+        "glass-card p-4 rounded-xl border border-l-4 flex flex-col justify-between",
+        color || "border-l-primary",
+      )}
+    >
       <div className="flex items-center justify-between text-muted-foreground">
         <span className="text-[10px] font-bold uppercase tracking-wider">{title}</span>
         <Icon className={cn("size-3.5", isAlert ? "text-destructive" : "text-primary")} />
       </div>
       <div className="mt-2 flex items-baseline justify-between">
-        <span className={cn("text-2xl font-bold font-mono", isAlert ? "text-destructive" : "text-foreground")}>
+        <span
+          className={cn(
+            "text-2xl font-bold font-mono",
+            isAlert ? "text-destructive" : "text-foreground",
+          )}
+        >
           {value}
         </span>
       </div>

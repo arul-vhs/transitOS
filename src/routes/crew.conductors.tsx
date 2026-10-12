@@ -70,8 +70,11 @@ export const Route = createFileRoute("/crew/conductors")({
   },
   head: () => ({
     meta: [
-      { title: "Conductor Roster & Profile — TransitOS" },
-      { name: "description", content: "Conductor rosters, ticketing machine registers and availability." },
+      { title: "Conductor Roster & Profile: TransitOS" },
+      {
+        name: "description",
+        content: "Conductor rosters, ticketing machine registers and availability.",
+      },
     ],
   }),
   component: ConductorsPage,
@@ -281,23 +284,33 @@ function ConductorsPage() {
         {/* 1. METRICS OVERVIEW */}
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
           <div className="glass-card p-4 rounded-xl border flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Conductors</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Total Conductors
+            </span>
             <span className="text-2xl font-bold font-mono mt-1 text-foreground">{totalCount}</span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-success flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Available</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Available
+            </span>
             <span className="text-2xl font-bold font-mono mt-1 text-success">{availableCount}</span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-primary flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">On Active Duty</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              On Active Duty
+            </span>
             <span className="text-2xl font-bold font-mono mt-1 text-primary">{onDutyCount}</span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-warning flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Resting</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Resting
+            </span>
             <span className="text-2xl font-bold font-mono mt-1 text-warning">{restingCount}</span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-destructive flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">On Leave</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              On Leave
+            </span>
             <span className="text-2xl font-bold font-mono mt-1 text-destructive">{leaveCount}</span>
           </div>
         </div>
@@ -350,7 +363,9 @@ function ConductorsPage() {
         {/* 3. CONDUCTORS TABLE */}
         <div className="glass-panel overflow-hidden">
           {isLoading ? (
-            <div className="py-16 text-center text-xs text-muted-foreground">Loading conductor registry...</div>
+            <div className="py-16 text-center text-xs text-muted-foreground">
+              Loading conductor registry...
+            </div>
           ) : conductorsList.length === 0 ? (
             <div className="py-16 text-center text-xs text-muted-foreground">
               No conductors found matching current search.
@@ -370,19 +385,30 @@ function ConductorsPage() {
               </TableHeader>
               <TableBody>
                 {conductorsList.map((conductor) => (
-                  <TableRow key={conductor.id} className="border-border/40 hover:bg-muted/40 transition-colors">
-                    <TableCell className="font-semibold text-primary font-mono text-xs">{conductor.employeeId}</TableCell>
+                  <TableRow
+                    key={conductor.id}
+                    className="border-border/40 hover:bg-muted/40 transition-colors"
+                  >
+                    <TableCell className="font-semibold text-primary font-mono text-xs">
+                      {conductor.employeeId}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2.5">
                         <Avatar className="size-7">
                           <AvatarFallback className="text-[10px] font-bold bg-warning/10 text-warning">
-                            {conductor.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                            {conductor.name
+                              .split(" ")
+                              .map((n: string) => n[0])
+                              .join("")
+                              .toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <span className="font-bold text-xs text-foreground">{conductor.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{conductor.depot}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {conductor.depot}
+                    </TableCell>
                     <TableCell className="text-xs font-mono">
                       <span className="inline-flex items-center gap-1 text-muted-foreground">
                         <Ticket className="size-3 text-warning" />
@@ -397,19 +423,52 @@ function ConductorsPage() {
                             statusMutation.mutate({ id: conductor.id, status: val })
                           }
                         >
-                          <SelectTrigger className={cn("h-7 w-28 text-[10px] font-semibold uppercase tracking-wider border", getStatusBadgeClass(conductor.status))}>
+                          <SelectTrigger
+                            className={cn(
+                              "h-7 w-28 text-[10px] font-semibold uppercase tracking-wider border",
+                              getStatusBadgeClass(conductor.status),
+                            )}
+                          >
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="available" className="text-xs uppercase text-emerald-600">Available</SelectItem>
-                            <SelectItem value="on-duty" className="text-xs uppercase text-primary">On Duty</SelectItem>
-                            <SelectItem value="resting" className="text-xs uppercase text-amber-600">Resting</SelectItem>
-                            <SelectItem value="leave" className="text-xs uppercase text-destructive">Leave</SelectItem>
-                            <SelectItem value="unavailable" className="text-xs uppercase text-muted-foreground">Unavailable</SelectItem>
+                            <SelectItem
+                              value="available"
+                              className="text-xs uppercase text-emerald-600"
+                            >
+                              Available
+                            </SelectItem>
+                            <SelectItem value="on-duty" className="text-xs uppercase text-primary">
+                              On Duty
+                            </SelectItem>
+                            <SelectItem
+                              value="resting"
+                              className="text-xs uppercase text-amber-600"
+                            >
+                              Resting
+                            </SelectItem>
+                            <SelectItem
+                              value="leave"
+                              className="text-xs uppercase text-destructive"
+                            >
+                              Leave
+                            </SelectItem>
+                            <SelectItem
+                              value="unavailable"
+                              className="text-xs uppercase text-muted-foreground"
+                            >
+                              Unavailable
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       ) : (
-                        <Badge variant="outline" className={cn("text-[9px] font-semibold uppercase font-mono", getStatusBadgeClass(conductor.status))}>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[9px] font-semibold uppercase font-mono",
+                            getStatusBadgeClass(conductor.status),
+                          )}
+                        >
                           {conductor.status.replace("-", " ")}
                         </Badge>
                       )}
@@ -421,9 +480,13 @@ function ConductorsPage() {
                           Rest ends {formatMinutesToTime(conductor.restUntil)}
                         </span>
                       ) : conductor.status === "available" ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">Ready (from {formatMinutesToTime(conductor.availableFrom)})</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">
+                          Ready (from {formatMinutesToTime(conductor.availableFrom)})
+                        </span>
                       ) : conductor.status === "on-duty" ? (
-                        <span className="text-primary font-medium text-[11px]">On Active Route</span>
+                        <span className="text-primary font-medium text-[11px]">
+                          On Active Route
+                        </span>
                       ) : (
                         <span className="text-muted-foreground text-[11px]">Off Shift</span>
                       )}
@@ -477,13 +540,27 @@ function ConductorsPage() {
                 <div className="flex items-center gap-3.5">
                   <Avatar className="size-14 ring-2 ring-warning/30 shadow-md">
                     <AvatarFallback className="text-base font-bold bg-warning text-warning-foreground">
-                      {selectedConductorDetails.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                      {selectedConductorDetails.name
+                        .split(" ")
+                        .map((n: string) => n[0])
+                        .join("")
+                        .toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="text-base font-bold text-foreground">{selectedConductorDetails.name}</h3>
-                    <p className="font-mono text-xs text-warning font-semibold">{selectedConductorDetails.employeeId}</p>
-                    <Badge variant="outline" className={cn("mt-1 text-[9px] font-mono uppercase font-bold", getStatusBadgeClass(selectedConductorDetails.status))}>
+                    <h3 className="text-base font-bold text-foreground">
+                      {selectedConductorDetails.name}
+                    </h3>
+                    <p className="font-mono text-xs text-warning font-semibold">
+                      {selectedConductorDetails.employeeId}
+                    </p>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "mt-1 text-[9px] font-mono uppercase font-bold",
+                        getStatusBadgeClass(selectedConductorDetails.status),
+                      )}
+                    >
                       {selectedConductorDetails.status}
                     </Badge>
                   </div>
@@ -492,11 +569,17 @@ function ConductorsPage() {
                 <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-border/60 font-mono">
                   <div>
                     <span className="text-[10px] uppercase text-muted-foreground">Depot Base</span>
-                    <p className="font-medium text-foreground text-[11px] truncate">{selectedConductorDetails.depot}</p>
+                    <p className="font-medium text-foreground text-[11px] truncate">
+                      {selectedConductorDetails.depot}
+                    </p>
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase text-muted-foreground">Ticketing ETM</span>
-                    <p className="font-medium text-foreground text-[11px] truncate">ETM-{selectedConductorDetails.employeeId.slice(-3)}</p>
+                    <span className="text-[10px] uppercase text-muted-foreground">
+                      Ticketing ETM
+                    </span>
+                    <p className="font-medium text-foreground text-[11px] truncate">
+                      ETM-{selectedConductorDetails.employeeId.slice(-3)}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -511,11 +594,15 @@ function ConductorsPage() {
                 <div className="p-2.5 rounded-lg border border-border/60 bg-secondary/20 space-y-1 text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Available From:</span>
-                    <span className="font-mono font-bold">{formatMinutesToTime(selectedConductorDetails.availableFrom)}</span>
+                    <span className="font-mono font-bold">
+                      {formatMinutesToTime(selectedConductorDetails.availableFrom)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Rest Limit:</span>
-                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{formatMinutesToTime(selectedConductorDetails.restUntil)}</span>
+                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                      {formatMinutesToTime(selectedConductorDetails.restUntil)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -609,10 +696,19 @@ function ConductorsPage() {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)} className="text-xs">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateOpen(false)}
+                className="text-xs"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createMutation.isPending} className="bg-primary text-primary-foreground text-xs font-semibold">
+              <Button
+                type="submit"
+                disabled={createMutation.isPending}
+                className="bg-primary text-primary-foreground text-xs font-semibold"
+              >
                 {createMutation.isPending ? "Creating..." : "Save Conductor"}
               </Button>
             </DialogFooter>
@@ -673,10 +769,19 @@ function ConductorsPage() {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} className="text-xs">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditOpen(false)}
+                className="text-xs"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateMutation.isPending} className="bg-primary text-primary-foreground text-xs font-semibold">
+              <Button
+                type="submit"
+                disabled={updateMutation.isPending}
+                className="bg-primary text-primary-foreground text-xs font-semibold"
+              >
                 {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>

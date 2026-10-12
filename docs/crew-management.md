@@ -11,7 +11,9 @@ Crew members (drivers and conductors) are stored in the PostgreSQL database usin
 ```typescript
 export const crew = pgTable("crew", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
   employeeId: varchar("employee_id", { length: 50 }).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   role: varchar("role", { length: 50 }).notNull(), // "driver" or "conductor"
@@ -27,6 +29,7 @@ export const crew = pgTable("crew", {
 ```
 
 ### Constraints & Indexes
+
 - **Tenant Scope Isolation**: Row-level isolation is logically enforced using an index on `tenant_id`.
 - **Tenant Uniqueness**: Uniqueness is enforced on `employee_id` within each individual tenant scope:
   - `unique("crew_tenant_employee_id_unique").on(table.tenantId, table.employeeId)`
@@ -67,6 +70,7 @@ The module exports clean client-safe RPC-bridged TanStack Start server functions
 ## 4. Availability Timeline
 
 The `/crew/availability` screen translates the current database status and time markers (`availableFrom`, `restUntil`) into a visual hourly grid:
+
 - Grid represents hours from `06:00` to `22:00`.
 - Cells are color-coded based on active constraints:
   - Green: Available
@@ -80,6 +84,7 @@ The `/crew/availability` screen translates the current database status and time 
 ## 5. Audit Logging & Compliance
 
 All crew management modifications are tracked:
+
 - **`DRIVER_CREATED` / `CONDUCTOR_CREATED`**
 - **`DRIVER_UPDATED` / `CONDUCTOR_UPDATED`**
 - **`DRIVER_STATUS_CHANGED` / `CONDUCTOR_STATUS_CHANGED`**
@@ -89,6 +94,7 @@ All crew management modifications are tracked:
 ## 6. Future Scheduling Engine Integration
 
 The scheduler resolves candidate crew pairs (one driver, one conductor) dynamically:
+
 - Candidate selection checks that `licenseExpiry` is in the future.
 - Check-ins verify that `restUntil` constraints are met.
 - Supports both **Linked Duties** (crew and vehicle stay together for the block) and **Unlinked Duties** (crew handovers occur during service intervals).

@@ -9,9 +9,9 @@ export const Route = createFileRoute("/analytics")({
   },
   head: () => ({
     meta: [
-      { title: "Analytics — TransitOS" },
+      { title: "Analytics: TransitOS" },
       { name: "description", content: "Punctuality, utilisation and disruption analytics." },
-      { property: "og:title", content: "Analytics — TransitOS" },
+      { property: "og:title", content: "Analytics: TransitOS" },
       { property: "og:description", content: "Punctuality, utilisation and disruption analytics." },
     ],
   }),

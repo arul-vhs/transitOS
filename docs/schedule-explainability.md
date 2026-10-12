@@ -5,6 +5,7 @@ Explainability is a core feature of the TransitOS Scheduling Engine. When the so
 ## Bottleneck Diagnostics
 
 The explainability engine analyze candidate profiles and timelines:
+
 1. **Total Resource Shortage**:
    - No active buses: `"No active buses available in the fleet registry."`
    - No active crew: `"No active drivers available. Check for expired licenses or status locks."`

@@ -63,7 +63,7 @@ export const Route = createFileRoute("/operations/trips")({
   },
   head: () => ({
     meta: [
-      { title: "Trip Management — TransitOS" },
+      { title: "Trip Management: TransitOS" },
       { name: "description", content: "Timetable registers and frequency-based generators." },
     ],
   }),
@@ -227,12 +227,18 @@ function TripsPage() {
             <div className="text-xs">
               <p className="font-bold text-foreground flex items-center gap-1.5">
                 <span>Timetable Management Guide</span>
-                <Badge variant="outline" className="text-[9px] font-mono border-primary/30 text-primary">
+                <Badge
+                  variant="outline"
+                  className="text-[9px] font-mono border-primary/30 text-primary"
+                >
                   Step 2 of 4
                 </Badge>
               </p>
               <p className="text-muted-foreground mt-0.5 leading-relaxed">
-                A <strong>Trip</strong> is a single one-way bus journey at a scheduled departure time. Once trips are listed here, open the <strong>AI Schedule Optimizer</strong> to group them into driver shifts (duties) and bus rosters with zero legal rest violations.
+                A <strong>Trip</strong> is a single one-way bus journey at a scheduled departure
+                time. Once trips are listed here, open the <strong>AI Schedule Optimizer</strong> to
+                group them into driver shifts (duties) and bus rosters with zero legal rest
+                violations.
               </p>
             </div>
           </div>
@@ -248,7 +254,11 @@ function TripsPage() {
                 Generate Timetable
               </Button>
             )}
-            <Button asChild size="sm" className="text-xs h-8 gap-1.5 bg-primary text-primary-foreground">
+            <Button
+              asChild
+              size="sm"
+              className="text-xs h-8 gap-1.5 bg-primary text-primary-foreground"
+            >
               <Link to="/scheduling/optimizer">
                 <span>Run AI Optimizer</span>
                 <ArrowRight className="size-3" />
@@ -335,25 +345,31 @@ function TripsPage() {
           </div>
 
           <Badge variant="outline" className="font-mono text-xs border-primary/30 text-primary">
-            {tripsList.filter((t) => {
-              if (!searchQuery.trim()) return true;
-              const q = searchQuery.toLowerCase();
-              return (
-                t.tripCode?.toLowerCase().includes(q) ||
-                t.routeCode?.toLowerCase().includes(q) ||
-                t.routeName?.toLowerCase().includes(q)
-              );
-            }).length} Trips Displayed
+            {
+              tripsList.filter((t) => {
+                if (!searchQuery.trim()) return true;
+                const q = searchQuery.toLowerCase();
+                return (
+                  t.tripCode?.toLowerCase().includes(q) ||
+                  t.routeCode?.toLowerCase().includes(q) ||
+                  t.routeName?.toLowerCase().includes(q)
+                );
+              }).length
+            }{" "}
+            Trips Displayed
           </Badge>
         </div>
 
         {/* 2. Main Trips Table */}
         <section className="panel overflow-hidden">
           {isLoading ? (
-            <div className="py-20 text-center text-xs text-muted-foreground">Loading scheduled trips...</div>
+            <div className="py-20 text-center text-xs text-muted-foreground">
+              Loading scheduled trips...
+            </div>
           ) : tripsList.length === 0 ? (
             <div className="py-20 text-center text-xs text-muted-foreground">
-              No trips scheduled for this date matching the filters. Click "Generate Timetable" to populate.
+              No trips scheduled for this date matching the filters. Click "Generate Timetable" to
+              populate.
             </div>
           ) : (
             <Table>
@@ -383,48 +399,66 @@ function TripsPage() {
                     );
                   })
                   .map((t) => (
-                  <TableRow key={t.id} className={t.status === "cancelled" ? "opacity-60 bg-muted/5" : ""}>
-                    <TableCell className="font-mono font-bold text-primary">{t.tripCode}</TableCell>
-                    <TableCell className="font-semibold text-xs">{t.routeCode}</TableCell>
-                    <TableCell className="text-sm font-medium">{t.routeName}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-[9px] uppercase font-bold px-1.5 h-5">
-                        {t.direction}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono font-semibold">{formatMinutesToTime(t.startTime)}</TableCell>
-                    <TableCell className="font-mono text-muted-foreground">{formatMinutesToTime(t.endTime)}</TableCell>
-                    <TableCell className="font-mono text-xs">{t.durationMin} min</TableCell>
-                    <TableCell className="font-mono text-xs">{t.distanceKm} km</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={t.status === "cancelled" ? "destructive" : t.status === "planned" ? "secondary" : "default"}
-                        className="text-[9px] uppercase font-bold py-0.5"
-                      >
-                        {t.status}
-                      </Badge>
-                    </TableCell>
-                    {canModify && (
-                      <TableCell className="text-right">
-                        {t.status !== "cancelled" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                            onClick={() => {
-                              if (confirm(`Cancel trip ${t.tripCode}?`)) {
-                                cancelTripMutation.mutate(t.id);
-                              }
-                            }}
-                          >
-                            <Ban className="size-3.5" />
-                            <span className="sr-only">Cancel Trip</span>
-                          </Button>
-                        )}
+                    <TableRow
+                      key={t.id}
+                      className={t.status === "cancelled" ? "opacity-60 bg-muted/5" : ""}
+                    >
+                      <TableCell className="font-mono font-bold text-primary">
+                        {t.tripCode}
                       </TableCell>
-                    )}
-                  </TableRow>
-                ))}
+                      <TableCell className="font-semibold text-xs">{t.routeCode}</TableCell>
+                      <TableCell className="text-sm font-medium">{t.routeName}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] uppercase font-bold px-1.5 h-5"
+                        >
+                          {t.direction}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono font-semibold">
+                        {formatMinutesToTime(t.startTime)}
+                      </TableCell>
+                      <TableCell className="font-mono text-muted-foreground">
+                        {formatMinutesToTime(t.endTime)}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{t.durationMin} min</TableCell>
+                      <TableCell className="font-mono text-xs">{t.distanceKm} km</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            t.status === "cancelled"
+                              ? "destructive"
+                              : t.status === "planned"
+                                ? "secondary"
+                                : "default"
+                          }
+                          className="text-[9px] uppercase font-bold py-0.5"
+                        >
+                          {t.status}
+                        </Badge>
+                      </TableCell>
+                      {canModify && (
+                        <TableCell className="text-right">
+                          {t.status !== "cancelled" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                              onClick={() => {
+                                if (confirm(`Cancel trip ${t.tripCode}?`)) {
+                                  cancelTripMutation.mutate(t.id);
+                                }
+                              }}
+                            >
+                              <Ban className="size-3.5" />
+                              <span className="sr-only">Cancel Trip</span>
+                            </Button>
+                          )}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
           )}
@@ -438,12 +472,15 @@ function TripsPage() {
             <DialogHeader>
               <DialogTitle>Create Scheduled Trip</DialogTitle>
               <DialogDescription>
-                Schedule an individual trip. Code, duration and endpoints are auto-resolved from route geometries.
+                Schedule an individual trip. Code, duration and endpoints are auto-resolved from
+                route geometries.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="route" className="text-right">Route</Label>
+                <Label htmlFor="route" className="text-right">
+                  Route
+                </Label>
                 <Select value={formRouteId} onValueChange={setFormRouteId}>
                   <SelectTrigger id="route" className="col-span-3">
                     <SelectValue />
@@ -458,7 +495,9 @@ function TripsPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="start" className="text-right">Start Time</Label>
+                <Label htmlFor="start" className="text-right">
+                  Start Time
+                </Label>
                 <Input
                   id="start"
                   type="time"
@@ -469,7 +508,9 @@ function TripsPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="date" className="text-right text-xs">Service Date</Label>
+                <Label htmlFor="date" className="text-right text-xs">
+                  Service Date
+                </Label>
                 <Input
                   id="date"
                   value={formServiceDate}
@@ -479,7 +520,9 @@ function TripsPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="directionForm" className="text-right">Direction</Label>
+                <Label htmlFor="directionForm" className="text-right">
+                  Direction
+                </Label>
                 <Select value={formDirection} onValueChange={setFormDirection}>
                   <SelectTrigger id="directionForm" className="col-span-3">
                     <SelectValue />
@@ -510,12 +553,15 @@ function TripsPage() {
             <DialogHeader>
               <DialogTitle>Generate Route Timetable</DialogTitle>
               <DialogDescription>
-                Generate multiple sequential trips for date <b>{serviceDate}</b> at a custom frequency interval.
+                Generate multiple sequential trips for date <b>{serviceDate}</b> at a custom
+                frequency interval.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="genRoute" className="text-right">Route</Label>
+                <Label htmlFor="genRoute" className="text-right">
+                  Route
+                </Label>
                 <Select value={genRouteId} onValueChange={setGenRouteId}>
                   <SelectTrigger id="genRoute" className="col-span-3">
                     <SelectValue />
@@ -530,7 +576,9 @@ function TripsPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="genStart" className="text-right text-xs">Start Limit</Label>
+                <Label htmlFor="genStart" className="text-right text-xs">
+                  Start Limit
+                </Label>
                 <Input
                   id="genStart"
                   type="time"
@@ -541,7 +589,9 @@ function TripsPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="genEnd" className="text-right text-xs">End Limit</Label>
+                <Label htmlFor="genEnd" className="text-right text-xs">
+                  End Limit
+                </Label>
                 <Input
                   id="genEnd"
                   type="time"
@@ -552,7 +602,9 @@ function TripsPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="genFreq" className="text-right text-xs">Freq (min)</Label>
+                <Label htmlFor="genFreq" className="text-right text-xs">
+                  Freq (min)
+                </Label>
                 <Input
                   id="genFreq"
                   type="number"
@@ -564,7 +616,9 @@ function TripsPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="genDirection" className="text-right">Direction</Label>
+                <Label htmlFor="genDirection" className="text-right">
+                  Direction
+                </Label>
                 <Select value={genDirection} onValueChange={setGenDirection}>
                   <SelectTrigger id="genDirection" className="col-span-3">
                     <SelectValue />
@@ -592,18 +646,29 @@ function TripsPage() {
                         <Sparkles className="size-3.5 text-primary" />
                         <span>Generator Live Preview</span>
                       </span>
-                      <Badge variant="outline" className="font-mono text-[10px] border-primary/40 text-primary bg-primary/10">
+                      <Badge
+                        variant="outline"
+                        className="font-mono text-[10px] border-primary/40 text-primary bg-primary/10"
+                      >
                         ~{estTrips} Trips to Create
                       </Badge>
                     </div>
                     <p className="text-[11px] text-muted-foreground leading-snug">
-                      Corridor: <strong className="text-foreground">{selectedRouteObj ? `${selectedRouteObj.code} (${selectedRouteObj.name})` : "Selected Route"}</strong> ({genDirection})
+                      Corridor:{" "}
+                      <strong className="text-foreground">
+                        {selectedRouteObj
+                          ? `${selectedRouteObj.code} (${selectedRouteObj.name})`
+                          : "Selected Route"}
+                      </strong>{" "}
+                      ({genDirection})
                     </p>
                     <p className="text-[11px] text-muted-foreground leading-snug">
-                      Frequency: Every <strong className="text-foreground">{freqM} minutes</strong> across a <strong className="text-foreground">{durationHours} hr</strong> service window ({genStartTime} to {genEndTime}).
+                      Frequency: Every <strong className="text-foreground">{freqM} minutes</strong>{" "}
+                      across a <strong className="text-foreground">{durationHours} hr</strong>{" "}
+                      service window ({genStartTime} to {genEndTime}).
                     </p>
-                    <p className="text-[10px] text-primary/80 italic pt-1 border-t border-primary/20">
-                      💡 Tip: Peak traffic headway is typically 15-20 min; off-peak is 30-45 min.
+                    <p className="text-[10px] text-muted-foreground pt-1 border-t border-border">
+                      Tip: Peak traffic headway is typically 15-20 min; off-peak is 30-45 min.
                     </p>
                   </div>
                 );

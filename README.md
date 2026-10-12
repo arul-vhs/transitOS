@@ -28,11 +28,14 @@ TransitOS is a production-style multi-tenant SaaS platform built to coordinate, 
 ## 3. Local Setup & Startup
 
 ### Prerequisites
+
 - Node.js (v18+)
 - PostgreSQL Database instance
 
 ### Installation
+
 1. Navigate to the frontend directory:
+
    ```bash
    cd transitOS/frontend
    npm install
@@ -40,12 +43,14 @@ TransitOS is a production-style multi-tenant SaaS platform built to coordinate, 
 
 2. Configure environment variables:
    Copy `.env.example` to `.env` and set your local PostgreSQL database credentials:
+
    ```bash
    cp .env.example .env
    ```
 
 3. Database Operations:
    Run Drizzle migration commands to create the database schemas and seed the Salem Transport Corporation demo datasets:
+
    ```bash
    # Generate Drizzle migration files
    npm run db:generate
