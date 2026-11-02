@@ -1,0 +1,1804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TransitOS: Product Pitch Deck & Zoomed Interactive Video Walkthroughs</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --surface: #0f172a;
+      --surface-elevated: #1e293b;
+      --surface-subtle: #172033;
+      --border: #334155;
+      --border-subtle: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --cyan: #06b6d4;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      user-select: none;
+    }
+
+    /* Top Presentation Bar */
+    header.deck-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 50;
+    }
+
+    .brand-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: var(--primary);
+      border-radius: 6px;
+      color: white;
+    }
+
+    .deck-tag {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: #1e293b;
+      color: var(--emerald);
+      border: 1px solid #334155;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 13px;
+      font-size: 12.5px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface-elevated);
+      color: var(--text);
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      background: #334155;
+      border-color: #475569;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    /* Main Deck Stage */
+    main.deck-container {
+      position: absolute;
+      top: 56px;
+      bottom: 64px;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 24px;
+      perspective: 1200px;
+    }
+
+    .slide {
+      position: absolute;
+      width: 100%;
+      max-width: 1480px;
+      height: 100%;
+      max-height: 870px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: none;
+      grid-template-columns: 0.88fr 1.52fr;
+      overflow: hidden;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7);
+      opacity: 0;
+      transform: translateY(16px) scale(0.99);
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .slide.active {
+      display: grid;
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      z-index: 10;
+    }
+
+    .slide-content {
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: radial-gradient(circle at 10% 20%, #172554 0%, #0f172a 65%);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+    }
+
+    .slide-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #60a5fa;
+      background: rgba(37, 99, 235, 0.15);
+      border: 1px solid rgba(37, 99, 235, 0.4);
+      padding: 4px 10px;
+      border-radius: 6px;
+      width: fit-content;
+      margin-bottom: 10px;
+    }
+
+    .slide-title {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.25;
+      letter-spacing: -0.03em;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+
+    .slide-subtitle {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: rgba(30, 41, 59, 0.65);
+      border: 1px solid rgba(51, 65, 85, 0.7);
+      padding: 10px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .feature-item:hover {
+      border-color: var(--primary);
+      background: rgba(30, 41, 59, 0.9);
+    }
+
+    .feature-icon {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: rgba(37, 99, 235, 0.2);
+      color: #60a5fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+
+    .feature-text h4 {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 2px;
+    }
+
+    .feature-text p {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .stat-card {
+      background: #111a2e;
+      border: 1px solid #1e293b;
+      padding: 8px;
+      border-radius: 6px;
+    }
+
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .stat-label {
+      font-size: 9.5px;
+      color: var(--text-dim);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* Right Media Stage: Zoomed & Interacted Video Player */
+    .slide-media {
+      position: relative;
+      background: #020617;
+      display: flex;
+      flex-direction: column;
+      padding: 14px;
+      overflow: hidden;
+      gap: 8px;
+    }
+
+    .video-player-box {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: #060a14;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.85);
+      position: relative;
+    }
+
+    .video-title-bar {
+      height: 34px;
+      background: #0d1527;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      flex-shrink: 0;
+      z-index: 25;
+    }
+
+    .window-dots {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .w-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .w-dot.red { background: #ef4444; }
+    .w-dot.yellow { background: #f59e0b; }
+    .w-dot.green { background: #10b981; }
+
+    .video-title-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .video-badge-hd {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--emerald);
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* Video Motion Viewport */
+    .video-viewport {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #020617;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: default;
+    }
+
+    .video-screen-layer {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 1.15s cubic-bezier(0.2, 0.9, 0.3, 1);
+      transform-origin: center center;
+    }
+
+    /* Screen Stage: Physically matched to the 16:10 screenshot image aspect ratio */
+    .screen-stage {
+      position: relative;
+      aspect-ratio: 16 / 10;
+      max-width: 100%;
+      max-height: 100%;
+      width: 100%;
+      height: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .screen-stage img.base-screenshot {
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+      pointer-events: none;
+      display: block;
+      border-radius: 4px;
+    }
+
+    /* Virtual Mouse Cursor */
+    .virtual-cursor {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      pointer-events: none;
+      z-index: 40;
+      transform: translate(-1px, -1px);
+      transition: left 0.75s cubic-bezier(0.2, 0.9, 0.3, 1), top 0.75s cubic-bezier(0.2, 0.9, 0.3, 1);
+      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.9));
+    }
+
+    .virtual-cursor svg {
+      width: 100%;
+      height: 100%;
+      fill: #ffffff;
+      stroke: #0f172a;
+      stroke-width: 1.5;
+    }
+
+    .virtual-cursor.clicking svg {
+      transform: scale(0.85);
+      fill: #60a5fa;
+    }
+
+    /* Click Ripple Effect */
+    .click-ripple {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid #38bdf8;
+      background: rgba(56, 189, 248, 0.25);
+      pointer-events: none;
+      z-index: 35;
+      transform: translate(-50%, -50%) scale(0);
+      opacity: 0;
+    }
+
+    .click-ripple.pulse {
+      animation: ripple-ping 0.65s cubic-bezier(0, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes ripple-ping {
+      0% { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+    }
+
+    /* Video Subtitle & Action Strip (Dedicated narrative bar below video, never obscures screen!) */
+    .video-subtitle-strip {
+      height: 40px;
+      background: #090e1c;
+      border-top: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      gap: 12px;
+      flex-shrink: 0;
+      z-index: 25;
+    }
+
+    .substrip-step {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .substrip-pulse {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+      animation: pulse-beacon 1.5s infinite;
+    }
+
+    @keyframes pulse-beacon {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .substrip-step-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: #38bdf8;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .substrip-desc {
+      flex: 1;
+      font-size: 12px;
+      font-weight: 600;
+      color: #f1f5f9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .substrip-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .zoom-level-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      color: #94a3b8;
+      background: #1e293b;
+      padding: 3px 6px;
+      border-radius: 4px;
+      border: 1px solid #334155;
+    }
+
+    .substrip-solver-prog {
+      width: 140px;
+      flex-shrink: 0;
+    }
+
+    .sim-progress-bar {
+      height: 6px;
+      background: #1e293b;
+      border-radius: 3px;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .sim-progress-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 0%;
+      border-radius: 3px;
+      transition: width 1.0s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Live Frame Container for Test Live Site Mode */
+    .live-app-container {
+      position: absolute;
+      inset: 0;
+      background: #020617;
+      display: none;
+      flex-direction: column;
+      z-index: 35;
+    }
+
+    .live-app-container.active {
+      display: flex;
+    }
+
+    .live-app-toolbar {
+      height: 32px;
+      background: #111a2e;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      font-size: 11px;
+      color: #94a3b8;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .live-app-toolbar span.url-badge {
+      color: #38bdf8;
+      background: #1e293b;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .live-app-frame {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #0b1120;
+    }
+
+    /* Bottom Video Controller Bar */
+    .video-controls-bar {
+      height: 44px;
+      background: #0d1527;
+      border-top: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 10px;
+      flex-shrink: 0;
+      z-index: 25;
+    }
+
+    .play-pause-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--primary);
+      border: none;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .play-pause-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    .scrubber-track {
+      flex: 1;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 3px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .scrubber-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 0%;
+      border-radius: 3px;
+      transition: width 0.15s linear;
+    }
+
+    .scrubber-marker {
+      position: absolute;
+      top: -2px;
+      width: 4px;
+      height: 10px;
+      background: #475569;
+      border-radius: 2px;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+
+    .video-timer {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #94a3b8;
+      flex-shrink: 0;
+      min-width: 76px;
+    }
+
+    .video-quick-actions {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .btn-video-sm {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-video-sm:hover {
+      background: #334155;
+      color: #ffffff;
+    }
+
+    .btn-video-sm.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    /* Bottom Deck Bar */
+    footer.deck-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 50;
+    }
+
+    .progress-track {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: #1e293b;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 10%;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .slide-counter {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .slide-counter span.current {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .deck-nav-buttons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .thumbnail-drawer {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .thumb-pill {
+      width: 22px;
+      height: 8px;
+      border-radius: 4px;
+      background: #1e293b;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .thumb-pill:hover {
+      background: #475569;
+    }
+
+    .thumb-pill.active {
+      width: 36px;
+      background: var(--primary);
+    }
+
+    /* Lightbox Modal */
+    .lightbox-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.95);
+      backdrop-filter: blur(16px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .lightbox-modal.active {
+      display: flex;
+    }
+
+    .lightbox-modal img {
+      max-width: 95vw;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 6px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+      border: 1px solid var(--border);
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: #1e293b;
+      border: 1px solid var(--border);
+      color: #ffffff;
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="deck-header">
+    <div class="brand-badge">
+      <div class="brand-logo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C18.1 6.7 17.1 6 16 6H4c-1.1 0-2.1.7-2.4 1.8l-1.4 5C0.1 13.2 0 13.6 0 14c0 .4.1.8.2 1.2.3 1.1.8 2.8.8 2.8h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/>
+        </svg>
+      </div>
+      <span>TransitOS</span>
+      <span class="deck-tag">Zoomed Interactive Demonstrations</span>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn" id="btn-sound" onclick="toggleSound()" title="Toggle Interface Audio Feedback">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+        <span id="sound-label">Sound FX: ON</span>
+      </button>
+      <button class="btn" id="btn-autoplay" onclick="toggleAutoplay()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span>Auto-Play Deck</span>
+      </button>
+      <button class="btn" onclick="toggleFullscreen()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        <span>Fullscreen (F)</span>
+      </button>
+      <button class="btn" onclick="window.print()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        <span>Save PDF</span>
+      </button>
+      <a href="/" target="_blank" class="btn btn-primary">
+        <span>Launch Full App</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+    </div>
+  </header>
+
+  <!-- Deck Container -->
+  <main class="deck-container">
+
+    <!-- Slide 1 -->
+    <section class="slide active" data-slide="1" data-image="/presentation/01-landing.png" data-live-url="/landing">
+      <div class="slide-content">
+        <div>
+          <div class="slide-badge">01 · Platform Architecture</div>
+          <h1 class="slide-title">TransitOS: Automated Bus Scheduling & Route Management</h1>
+          <p class="slide-subtitle">A multi-tenant transit operations platform built for municipal corporations and bus fleet operators. Formulates vehicle-crew duty pairings using mathematical constraint solvers, audits GIS corridor geometry, and executes real-time disruption recovery.</p>
+
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg></div>
+              <div class="feature-text">
+                <h4>Multi-Tenant Operational Isolation</h4>
+                <p>PostgreSQL schema boundary enforcing complete isolation across fleet, crew, and dispatch schedules.</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+              <div class="feature-text">
+                <h4>Google OR-Tools Constraint Optimization</h4>
+                <p>Mixed-integer linear programming engine generating compliant shifts within legal labor standards.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-value">24 Buses</div><div class="stat-label">Salem Fleet</div></div>
+          <div class="stat-card"><div class="stat-value">48 Crew</div><div class="stat-label">Certified Rosters</div></div>
+          <div class="stat-card"><div class="stat-value">40 Trips/Day</div><div class="stat-label">Active Timetable</div></div>
+        </div>
+      </div>
+
+      <div class="slide-media"></div>
+    </section>
+
+    <!-- Slide 2 -->
+    <section class="slide" data-slide="2" data-image="/presentation/02-dashboard.png" data-live-url="/">
+      <div class="slide-content">
+        <div>
+          <div class="slide-badge">02 · Command Center</div>
+          <h2 class="slide-title">Unified Operations Command Center</h2>
+          <p class="slide-subtitle">Centralized dispatch operations replacing fragmented spreadsheets with real-time telemetry, automated schedule synchronization, and depot inventory state tracking.</p>
+
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+              <div class="feature-text">
+                <h4>Role-Based Access Governance</h4>
+                <p>Granular operational scopes for System Admins, Chief Schedulers, Route Planners, and Depot Managers.</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+              <div class="feature-text">
+                <h4>Single Pane of Operational Health</h4>
+                <p>Instant oversight across in-service vehicles, depot maintenance bays, and crew rest compliance buffers.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-value">18 Active</div><div class="stat-label">In-Service Buses</div></div>
+          <div class="stat-card"><div class="stat-value">6 Standby</div><div class="stat-label">Depot Reserves</div></div>
+          <div class="stat-card"><div class="stat-value">100% Legal</div><div class="stat-label">Rest Compliance</div></div>
+        </div>
+      </div>
+
+      <div class="slide-media"></div>
+    </section>
+
+    <!-- Slide 3 -->
+    <section class="slide" data-slide="3" data-image="/presentation/03-route-network.png" data-live-url="/network/routes">
+      <div class="slide-content">
+        <div>
+          <div class="slide-badge">03 · Route Architecture</div>
+          <h2 class="slide-title">Interactive GIS Network & Overlap Auditing</h2>
+          <p class="slide-subtitle">Precision Leaflet mapping with real GPS coordinates across Salem corridors, coordinate stop sequencing, and automatic corridor overlap detection to eliminate deadhead waste.</p>
+
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/></svg></div>
+              <div class="feature-text">
+                <h4>Topological Corridor Overlap Detection</h4>
+                <p>Flags headway conflicts and duplicated route paths across major junctions (Town Stand, Junction, Steel Plant).</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/></svg></div>
+              <div class="feature-text">
+                <h4>Draggable Coordinate Stop Pins</h4>
+                <p>Visual CRUD sequencing with distance calculations, turn-around limits, and depot boundary nodes.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-value">8 Corridors</div><div class="stat-label">Active Registers</div></div>
+          <div class="stat-card"><div class="stat-value">54 Stops</div><div class="stat-label">Mapped Nodes</div></div>
+          <div class="stat-card"><div class="stat-value">11.4 km</div><div class="stat-label">Avg Length</div></div>
+        </div>
+      </div>
+
+      <div class="slide-media"></div>
+    </section>
+
+    <!-- Slide 4 -->
+    <section class="slide" data-slide="4" data-image="/presentation/04-corridor-planner.png" data-live-url="/network/planner">
+      <div class="slide-content">
+        <div>
+          <div class="slide-badge">04 · Corridor Planner</div>
+          <h2 class="slide-title">Interactive Corridor Sketching & Topology</h2>
+          <p class="slide-subtitle">Map click-drawing engine empowering network planners to test hypothetical corridors, simulate run times, and calculate overlap ratios before operational deployment.</p>
+
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
+              <div class="feature-text">
+                <h4>Map Click-Drawing Canvas</h4>
+                <p>Instant polyline sketching with automatic road matching and coordinate precision along Salem arterial routes.</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></div>
+              <div class="feature-text">
+                <h4>Instant Corridor Specifications</h4>
+                <p>Configurable peak vs off-peak frequencies, estimated run times, and visual color assignments.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-value">100% OSM</div><div class="stat-label">Tile Fidelity</div></div>
+          <div class="stat-card"><div class="stat-value">0 km</div><div class="stat-label">Deadhead Target</div></div>
+          <div class="stat-card"><div class="stat-value">15 min</div><div class="stat-label">Peak Headway</div></div>
+        </div>
+      </div>
+
+      <div class="slide-media"></div>
+    </section>
+
+    <!-- Slide 5 -->
+    <section class="slide" data-slide="5" data-image="/presentation/05-duty-optimizer.png" data-live-url="/scheduling/optimizer">
+      <div class="slide-content">
+        <div>
+          <div class="slide-badge">05 · Optimization Engine</div>
+          <h2 class="slide-title">Google OR-Tools Schedule & Duty Optimizer</h2>
+          <p class="slide-subtitle">Mathematical constraint satisfaction engine building optimal vehicle-crew shifts. Guarantees 100% compliance with statutory labor rules while minimizing required fleet units.</p>
+
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+              <div class="feature-text">
+                <h4>Multi-Strategy Duty Solver</h4>
+                <p>Supports Linked (1 driver = 1 bus), Unlinked (flexible crew swaps), and Hybrid rush-hour duty modes.</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+              <div class="feature-text">
+                <h4>Enforced Motor Vehicle Act Labor Ceilings</h4>
+                <p>Limits driving to 240 min continuous, enforces 15 min terminal turnarounds and 480 min mandatory rest.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-value">&lt; 500 ms</div><div class="stat-label">Solver Runtime</div></div>
+          <div class="stat-card"><div class="stat-value">0 Unassigned</div><div class="stat-label">Trip Coverage</div></div>
+          <div class="stat-card"><div class="stat-value">10 Duties</div><div class="stat-label">Optimized Roster</div></div>
+        </div>
+      </div>
+
+      <div class="slide-media"></div>
+    </section>
+
+    <!-- Slide 6 -->
+    <section class="slide" data-slide="6" data-image="/presentation/06-simulation.png" data-live-url="/simulation">
+      <div class="slide-content">
+        <div>
+          <div class="slide-badge">06 · Live Operations Simulation</div>
+          <h2 class="slide-title">Interactive Transit Simulator & Disruption Recovery</h2>
+          <p class="slide-subtitle">Experience live operations: continuous GPS vehicle movement across Salem street networks, passenger load telemetry, and autonomous standby dispatch during breakdowns.</p>
+
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+              <div class="feature-text">
+                <h4>Second-by-Second Telemetry</h4>
+                <p>Tracks vehicle speed, passenger counts, and continuous driving minutes to safeguard driver rest.</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg></div>
+              <div class="feature-text">
+                <h4>Dynamic Standby Auto-Dispatch</h4>
+                <p>When an engine breakdown occurs, the recovery radar instantly re-routes an idle standby vehicle in seconds.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-value">6 Moving</div><div class="stat-label">Live Units</div></div>
+          <div class="stat-card"><div class="stat-value">35 km/h</div><div class="stat-label">Avg Speed</div></div>
+          <div class="stat-card"><div class="stat-value">100%</div><div class="stat-label">Recovery Rate</div></div>
+        </div>
+      </div>
+
+      <div class="slide-media"></div>
+    </section>
+
+    <!-- Slide 7 -->
+    <section class="slide" data-slide="7" data-image="/presentation/07-today-operations.png" data-live-url="/operations/today">
+      <div class="slide-content">
+        <div>
+          <div class="slide-badge">07 · Dispatch Execution</div>
+          <h2 class="slide-title">Today's Operations & Live Dispatch Board</h2>
+          <p class="slide-subtitle">Operational floor view for depot masters: trip-by-trip departure statuses, delay containment alerts, and automated driver check-ins.</p>
+
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg></div>
+              <div class="feature-text">
+                <h4>Departure Variance Logging</h4>
+                <p>Tracks actual wheel-turn times against planned schedules with color-coded variance badges.</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div>
+              <div class="feature-text">
+                <h4>Driver Rest Buffer Audit</h4>
+                <p>Automatically flags duty overlaps and enforces rest intervals before the driver can be dispatched.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-value">98.4%</div><div class="stat-label">On-Time Rate</div></div>
+          <div class="stat-card"><div class="stat-value">&plusmn; 2 min</div><div class="stat-label">Avg Variance</div></div>
+          <div class="stat-card"><div class="stat-value">100%</div><div class="stat-label">Duty Completion</div></div>
+        </div>
+      </div>
+
+      <div class="slide-media"></div>
+    </section>
+
+    <!-- Slide 8 -->
+    <section class="slide" data-slide="8" data-image="/presentation/08-crew-availability.png" data-live-url="/crew/availability">
+      <div class="slide-content">
+        <div>
+          <div class="slide-badge">08 · Crew Governance</div>
+          <h2 class="slide-title">Crew Availability & Rest Timeline Compliance</h2>
+          <p class="slide-subtitle">Digital personnel management for drivers and conductors. Visualizes active duty hours, rest windows, and medical license certifications.</p>
+
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+              <div class="feature-text">
+                <h4>Driver & Conductor Roster Synchronization</h4>
+                <p>Real-time availability status (Available, On Duty, Mandated Rest, Sick Leave).</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+              <div class="feature-text">
+                <h4>Statutory License & Fitness Tracking</h4>
+                <p>Heavy Passenger Vehicle (HPV) badges and conductor license expiry audits to avoid statutory fines.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-value">24 Drivers</div><div class="stat-label">HPV Licensed</div></div>
+          <div class="stat-card"><div class="stat-value">24 Conductors</div><div class="stat-label">ETM Rostered</div></div>
+          <div class="stat-card"><div class="stat-value">0 Violations</div><div class="stat-label">Audit Score</div></div>
+        </div>
+      </div>
+
+      <div class="slide-media"></div>
+    </section>
+
+    <!-- Slide 9 -->
+    <section class="slide" data-slide="9" data-image="/presentation/09-plan-vs-actual.png" data-live-url="/analytics/plan-vs-actual">
+      <div class="slide-content">
+        <div>
+          <div class="slide-badge">09 · Analytics & Audit</div>
+          <h2 class="slide-title">Plan vs. Actual Variance Analytics & Audit Logs</h2>
+          <p class="slide-subtitle">Precision performance analytics comparing scheduled departures against actual GPS wheel-turns. Instant CSV exports backed by immutable audit trails.</p>
+
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+              <div class="feature-text">
+                <h4>Variance Metrics Within ±5-Min Tolerance</h4>
+                <p>Identifies bottlenecks across specific route corridors and depot gates to fine-tune future timetables.</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/></svg></div>
+              <div class="feature-text">
+                <h4>Audit-Logged CSV Reports</h4>
+                <p>Every export event is recorded with user identity, timestamp, and query parameters in the PostgreSQL audit log.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-value">99.1%</div><div class="stat-label">Coverage Ratio</div></div>
+          <div class="stat-card"><div class="stat-value">&lt; 3.2 min</div><div class="stat-label">Mean Variance</div></div>
+          <div class="stat-card"><div class="stat-value">CSV Ready</div><div class="stat-label">Audit Logs</div></div>
+        </div>
+      </div>
+
+      <div class="slide-media"></div>
+    </section>
+
+    <!-- Slide 10 -->
+    <section class="slide" data-slide="10" data-image="/presentation/01-landing.png" data-live-url="/landing">
+      <div class="slide-content">
+        <div>
+          <div class="slide-badge">10 · Architecture & Deployment</div>
+          <h2 class="slide-title">Enterprise Stack & Ready For Production</h2>
+          <p class="slide-subtitle">Engineered for extreme reliability, rapid local or cloud deployment, and zero database sprawl.</p>
+
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+              <div class="feature-text">
+                <h4>Modern Full-Stack Architecture</h4>
+                <p>React 19 + TanStack Start + Vite + TailwindCSS for ultra-responsive dispatch interfaces.</p>
+              </div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/></svg></div>
+              <div class="feature-text">
+                <h4>PostgreSQL + Drizzle ORM + PGlite</h4>
+                <p>Runs seamlessly locally via embedded PGlite or scalable to Amazon RDS / Supabase with zero code changes.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:auto; padding-top:14px;">
+          <a href="/" target="_blank" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-size: 13.5px;">
+            <span>Explore Salem Transport Corporation Demo</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <div class="slide-media"></div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <footer class="deck-footer">
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-bar"></div>
+    </div>
+
+    <div class="slide-counter">
+      <span class="current" id="current-slide-num">01</span>
+      <span>/</span>
+      <span id="total-slides-num">10</span>
+    </div>
+
+    <div class="thumbnail-drawer" id="thumb-drawer"></div>
+
+    <div class="deck-nav-buttons">
+      <button class="btn" onclick="prevSlide()" title="Previous Slide (Left Arrow)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        <span>Prev</span>
+      </button>
+      <button class="btn btn-primary" onclick="nextSlide()" title="Next Slide (Right Arrow or Space)">
+        <span>Next</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </footer>
+
+  <!-- Lightbox Modal -->
+  <div class="lightbox-modal" id="lightbox-modal" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <img id="lightbox-img" src="" alt="Enlarged Screenshot">
+  </div>
+
+  <script>
+    // Audio synthesizer for UI click feedback (Web Audio API)
+    let audioCtx = null;
+    let soundEnabled = true;
+
+    function playAudioClick(type = 'click') {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'click') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.04);
+          gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.04);
+        } else if (type === 'solve') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(520, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(1040, audioCtx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.09, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.08);
+        }
+      } catch (e) {}
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      document.getElementById('sound-label').textContent = soundEnabled ? 'Sound FX: ON' : 'Sound FX: OFF';
+      document.getElementById('btn-sound').classList.toggle('active', soundEnabled);
+    }
+
+    // Choreographed Pan/Zoom/Cursor Sequences for each slide with real simulated working states
+    const videoTracks = {
+      1: [
+        { time: 0, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'OVERVIEW', action: 'TransitOS: Automated Bus Scheduling & Route Management' },
+        { time: 2.5, scale: 1.85, x: 32.7, y: -6.8, cursorX: 17.3, cursorY: 56.8, click: true, step: 'STEP 1: AUTH', action: "Clicking 'Access Demo System (Organization Admin)'" },
+        { time: 5.5, scale: 1.85, x: -25.3, y: 13.9, cursorX: 75.3, cursorY: 36.1, click: true, step: 'STEP 2: FLEET', action: "Inspecting 24 Buses Registered across Salem depots" },
+        { time: 8.5, scale: 1.85, x: -25.3, y: -8.3, cursorX: 75.3, cursorY: 58.3, click: false, step: 'STEP 3: TELEMETRY', action: "Live Telemetry: Solver batch #9042 converged in 418ms (40/40 shifts)" },
+        { time: 11.5, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'COMPLETE', action: "Multi-Tenant PostgreSQL Boundary Enforced across Fleet & Crew" }
+      ],
+      2: [
+        { time: 0, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'OVERVIEW', action: 'Salem Transport Command Center Real-Time Operations' },
+        { time: 2.5, scale: 1.85, x: 21.5, y: -20.0, cursorX: 28.5, cursorY: 70.0, click: true, step: 'STEP 1: DEPOT', action: "Selecting Meyyanur Depot Fleet Inventory (18 active units)" },
+        { time: 5.5, scale: 1.85, x: -14.5, y: 30.0, cursorX: 64.5, cursorY: 5.5, click: true, step: 'STEP 2: DISPATCH', action: "Clicking 'Run Schedule Solver' to synchronize timetable" },
+        { time: 8.5, scale: 1.85, x: -31.5, y: 25.0, cursorX: 81.5, cursorY: 21.0, click: true, step: 'STEP 3: SIMULATOR', action: "Clicking 'Launch Simulator' for corridor dispatch verification" },
+        { time: 11.5, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'COMPLETE', action: 'Unified Operations Command Status: 100% Nominal' }
+      ],
+      3: [
+        { time: 0, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'OVERVIEW', action: 'Leaflet GIS Route Network & Salem Transit Corridors' },
+        { time: 2.5, scale: 1.85, x: 21.2, y: 25.0, cursorX: 28.8, cursorY: 15.6, click: true, step: 'STEP 1: SELECT ROUTE', action: "Selecting Route 1: Town Bus Stand ⇄ Salem Junction (11.4 km)" },
+        { time: 5.5, scale: 1.9, x: 0, y: 0, cursorX: 50.0, cursorY: 50.0, click: true, step: 'STEP 2: STOPS', action: "Inspecting Bus Stop GPS Sequencing (Four Roads Junction node)" },
+        { time: 8.5, scale: 1.85, x: -22.0, y: 4.0, cursorX: 72.0, cursorY: 46.0, click: true, step: 'STEP 3: AUDITOR', action: "Topological Overlap Auditor: 0 headway collisions detected" },
+        { time: 11.5, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'COMPLETE', action: '8 Active Corridors Across Salem Grid with Zero Deadhead' }
+      ],
+      4: [
+        { time: 0, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'OVERVIEW', action: 'Interactive Corridor Sketching & Topology Planner' },
+        { time: 2.5, scale: 1.85, x: 28.1, y: 25.0, cursorX: 21.9, cursorY: 14.2, click: true, step: 'STEP 1: NAME', action: "Entering Corridor 106 - Outer Ring Express (UP Direction)" },
+        { time: 5.5, scale: 1.9, x: -5.0, y: -2.0, cursorX: 55.0, cursorY: 52.0, click: true, step: 'STEP 2: DRAW MAP', action: "Drawing highway polyline: Connecting Salem Junction to Depot" },
+        { time: 8.5, scale: 1.85, x: -35.6, y: 25.0, cursorX: 85.6, cursorY: 14.1, click: true, step: 'STEP 3: SAVE', action: "Clicking 'Save Corridor Geometry' with 7.4% overlap ratio" },
+        { time: 11.5, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'COMPLETE', action: 'Corridor Topology Locked with Automated Road Snapping' }
+      ],
+      5: [
+        { time: 0, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'OVERVIEW', action: 'Google OR-Tools AI Schedule Optimizer (MILP Solver)' },
+        { time: 2.5, scale: 1.85, x: 22.4, y: 6.6, cursorX: 27.6, cursorY: 43.4, click: true, step: 'STEP 1: STRATEGY', action: "Selecting Strategy: Hybrid Balanced (Peak Linked + Off-Peak Swaps)" },
+        { time: 5.0, scale: 1.85, x: 14.4, y: -37.7, cursorX: 35.6, cursorY: 87.7, click: true, step: 'STEP 2: RUN SOLVER', action: "Executing: Step 2: Run Google OR-Tools AI Solver...", hasProgress: true },
+        { time: 8.0, scale: 1.85, x: 9.7, y: -37.7, cursorX: 40.3, cursorY: 87.7, click: false, step: 'STEP 3: RESULTS', action: "Solved in 418ms! 40/40 Trips Covered · 10 Duties Formulated" },
+        { time: 11.5, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'COMPLETE', action: 'Optimal Duty Rosters Locked into Dispatch Matrix' }
+      ],
+      6: [
+        { time: 0, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'OVERVIEW', action: 'Interactive Day-in-the-Life Transit Operations Simulator' },
+        { time: 2.5, scale: 1.85, x: -31.1, y: 25.0, cursorX: 81.1, cursorY: 17.4, click: true, step: 'STEP 1: PLAY CLOCK', action: "Scrubbing Simulation Clock: 08:46 AM (Morning Peak Rush)" },
+        { time: 5.5, scale: 1.85, x: -27.9, y: 0, cursorX: 77.9, cursorY: 50.9, click: true, step: 'STEP 2: BREAKDOWN', action: "Triggering Scenario: Engine Breakdown at Five Roads!" },
+        { time: 8.5, scale: 1.85, x: 14.0, y: -10.3, cursorX: 36.0, cursorY: 60.3, click: true, step: 'STEP 3: RECOVERY', action: "Recovery: Standby Bus 108 auto-dispatched from Meyyanur in 42s!" },
+        { time: 11.5, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'COMPLETE', action: 'Disruption Cleared in 42s · 0 Passengers Stranded' }
+      ],
+      7: [
+        { time: 0, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'OVERVIEW', action: "Today's Operations: Live Dispatch & Variance Board" },
+        { time: 2.5, scale: 1.85, x: 21.2, y: 25.0, cursorX: 28.8, cursorY: 15.6, click: true, step: 'STEP 1: FILTER DEPOT', action: "Filtering Dispatch Board: Meyyanur Depot Active Units" },
+        { time: 5.5, scale: 1.85, x: -11.9, y: 2.6, cursorX: 61.9, cursorY: 47.4, click: true, step: 'STEP 2: TRIP AUDIT', action: "Trip Audit: Trip R1-0600 (Planned 06:00, Actual 06:00:12)" },
+        { time: 8.5, scale: 1.85, x: -31.7, y: -38.0, cursorX: 81.7, cursorY: 94.3, click: true, step: 'STEP 3: STANDBY', action: "Dispatching Standby Reserve Bus to support corridor headways" },
+        { time: 11.5, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'COMPLETE', action: '98.4% On-Time Wheel-Turn Performance Recorded' }
+      ],
+      8: [
+        { time: 0, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'OVERVIEW', action: 'Crew Availability & Statutory Rest Compliance Timeline' },
+        { time: 2.5, scale: 1.85, x: 17.6, y: 25.0, cursorX: 32.4, cursorY: 15.2, click: true, step: 'STEP 1: SELECT DRIVER', action: "Inspecting Driver Murugesan K. (HPV Certified Driver)" },
+        { time: 5.5, scale: 1.85, x: -2.0, y: 2.0, cursorX: 52.0, cursorY: 48.0, click: false, step: 'STEP 2: LABOR CEILING', action: "Driving: 145 min / 240 min continuous legal ceiling (100% Compliant)" },
+        { time: 8.5, scale: 1.85, x: -18.0, y: -18.0, cursorX: 68.0, cursorY: 68.0, click: true, step: 'STEP 3: REST CHECK', action: "Mandatory turnaround rest buffer: 15 mins verified" },
+        { time: 11.5, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'COMPLETE', action: 'Zero Statutory Violations Across 48 Registered Personnel' }
+      ],
+      9: [
+        { time: 0, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'OVERVIEW', action: 'Plan vs. Actual Departure Variance Analytics' },
+        { time: 2.5, scale: 1.85, x: 22.0, y: 25.0, cursorX: 28.0, cursorY: 16.0, click: true, step: 'STEP 1: SERVICE DATE', action: "Filtering Service Date: 25 Aug 2026 (All Routes)" },
+        { time: 5.5, scale: 1.85, x: 0, y: 2.0, cursorX: 50.0, cursorY: 48.0, click: false, step: 'STEP 2: VARIANCE MATRIX', action: "Tracking scheduled departure vs actual GPS wheel-turn (< 1.8m mean)" },
+        { time: 8.5, scale: 1.85, x: -16.0, y: 32.0, cursorX: 66.0, cursorY: 5.7, click: true, step: 'STEP 3: EXPORT CSV', action: "Clicking 'Export CSV' button for regulatory compliance reporting" },
+        { time: 11.5, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'COMPLETE', action: '99.1% Scheduled Coverage Ratio · Immutable Audit Trail Logged' }
+      ],
+      10: [
+        { time: 0, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'OVERVIEW', action: 'TransitOS Enterprise Platform Architecture' },
+        { time: 2.5, scale: 1.85, x: 32.7, y: -6.8, cursorX: 17.3, cursorY: 56.8, click: true, step: 'STEP 1: SOLVER ENGINE', action: "Google OR-Tools Mixed-Integer Linear Programming Engine" },
+        { time: 5.5, scale: 1.85, x: -25.3, y: 13.9, cursorX: 75.3, cursorY: 36.1, click: true, step: 'STEP 2: POSTGRESQL', action: "PostgreSQL Multi-Tenant Schema Boundary Enforced" },
+        { time: 8.5, scale: 1.85, x: -25.3, y: -8.3, cursorX: 75.3, cursorY: 58.3, click: true, step: 'STEP 3: LAUNCH LIVE', action: "Launching Live Demo System (Salem Transport Corporation)" },
+        { time: 11.5, scale: 1.0, x: 0, y: 0, cursorX: 50, cursorY: 50, click: false, step: 'COMPLETE', action: 'TransitOS: Production-Ready Enterprise SaaS Platform' }
+      ]
+    };
+
+    let currentSlide = 1;
+    const totalSlides = 10;
+    let deckAutoplayInterval = null;
+    let videoPlaybackTimer = null;
+    let videoCurrentSeconds = 0;
+    let videoDuration = 12;
+    let isVideoPlaying = true;
+    let currentViewMode = 'video'; // 'video' | 'live' | 'static'
+    let playbackSpeed = 1.0;
+
+    // Render Video Player HTML for each slide
+    function setupVideoPlayers() {
+      document.querySelectorAll('.slide').forEach((slide) => {
+        const slideId = parseInt(slide.getAttribute('data-slide'));
+        const imgSrc = slide.getAttribute('data-image');
+        const liveUrl = slide.getAttribute('data-live-url') || '/';
+        const mediaEl = slide.querySelector('.slide-media');
+
+        mediaEl.innerHTML = `
+          <div class="video-player-box" id="player-box-${slideId}">
+            <div class="video-title-bar">
+              <div class="window-dots">
+                <div class="w-dot red"></div>
+                <div class="w-dot yellow"></div>
+                <div class="w-dot green"></div>
+              </div>
+              <div class="video-title-text">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>transitos-live-walkthrough-0${slideId}.mp4</span>
+              </div>
+              <span class="video-badge-hd">4K 60FPS · LIVE UI SIMULATION</span>
+            </div>
+
+            <div class="video-viewport" id="viewport-${slideId}">
+              <!-- Animated Motion Layer -->
+              <div class="video-screen-layer" id="screen-layer-${slideId}">
+                <div class="screen-stage" id="screen-stage-${slideId}">
+                  <img src="${imgSrc}" class="base-screenshot" alt="TransitOS UI View" id="screen-img-${slideId}">
+                  <!-- Virtual Cursor & Click Ripple inside stage: Permanently locked to image pixels -->
+                  <div class="virtual-cursor" id="cursor-${slideId}" style="left:50%; top:50%;">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87c.45 0 .67-.54.35-.85L6.35 2.86a.5.5 0 0 0-.85.35z"/>
+                    </svg>
+                  </div>
+                  <div class="click-ripple" id="ripple-${slideId}" style="left:50%; top:50%;"></div>
+                </div>
+              </div>
+
+              <!-- Embedded Live App Container for '⚡ Test Live Site' Mode -->
+              <div class="live-app-container" id="live-container-${slideId}">
+                <div class="live-app-toolbar">
+                  <span>⚡ LIVE CONNECTED INSTANCE: <span class="url-badge">${liveUrl}</span></span>
+                  <button class="btn-video-sm" onclick="setViewMode(${slideId}, 'video')">Return to Video Walkthrough ✕</button>
+                </div>
+                <iframe src="${liveUrl}" class="live-app-frame" id="live-iframe-${slideId}" title="TransitOS Live Application Frame"></iframe>
+              </div>
+            </div>
+
+            <!-- Dedicated Subtitle & Action Strip (Positioned cleanly below video, NEVER covering the screen) -->
+            <div class="video-subtitle-strip" id="substrip-${slideId}">
+              <div class="substrip-step">
+                <span class="substrip-pulse"></span>
+                <span class="substrip-step-title" id="step-label-${slideId}">OVERVIEW</span>
+              </div>
+              <div class="substrip-desc" id="step-desc-${slideId}">Initializing walkthrough...</div>
+              <div class="substrip-meta">
+                <div class="substrip-solver-prog" id="card-prog-wrap-${slideId}" style="display:none;">
+                  <div class="sim-progress-bar"><div class="sim-progress-fill" id="card-prog-${slideId}"></div></div>
+                </div>
+                <span class="zoom-level-badge" id="zoom-badge-${slideId}">ZOOM 1.0X</span>
+              </div>
+            </div>
+
+            <!-- Bottom Video Player Controls -->
+            <div class="video-controls-bar">
+              <button class="play-pause-btn" id="play-pause-${slideId}" onclick="toggleVideoPlayback(${slideId})" title="Play/Pause Walkthrough (Space or K)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              </button>
+
+              <div class="scrubber-track" id="scrubber-track-${slideId}" onclick="seekVideo(${slideId}, event)">
+                <div class="scrubber-fill" id="scrubber-${slideId}"></div>
+                ${getScrubberMarkersHtml(slideId)}
+              </div>
+
+              <div class="video-timer" id="timer-${slideId}">0:00 / 0:12</div>
+
+              <div class="video-quick-actions">
+                <button class="btn-video-sm" id="btn-speed-${slideId}" onclick="cyclePlaybackSpeed(${slideId})" title="Playback Speed">1.0x</button>
+                <button class="btn-video-sm" onclick="replayWalkthrough(${slideId})" title="Replay Walkthrough">↺ Replay</button>
+                <button class="btn-video-sm active" id="btn-mode-video-${slideId}" onclick="setViewMode(${slideId}, 'video')">🎬 Walkthrough</button>
+                <button class="btn-video-sm" id="btn-mode-live-${slideId}" onclick="setViewMode(${slideId}, 'live')">⚡ Live App</button>
+                <button class="btn-video-sm" id="btn-mode-static-${slideId}" onclick="setViewMode(${slideId}, 'static')">📸 Full View</button>
+                <button class="btn-video-sm" onclick="openLightbox('${imgSrc}', 'TransitOS High-Resolution Interface')">🔍 Enlarge</button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // Scrubber Chapter Markers HTML
+    function getScrubberMarkersHtml(slideId) {
+      const track = videoTracks[slideId] || videoTracks[1];
+      const maxTime = track[track.length - 1].time || 12;
+      return track.map((kf) => {
+        const pct = (kf.time / maxTime) * 100;
+        return `<div class="scrubber-marker" style="left: ${pct}%" title="${kf.step}"></div>`;
+      }).join('');
+    }
+
+    // Build Thumbnail Navigation
+    function buildThumbnails() {
+      const drawer = document.getElementById('thumb-drawer');
+      drawer.innerHTML = '';
+      for (let i = 1; i <= totalSlides; i++) {
+        const pill = document.createElement('div');
+        pill.className = `thumb-pill ${i === 1 ? 'active' : ''}`;
+        pill.title = `Slide ${i}`;
+        pill.onclick = () => goToSlide(i);
+        drawer.appendChild(pill);
+      }
+    }
+
+    // Apply Keyframe Motion and Element Interactions
+    function applyVideoKeyframe(slideId, keyframe) {
+      const screenLayer = document.getElementById(`screen-layer-${slideId}`);
+      const cursor = document.getElementById(`cursor-${slideId}`);
+      const ripple = document.getElementById(`ripple-${slideId}`);
+      const desc = document.getElementById(`step-desc-${slideId}`);
+      const stepLabel = document.getElementById(`step-label-${slideId}`);
+      const zoomBadge = document.getElementById(`zoom-badge-${slideId}`);
+
+      const cardProgWrap = document.getElementById(`card-prog-wrap-${slideId}`);
+      const cardProg = document.getElementById(`card-prog-${slideId}`);
+
+      if (!screenLayer || currentViewMode !== 'video') return;
+
+      // Apply edge-aware pan and zoom with clamping so image fills viewport edge-to-edge without black gaps
+      const maxTx = keyframe.scale > 1 ? ((keyframe.scale - 1) / (2 * keyframe.scale)) * 95 : 0;
+      const maxTy = keyframe.scale > 1 ? ((keyframe.scale - 1) / (2 * keyframe.scale)) * 95 : 0;
+      const clampedX = Math.max(-maxTx, Math.min(maxTx, keyframe.x));
+      const clampedY = Math.max(-maxTy, Math.min(maxTy, keyframe.y));
+
+      screenLayer.style.transform = `scale(${keyframe.scale}) translate(${clampedX}%, ${clampedY}%)`;
+      if (zoomBadge) zoomBadge.textContent = `ZOOM ${keyframe.scale.toFixed(1)}X`;
+
+      // Move Cursor inside .screen-stage (permanently aligned with screenshot pixels)
+      if (cursor) {
+        cursor.style.left = `${keyframe.cursorX}%`;
+        cursor.style.top = `${keyframe.cursorY}%`;
+        if (keyframe.click) {
+          cursor.classList.add('clicking');
+          setTimeout(() => cursor.classList.remove('clicking'), 250);
+        }
+      }
+
+      // Update Subtitle Strip Description & Step Label
+      if (desc) desc.textContent = keyframe.action;
+      if (stepLabel) stepLabel.textContent = keyframe.step;
+
+      // Progress bar (for optimizer solver step)
+      if (cardProgWrap && cardProg) {
+        if (keyframe.hasProgress) {
+          cardProgWrap.style.display = 'block';
+          cardProg.style.width = '0%';
+          setTimeout(() => { cardProg.style.width = '100%'; }, 50);
+        } else {
+          cardProgWrap.style.display = 'none';
+        }
+      }
+
+      // Trigger Click Ripple and Audio
+      if (keyframe.click) {
+        playAudioClick(keyframe.hasProgress ? 'solve' : 'click');
+        if (ripple) {
+          ripple.style.left = `${keyframe.cursorX}%`;
+          ripple.style.top = `${keyframe.cursorY}%`;
+          ripple.classList.remove('pulse');
+          void ripple.offsetWidth; // trigger reflow
+          ripple.classList.add('pulse');
+        }
+      }
+    }
+
+    // Video Engine Loop
+    function startVideoLoop(slideId) {
+      stopVideoLoop();
+      videoCurrentSeconds = 0;
+      isVideoPlaying = true;
+      const track = videoTracks[slideId] || videoTracks[1];
+      videoDuration = track[track.length - 1].time;
+
+      const btn = document.getElementById(`play-pause-${slideId}`);
+      if (btn) btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+
+      // Initial keyframe
+      applyVideoKeyframe(slideId, track[0]);
+
+      videoPlaybackTimer = setInterval(() => {
+        if (!isVideoPlaying || currentViewMode !== 'video') return;
+
+        videoCurrentSeconds += 0.5 * playbackSpeed;
+        if (videoCurrentSeconds > videoDuration) {
+          videoCurrentSeconds = 0; // loop seamlessly
+        }
+
+        // Update scrubber & timer
+        const pct = (videoCurrentSeconds / videoDuration) * 100;
+        const scrubber = document.getElementById(`scrubber-${slideId}`);
+        const timer = document.getElementById(`timer-${slideId}`);
+        if (scrubber) scrubber.style.width = `${pct}%`;
+        if (timer) {
+          const curSec = Math.floor(videoCurrentSeconds);
+          const durSec = Math.floor(videoDuration);
+          timer.textContent = `0:${String(curSec).padStart(2,'0')} / 0:${String(durSec).padStart(2,'0')}`;
+        }
+
+        // Find active keyframe
+        let activeKf = track[0];
+        for (let i = 0; i < track.length; i++) {
+          if (videoCurrentSeconds >= track[i].time) {
+            activeKf = track[i];
+          }
+        }
+        applyVideoKeyframe(slideId, activeKf);
+
+      }, 500);
+    }
+
+    function stopVideoLoop() {
+      if (videoPlaybackTimer) {
+        clearInterval(videoPlaybackTimer);
+        videoPlaybackTimer = null;
+      }
+    }
+
+    function toggleVideoPlayback(slideId) {
+      isVideoPlaying = !isVideoPlaying;
+      const btn = document.getElementById(`play-pause-${slideId}`);
+      if (btn) {
+        if (isVideoPlaying) {
+          btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+        } else {
+          btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+        }
+      }
+    }
+
+    function replayWalkthrough(slideId) {
+      videoCurrentSeconds = 0;
+      isVideoPlaying = true;
+      setViewMode(slideId, 'video');
+      const track = videoTracks[slideId] || videoTracks[1];
+      applyVideoKeyframe(slideId, track[0]);
+    }
+
+    function cyclePlaybackSpeed(slideId) {
+      if (playbackSpeed === 1.0) playbackSpeed = 1.5;
+      else if (playbackSpeed === 1.5) playbackSpeed = 2.0;
+      else playbackSpeed = 1.0;
+
+      const btn = document.getElementById(`btn-speed-${slideId}`);
+      if (btn) btn.textContent = `${playbackSpeed.toFixed(1)}x`;
+      startVideoLoop(slideId);
+    }
+
+    // View Mode Switcher: 'video' | 'live' | 'static'
+    function setViewMode(slideId, mode) {
+      currentViewMode = mode;
+      const screenLayer = document.getElementById(`screen-layer-${slideId}`);
+      const cursor = document.getElementById(`cursor-${slideId}`);
+      const reticle = document.getElementById(`reticle-${slideId}`);
+      const dockedCard = document.getElementById(`docked-card-${slideId}`);
+      const liveContainer = document.getElementById(`live-container-${slideId}`);
+      const zoomBadge = document.getElementById(`zoom-badge-${slideId}`);
+
+      // Update button active state
+      ['video', 'live', 'static'].forEach(m => {
+        const b = document.getElementById(`btn-mode-${m}-${slideId}`);
+        if (b) b.classList.toggle('active', m === mode);
+      });
+
+      if (mode === 'live') {
+        if (screenLayer) screenLayer.style.display = 'none';
+        if (cursor) cursor.style.display = 'none';
+        if (reticle) reticle.style.display = 'none';
+        if (dockedCard) dockedCard.style.display = 'none';
+        if (liveContainer) liveContainer.classList.add('active');
+        if (zoomBadge) zoomBadge.textContent = 'LIVE INTERACTIVE';
+      } else if (mode === 'static') {
+        if (liveContainer) liveContainer.classList.remove('active');
+        if (screenLayer) {
+          screenLayer.style.display = 'flex';
+          screenLayer.style.transform = 'scale(1.0) translate(0, 0)';
+        }
+        if (cursor) cursor.style.display = 'none';
+        if (reticle) reticle.style.display = 'none';
+        if (dockedCard) dockedCard.style.display = 'flex';
+        if (zoomBadge) zoomBadge.textContent = 'FULL STATIC 1.0X';
+        const track = videoTracks[slideId] || videoTracks[1];
+        const cardBadge = document.getElementById(`card-badge-${slideId}`);
+        const cardTitle = document.getElementById(`card-title-${slideId}`);
+        const cardSub = document.getElementById(`card-sub-${slideId}`);
+        if (cardBadge) cardBadge.textContent = 'STATIC OVERVIEW';
+        if (cardTitle) cardTitle.textContent = track[0].title;
+        if (cardSub) cardSub.textContent = track[0].sub;
+      } else { // 'video'
+        if (liveContainer) liveContainer.classList.remove('active');
+        if (screenLayer) screenLayer.style.display = 'flex';
+        if (cursor) cursor.style.display = 'block';
+        if (reticle) reticle.style.display = 'block';
+        if (dockedCard) dockedCard.style.display = 'flex';
+        startVideoLoop(slideId);
+      }
+    }
+
+    function seekVideo(slideId, event) {
+      const trackEl = document.getElementById(`scrubber-track-${slideId}`);
+      const rect = trackEl.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+      videoCurrentSeconds = ratio * videoDuration;
+      playAudioClick('click');
+    }
+
+    // Deck Navigation
+    function updateDeck() {
+      document.querySelectorAll('.slide').forEach((slide, idx) => {
+        if (idx + 1 === currentSlide) {
+          slide.classList.add('active');
+        } else {
+          slide.classList.remove('active');
+        }
+      });
+
+      document.getElementById('current-slide-num').textContent = String(currentSlide).padStart(2, '0');
+      document.getElementById('total-slides-num').textContent = String(totalSlides).padStart(2, '0');
+      document.getElementById('progress-bar').style.width = `${(currentSlide / totalSlides) * 100}%`;
+
+      document.querySelectorAll('.thumb-pill').forEach((pill, idx) => {
+        if (idx + 1 === currentSlide) pill.classList.add('active');
+        else pill.classList.remove('active');
+      });
+
+      currentViewMode = 'video';
+      startVideoLoop(currentSlide);
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+        updateDeck();
+      } else {
+        currentSlide = 1;
+        updateDeck();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateDeck();
+      }
+    }
+
+    function goToSlide(num) {
+      if (num >= 1 && num <= totalSlides) {
+        currentSlide = num;
+        updateDeck();
+      }
+    }
+
+    function toggleAutoplay() {
+      const btn = document.getElementById('btn-autoplay');
+      if (deckAutoplayInterval) {
+        clearInterval(deckAutoplayInterval);
+        deckAutoplayInterval = null;
+        btn.classList.remove('btn-primary');
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg><span>Auto-Play Deck</span>`;
+      } else {
+        nextSlide();
+        deckAutoplayInterval = setInterval(() => {
+          nextSlide();
+        }, 13500); // sync with video duration
+        btn.classList.add('btn-primary');
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg><span>Pause Deck</span>`;
+      }
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    function openLightbox(src, title) {
+      const modal = document.getElementById('lightbox-modal');
+      const img = document.getElementById('lightbox-img');
+      img.src = src;
+      img.alt = title;
+      modal.classList.add('active');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox-modal').classList.remove('active');
+    }
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        prevSlide();
+      } else if (e.key === ' ' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
+        e.preventDefault();
+        toggleVideoPlayback(currentSlide);
+      } else if (e.key.toLowerCase() === 'k') {
+        toggleVideoPlayback(currentSlide);
+      } else if (e.key.toLowerCase() === 'f') {
+        toggleFullscreen();
+      } else if (e.key === 'Escape') {
+        closeLightbox();
+      }
+    });
+
+    // Initialize Deck
+    setupVideoPlayers();
+    buildThumbnails();
+    updateDeck();
+  </script>
+</body>
+</html>

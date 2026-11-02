@@ -1,0 +1,83 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1787029467957,
+      "tag": "0000_past_vermin",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787029952973,
+      "tag": "0001_secret_slipstream",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787033138465,
+      "tag": "0002_omniscient_mimic",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787629988017,
+      "tag": "0003_wooden_reaper",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787630536936,
+      "tag": "0004_flashy_preak",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787630578274,
+      "tag": "0005_rich_spacker_dave",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787631142134,
+      "tag": "0006_illegal_energizer",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787631802325,
+      "tag": "0007_loose_stone_men",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787631813157,
+      "tag": "0008_whole_jack_murdock",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787632351651,
+      "tag": "0009_medical_daredevil",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790097496266,
+      "tag": "0010_futuristic_darkstar",
+      "breakpoints": true
+    }
+  ]
+}

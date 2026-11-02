@@ -1,0 +1,8 @@
+{
+  "compatibility_date": "2026-10-12",
+  "pages_build_output_dir": "..",
+  "name": "arul-vhs-transitos",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
+}
