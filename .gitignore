@@ -3,25 +3,47 @@ node_modules/
 .pnp
 .pnp.js
 
-# Local environment files
+# Environment variables
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
-# Database local storage & PGlite files
+# Caches
+.cache/
+.vite/
+.turbo/
+.tanstack/
+.eslintcache
+*.cache
+
+# PostgreSQL dumps, backups, and database files
+*.dump
+*.sql.dump
+*.pgdump
+*.dmp
+*.backup
+dump.sql
+pg_dump*
 .pgdata/
 *.db
 *.sqlite
+*.sqlite3
 
-# Build outputs
+# Temporary files & folders
+tmp/
+temp/
+*.tmp
+*.temp
+*~
+*.swp
+*.swo
+
+# Build and deployment outputs
 dist/
 build/
 .output/
 .nitro/
 .wrangler/
-
-# Vite / bundler cache
-.vite/
 
 # Logs
 logs/
@@ -35,6 +57,6 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# IDE / Editor folders
+# IDE & Editor folders
 .vscode/
 .idea/
