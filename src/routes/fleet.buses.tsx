@@ -112,6 +112,17 @@ function getStatusBadgeClass(status: string) {
   }
 }
 
+interface BusItem {
+  id: string;
+  registrationNumber: string;
+  fleetNumber?: string;
+  busType?: string;
+  capacity?: number;
+  depot: string;
+  status: string;
+  availableFrom?: number;
+}
+
 function BusesPage() {
   const queryClient = useQueryClient();
   const context = RootRoute.useRouteContext();
@@ -148,20 +159,26 @@ function BusesPage() {
   const [formAvailableFrom, setFormAvailableFrom] = useState("05:30");
 
   // 1. Fetch Buses
-  const { data: busesList = [], isLoading } = useQuery({
+  const { data: busesList = [], isLoading } = useQuery<BusItem[]>({
     queryKey: ["buses", statusFilter, depotFilter, search],
-    queryFn: () =>
-      getBuses({
+    queryFn: async () => {
+      const data = await getBuses({
         status: statusFilter,
         depot: depotFilter,
         search,
-      }),
+      });
+      return (data || []) as unknown as BusItem[];
+    },
   });
 
   // 2. Fetch Selected Bus Details
-  const { data: selectedBusDetails } = useQuery({
+  const { data: selectedBusDetails } = useQuery<BusItem | null>({
     queryKey: ["bus", selectedBusId],
-    queryFn: () => getBus(selectedBusId!),
+    queryFn: async () => {
+      if (!selectedBusId) return null;
+      const data = await getBus(selectedBusId);
+      return data as unknown as BusItem;
+    },
     enabled: !!selectedBusId,
   });
 
@@ -174,7 +191,7 @@ function BusesPage() {
       setIsCreateOpen(false);
       resetForm();
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to create bus");
     },
   });
@@ -190,7 +207,7 @@ function BusesPage() {
       setIsEditOpen(false);
       resetForm();
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to update bus");
     },
   });
@@ -206,7 +223,7 @@ function BusesPage() {
       setIsConfirmStatusOpen(false);
       setPendingStatusChange(null);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to update status");
     },
   });
@@ -223,7 +240,7 @@ function BusesPage() {
   };
 
   // Open Edit Dialog
-  const handleOpenEdit = (bus: any) => {
+  const handleOpenEdit = (bus: BusItem) => {
     setSelectedBusId(bus.id);
     setFormRegNum(bus.registrationNumber);
     setFormFleetNum(bus.fleetNumber || "");
@@ -231,7 +248,7 @@ function BusesPage() {
     setFormCapacity(String(bus.capacity || 40));
     setFormDepot(bus.depot);
     setFormStatus(bus.status);
-    setFormAvailableFrom(formatMinutesToTime(bus.availableFrom));
+    setFormAvailableFrom(formatMinutesToTime(bus.availableFrom || 330));
     setIsEditOpen(true);
   };
 

@@ -182,7 +182,7 @@ function DutiesPage() {
   const assignedTripIds = new Set<string>();
   dutiesList.forEach((d) => {
     if (d.trips) {
-      d.trips.forEach((t: any) => assignedTripIds.add(t.id));
+      d.trips.forEach((t: { id: string }) => assignedTripIds.add(t.id));
     }
   });
   const unassignedTrips = allTripsList.filter(
@@ -220,7 +220,7 @@ function DutiesPage() {
     if (conductorsList.length > 0 && !handoverConductorId) {
       setHandoverConductorId(conductorsList[0].id);
     }
-  }, [driversList, conductorsList]);
+  }, [driversList, conductorsList, handoverDriverId, handoverConductorId]);
 
   // Mutations
   const createDutyMutation = useMutation({
@@ -232,7 +232,7 @@ function DutiesPage() {
       setSelectedDutyId(newD.id);
       setFormDutyCode("");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to create duty");
     },
   });
@@ -246,7 +246,7 @@ function DutiesPage() {
       });
       toast.success(`Duty ${updatedD.dutyCode} updated successfully.`);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to update duty");
     },
   });
@@ -258,7 +258,7 @@ function DutiesPage() {
       toast.success("Duty deleted successfully.");
       setSelectedDutyId(null);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to delete duty");
     },
   });
@@ -272,7 +272,7 @@ function DutiesPage() {
       });
       toast.success("Trip added to duty.");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to add trip");
     },
   });
@@ -286,7 +286,7 @@ function DutiesPage() {
       });
       toast.success("Trip removed from duty.");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to remove trip");
     },
   });
@@ -301,7 +301,7 @@ function DutiesPage() {
       toast.success("Crew handover segment added.");
       setIsHandoverOpen(false);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to add handover");
     },
   });
@@ -315,7 +315,7 @@ function DutiesPage() {
       });
       toast.success("Handover segments cleared.");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to clear handovers");
     },
   });
@@ -826,57 +826,69 @@ function DutiesPage() {
 
                   <div className="space-y-2 border border-border/70 rounded-xl p-3 bg-card/40">
                     {selectedDuty.trips && selectedDuty.trips.length > 0 ? (
-                      selectedDuty.trips.map((t: any, idx: number) => (
-                        <div
-                          key={t.id}
-                          className="flex items-center justify-between p-2.5 rounded-lg border border-border/60 bg-background/70 hover:border-primary/40 transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="size-6 rounded-full bg-primary/10 text-primary font-bold text-xs grid place-items-center font-mono">
-                              {idx + 1}
-                            </span>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-xs font-mono">
-                                  {formatMinutesToTime(t.startTime)}
-                                </span>
-                                <ArrowRight className="size-3 text-muted-foreground" />
-                                <span className="font-bold text-xs font-mono">
-                                  {formatMinutesToTime(
-                                    t.endTime || t.startTime + 45,
-                                  )}
-                                </span>
-                                <Badge
-                                  variant="secondary"
-                                  className="text-[10px] font-mono"
-                                >
-                                  {t.routeCode || "Corridor"}
-                                </Badge>
+                      selectedDuty.trips.map(
+                        (
+                          t: {
+                            id: string;
+                            startTime: number;
+                            endTime?: number;
+                            routeCode?: string;
+                            origin?: string;
+                            destination?: string;
+                          },
+                          idx: number,
+                        ) => (
+                          <div
+                            key={t.id}
+                            className="flex items-center justify-between p-2.5 rounded-lg border border-border/60 bg-background/70 hover:border-primary/40 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="size-6 rounded-full bg-primary/10 text-primary font-bold text-xs grid place-items-center font-mono">
+                                {idx + 1}
+                              </span>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-xs font-mono">
+                                    {formatMinutesToTime(t.startTime)}
+                                  </span>
+                                  <ArrowRight className="size-3 text-muted-foreground" />
+                                  <span className="font-bold text-xs font-mono">
+                                    {formatMinutesToTime(
+                                      t.endTime || t.startTime + 45,
+                                    )}
+                                  </span>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px] font-mono"
+                                  >
+                                    {t.routeCode || "Corridor"}
+                                  </Badge>
+                                </div>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                  {t.origin || "Terminal A"} ➔{" "}
+                                  {t.destination || "Terminal B"}
+                                </p>
                               </div>
-                              <p className="text-[11px] text-muted-foreground mt-0.5">
-                                {t.origin || "Terminal A"} ➔{" "}
-                                {t.destination || "Terminal B"}
-                              </p>
                             </div>
-                          </div>
 
-                          {canModify && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                removeTripMutation.mutate({
-                                  dutyId: selectedDuty.id,
-                                  tripId: t.id,
-                                })
-                              }
-                              className="size-7 text-destructive hover:bg-destructive/10 rounded-md"
-                            >
-                              <X className="size-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      ))
+                            {canModify && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  removeTripMutation.mutate({
+                                    dutyId: selectedDuty.id,
+                                    tripId: t.id,
+                                  })
+                                }
+                                className="size-7 text-destructive hover:bg-destructive/10 rounded-md"
+                              >
+                                <X className="size-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        ),
+                      )
                     ) : (
                       <div className="py-12 text-center text-xs text-muted-foreground">
                         <RouteIcon className="size-6 mx-auto mb-1.5 text-muted-foreground/50" />
@@ -910,30 +922,38 @@ function DutiesPage() {
                   {selectedDuty.crewSegments &&
                   selectedDuty.crewSegments.length > 0 ? (
                     <div className="grid gap-2 sm:grid-cols-2">
-                      {selectedDuty.crewSegments.map((seg: any) => (
-                        <div
-                          key={seg.id}
-                          className="p-3 rounded-lg border border-border/70 bg-card/60 text-xs space-y-1"
-                        >
-                          <div className="flex justify-between font-mono text-[11px] text-primary font-bold">
-                            <span>
-                              {formatMinutesToTime(seg.startTime)} –{" "}
-                              {formatMinutesToTime(seg.endTime)}
-                            </span>
-                            <Badge variant="outline" className="text-[9px]">
-                              Relief
-                            </Badge>
+                      {selectedDuty.crewSegments.map(
+                        (seg: {
+                          id: string;
+                          startTime: number;
+                          endTime: number;
+                          driverName?: string;
+                          conductorName?: string;
+                        }) => (
+                          <div
+                            key={seg.id}
+                            className="p-3 rounded-lg border border-border/70 bg-card/60 text-xs space-y-1"
+                          >
+                            <div className="flex justify-between font-mono text-[11px] text-primary font-bold">
+                              <span>
+                                {formatMinutesToTime(seg.startTime)} -{" "}
+                                {formatMinutesToTime(seg.endTime)}
+                              </span>
+                              <Badge variant="outline" className="text-[9px]">
+                                Relief
+                              </Badge>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">
+                              Driver:{" "}
+                              <strong>{seg.driverName || "Assigned"}</strong>
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Conductor:{" "}
+                              <strong>{seg.conductorName || "Assigned"}</strong>
+                            </p>
                           </div>
-                          <p className="text-[11px] text-muted-foreground">
-                            Driver:{" "}
-                            <strong>{seg.driverName || "Assigned"}</strong>
-                          </p>
-                          <p className="text-[11px] text-muted-foreground">
-                            Conductor:{" "}
-                            <strong>{seg.conductorName || "Assigned"}</strong>
-                          </p>
-                        </div>
-                      ))}
+                        ),
+                      )}
                     </div>
                   ) : (
                     <div className="p-3 rounded-lg border border-dashed border-border/70 text-center text-[11px] text-muted-foreground bg-background/30">
@@ -1094,7 +1114,9 @@ function DutiesPage() {
                 <Label className="text-xs">Duty Strategy</Label>
                 <Select
                   value={formDutyType}
-                  onValueChange={(val: any) => setFormDutyType(val)}
+                  onValueChange={(val: "LINKED" | "UNLINKED") =>
+                    setFormDutyType(val)
+                  }
                 >
                   <SelectTrigger className="text-xs font-mono">
                     <SelectValue />

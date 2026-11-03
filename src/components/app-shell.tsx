@@ -82,7 +82,8 @@ const NAV: NavGroup[] = [
     title: "Fleet & Routes",
     items: [
       { label: "Buses", to: "/fleet/buses", icon: Bus },
-      { label: "Drivers & Crew", to: "/crew/drivers", icon: Users },
+      { label: "Drivers", to: "/crew/drivers", icon: Users },
+      { label: "Conductors", to: "/crew/conductors", icon: Users },
       { label: "Routes & Stops", to: "/network/routes", icon: Map },
     ],
   },
@@ -121,6 +122,7 @@ function isNavVisible(role: string, to: string): boolean {
         "MANAGEMENT",
       ].includes(role);
     case "/crew/drivers":
+    case "/crew/conductors":
       return [
         "SCHEDULER",
         "DEPOT_MANAGER",

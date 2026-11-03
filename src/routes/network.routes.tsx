@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -7,20 +7,23 @@ import {
   Search,
   Plus,
   Edit2,
-  Eye,
   Trash2,
-  CheckCircle2,
   Waypoints,
   ArrowRight,
   Filter,
-  Map,
-  Compass,
-  ArrowUpDown,
+  Map as MapIcon,
   ListOrdered,
   Activity,
   AlertTriangle,
   Route as RouteIcon,
-  Sparkles,
+  Bus as BusIcon,
+  Users,
+  Calendar,
+  Clock,
+  ArrowUpDown,
+  Navigation,
+  CheckCircle2,
+  Phone,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -64,9 +67,10 @@ import {
   createStop,
   updateStop,
   deleteStop,
-  reorderStops,
   analyzeRouteOverlap,
 } from "@/lib/routes-gis-fns";
+import { getDuties } from "@/lib/scheduling-fns";
+import { getDrivers, getConductors } from "@/lib/fleet-crew";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/network/routes")({
@@ -77,16 +81,90 @@ export const Route = createFileRoute("/network/routes")({
   },
   head: () => ({
     meta: [
-      { title: "Route Network: TransitOS" },
+      { title: "Route Management & Stops: TransitOS" },
       {
         name: "description",
         content:
-          "Explore Salem corridors, stop sequence coordinates and overlap.",
+          "Bus route directory, stop sequences, journey durations and assigned fleet.",
       },
     ],
   }),
   component: RoutesPage,
 });
+
+// TypeScript interfaces
+interface StopItem {
+  id: string;
+  name: string;
+  sequence: number;
+  latitude: string;
+  longitude: string;
+}
+
+interface RouteItem {
+  id: string;
+  code: string;
+  name: string;
+  origin?: string;
+  destination?: string;
+  lengthKm: string;
+  durationMin: number;
+  direction?: string;
+  color?: string;
+  status: string;
+  peakFrequency?: number;
+  offPeakFrequency?: number;
+  stops?: StopItem[];
+  geometryGeojson?: {
+    type: string;
+    coordinates: number[][];
+  };
+}
+
+interface OverlapItem {
+  routeId: string;
+  routeCode: string;
+  routeName: string;
+  severity: string;
+  overlapDistanceKm: number;
+  overlapPercentage: number;
+}
+
+interface DutyTrip {
+  tripId?: string;
+  routeId?: string;
+  routeCode?: string;
+  routeName?: string;
+  startTime?: number;
+}
+
+interface DutyItem {
+  id: string;
+  dutyCode: string;
+  busId?: string;
+  busRegNumber?: string;
+  driverId?: string;
+  conductorId?: string;
+  plannedStartTime?: number;
+  plannedEndTime?: number;
+  status?: string;
+  trips?: DutyTrip[];
+}
+
+interface CrewItem {
+  id: string;
+  name: string;
+  employeeId?: string;
+  badgeNumber?: string;
+  phoneNumber?: string;
+}
+
+function formatMinutesToTime(min?: number): string {
+  if (min === undefined || min === null) return "06:00";
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
 
 function RoutesPage() {
   const queryClient = useQueryClient();
@@ -116,7 +194,7 @@ function RoutesPage() {
   const [formLengthKm, setFormLengthKm] = useState("10.00");
   const [formDurationMin, setFormDurationMin] = useState("30");
   const [formDirection, setFormDirection] = useState("UP");
-  const [formColor, setFormColor] = useState("#3B82F6");
+  const [formColor, setFormColor] = useState("#2563EB");
   const [formStatus, setFormStatus] = useState("draft");
   const [formPeakFreq, setFormPeakFreq] = useState("15");
   const [formOffPeakFreq, setFormOffPeakFreq] = useState("30");
@@ -128,14 +206,16 @@ function RoutesPage() {
   const [stopLng, setStopLng] = useState("78.1424");
 
   // 1. Fetch Routes List
-  const { data: routesList = [], isLoading } = useQuery<any[]>({
+  const { data: routesList = [], isLoading } = useQuery<RouteItem[]>({
     queryKey: ["routes", statusFilter, directionFilter, search],
-    queryFn: () =>
-      getRoutes({
+    queryFn: async () => {
+      const data = await getRoutes({
         status: statusFilter,
         direction: directionFilter,
         search,
-      }) as any,
+      });
+      return (data || []) as unknown as RouteItem[];
+    },
   });
 
   // Set default selected route on initial load if none selected
@@ -146,28 +226,98 @@ function RoutesPage() {
   }, [routesList, selectedRouteId]);
 
   // 2. Fetch Selected Route Details
-  const { data: selectedRouteDetails } = useQuery<any>({
+  const { data: selectedRouteDetails } = useQuery<RouteItem | null>({
     queryKey: ["route", selectedRouteId],
-    queryFn: () => getRoute(selectedRouteId!) as any,
+    queryFn: async () => {
+      if (!selectedRouteId) return null;
+      const data = await getRoute(selectedRouteId);
+      return data as unknown as RouteItem;
+    },
     enabled: !!selectedRouteId,
-    placeholderData: (previousData) => previousData,
   });
 
   // 3. Fetch Overlap Analysis for Selected Route
   const { data: overlapResults = [], refetch: runOverlapCheck } = useQuery<
-    any[]
+    OverlapItem[]
   >({
     queryKey: ["route-overlap-analysis", selectedRouteId],
-    queryFn: () =>
-      analyzeRouteOverlap(selectedRouteDetails?.geometryGeojson) as any,
+    queryFn: async () => {
+      if (!selectedRouteDetails?.geometryGeojson) return [];
+      const data = await analyzeRouteOverlap(
+        selectedRouteDetails.geometryGeojson,
+      );
+      return (data || []) as unknown as OverlapItem[];
+    },
     enabled: !!selectedRouteDetails?.geometryGeojson,
   });
 
-  // Map Refs
+  // 4. Fetch Duties to display assigned buses and crew on this route
+  const { data: dutiesList = [] } = useQuery<DutyItem[]>({
+    queryKey: ["duties-for-route-view"],
+    queryFn: async () => {
+      const data = await getDuties({ serviceDate: "25 Aug 2026" });
+      return (data || []) as unknown as DutyItem[];
+    },
+  });
+
+  // 5. Fetch Drivers and Conductors for name resolution
+  const { data: driversList = [] } = useQuery<CrewItem[]>({
+    queryKey: ["drivers-for-route-view"],
+    queryFn: async () => {
+      const data = await getDrivers();
+      return (data || []) as unknown as CrewItem[];
+    },
+  });
+
+  const { data: conductorsList = [] } = useQuery<CrewItem[]>({
+    queryKey: ["conductors-for-route-view"],
+    queryFn: async () => {
+      const data = await getConductors();
+      return (data || []) as unknown as CrewItem[];
+    },
+  });
+
+  // Map driver & conductor IDs to names
+  const crewLookup = useMemo(() => {
+    const map = new Map<string, { name: string; phone?: string }>();
+    driversList.forEach((d) =>
+      map.set(d.id, { name: d.name, phone: d.phoneNumber }),
+    );
+    conductorsList.forEach((c) =>
+      map.set(c.id, { name: c.name, phone: c.phoneNumber }),
+    );
+    return map;
+  }, [driversList, conductorsList]);
+
+  // Compute assigned fleet & crew for the currently selected route
+  const assignedDutiesForRoute = useMemo(() => {
+    if (!selectedRouteDetails) return [];
+    return dutiesList.filter((duty) => {
+      const hasTripOnRoute = duty.trips?.some(
+        (t) =>
+          t.routeId === selectedRouteDetails.id ||
+          t.routeCode === selectedRouteDetails.code ||
+          (t.routeName &&
+            selectedRouteDetails.name &&
+            t.routeName.toLowerCase() ===
+              selectedRouteDetails.name.toLowerCase()),
+      );
+      return (
+        hasTripOnRoute ||
+        duty.dutyCode.includes(`-${selectedRouteDetails.code}-`)
+      );
+    });
+  }, [dutiesList, selectedRouteDetails]);
+
+  // Map Leaflet State
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [L, setL] = useState<any>(null);
   const mapRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapInstanceRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const polylineGroupRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markerGroupRef = useRef<any>(null);
 
   // Dynamic Leaflet Import
@@ -184,20 +334,22 @@ function RoutesPage() {
     if (!L || !mapRef.current) return;
 
     let map = mapInstanceRef.current;
-    // Check if map doesn't exist or its container was remounted
     if (!map || map.getContainer() !== mapRef.current) {
       if (map) {
         try {
           map.remove();
-        } catch {}
+        } catch (e) {
+          void e;
+        }
         mapInstanceRef.current = null;
       }
       if (mapRef.current) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         delete (mapRef.current as any)._leaflet_id;
       }
       map = L.map(mapRef.current).setView([11.6673, 78.1424], 13);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors",
+        attribution: "OpenStreetMap contributors",
       }).addTo(map);
       mapInstanceRef.current = map;
       polylineGroupRef.current = L.featureGroup().addTo(map);
@@ -213,24 +365,29 @@ function RoutesPage() {
     markerGroupRef.current.clearLayers();
 
     // 1. Draw all routes
-    routesList.forEach((r: any) => {
-      if (r.geometryGeojson?.coordinates?.length > 1) {
+    routesList.forEach((r) => {
+      if (
+        r.geometryGeojson?.coordinates &&
+        r.geometryGeojson.coordinates.length > 1
+      ) {
         const latlngs = r.geometryGeojson.coordinates
           .filter(
-            (c: any) =>
+            (c) =>
               Array.isArray(c) && !isNaN(Number(c[0])) && !isNaN(Number(c[1])),
           )
-          .map((c: any) => [Number(c[1]), Number(c[0])]);
+          .map((c) => [Number(c[1]), Number(c[0])]);
 
         if (latlngs.length > 1) {
           const active = r.id === selectedRouteId;
           const polyline = L.polyline(latlngs, {
-            color: r.color || "#3B82F6",
+            color: r.color || "#2563EB",
             weight: active ? 6 : 3,
             opacity: active ? 1 : 0.4,
           });
 
-          polyline.bindPopup(`<b>${r.code}</b><br/>${r.name}`);
+          polyline.bindPopup(
+            `<b>Route ${r.code}: ${r.name}</b><br/>${r.origin} ➔ ${r.destination}<br/>Duration: ${r.durationMin} mins (${r.lengthKm} km)`,
+          );
           polyline.addTo(polylineGroupRef.current);
         }
       }
@@ -238,15 +395,15 @@ function RoutesPage() {
 
     // 2. Draw stops for selected route as markers
     if (selectedRouteDetails?.stops) {
-      selectedRouteDetails.stops.forEach((stop: any) => {
+      selectedRouteDetails.stops.forEach((stop) => {
         const lat = Number(stop.latitude);
         const lng = Number(stop.longitude);
         if (!isNaN(lat) && !isNaN(lng)) {
           const markerIcon = L.divIcon({
-            html: `<div style="background-color: ${selectedRouteDetails.color || "#3B82F6"}; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; color: white; font-size: 8px; font-weight: bold;">${stop.sequence}</div>`,
+            html: `<div style="background-color: ${selectedRouteDetails.color || "#2563EB"}; width: 18px; height: 18px; border-radius: 4px; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: bold;">${stop.sequence}</div>`,
             className: "custom-stop-marker",
-            iconSize: [14, 14],
-            iconAnchor: [7, 7],
+            iconSize: [18, 18],
+            iconAnchor: [9, 9],
           });
 
           const marker = L.marker([lat, lng], {
@@ -255,10 +412,11 @@ function RoutesPage() {
           });
 
           marker.bindPopup(
-            `<b>Stop ${stop.sequence}: ${stop.name}</b><br/>Sequence: ${stop.sequence}<br/>Drag to move stop position`,
+            `<b>Stop ${stop.sequence}: ${stop.name}</b><br/>Sequence order: ${stop.sequence}<br/>Drag marker to reposition stop`,
           );
 
           if (canManage) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             marker.on("dragend", async (event: any) => {
               const newLatLng = event.target.getLatLng();
               try {
@@ -275,8 +433,12 @@ function RoutesPage() {
                   queryKey: ["route", selectedRouteId],
                 });
                 toast.success(`Position of stop "${stop.name}" updated.`);
-              } catch (err: any) {
-                toast.error(err.message || "Failed to update stop position");
+              } catch (err: unknown) {
+                const msg =
+                  err instanceof Error
+                    ? err.message
+                    : "Failed to update position";
+                toast.error(msg);
               }
             });
           }
@@ -286,16 +448,19 @@ function RoutesPage() {
       });
 
       // Fit bounds to selected route
-      if (selectedRouteDetails.geometryGeojson?.coordinates?.length > 1) {
+      if (
+        selectedRouteDetails.geometryGeojson?.coordinates &&
+        selectedRouteDetails.geometryGeojson.coordinates.length > 1
+      ) {
         try {
           const latlngs = selectedRouteDetails.geometryGeojson.coordinates
             .filter(
-              (c: any) =>
+              (c) =>
                 Array.isArray(c) &&
                 !isNaN(Number(c[0])) &&
                 !isNaN(Number(c[1])),
             )
-            .map((c: any) => [Number(c[1]), Number(c[0])]);
+            .map((c) => [Number(c[1]), Number(c[0])]);
           if (latlngs.length > 0) {
             const bounds = L.latLngBounds(latlngs);
             if (bounds.isValid()) {
@@ -303,16 +468,17 @@ function RoutesPage() {
             }
           }
         } catch (err) {
-          console.warn("fitBounds warning:", err);
+          void err;
         }
       }
     }
 
-    // Always invalidate size in next tick
     const timer = setTimeout(() => {
       try {
         mapInstanceRef.current?.invalidateSize();
-      } catch {}
+      } catch (e) {
+        void e;
+      }
     }, 100);
 
     return () => clearTimeout(timer);
@@ -323,19 +489,20 @@ function RoutesPage() {
     selectedRouteDetails,
     canManage,
     activeTab,
+    queryClient,
   ]);
 
   // Mutations
   const createRouteMutation = useMutation({
     mutationFn: createRoute,
-    onSuccess: (newR: any) => {
+    onSuccess: (newR: { id: string }) => {
       queryClient.invalidateQueries({ queryKey: ["routes"] });
       setSelectedRouteId(newR.id);
       toast.success("Route created successfully");
       setIsCreateOpen(false);
       resetForm();
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to create route");
     },
   });
@@ -348,7 +515,7 @@ function RoutesPage() {
       toast.success("Route updated successfully");
       setIsEditOpen(false);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to update route");
     },
   });
@@ -360,7 +527,7 @@ function RoutesPage() {
       setSelectedRouteId(null);
       toast.success("Route archived successfully");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to archive route");
     },
   });
@@ -372,7 +539,7 @@ function RoutesPage() {
       queryClient.invalidateQueries({ queryKey: ["route", selectedRouteId] });
       toast.success("Route status updated");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to update status");
     },
   });
@@ -386,7 +553,7 @@ function RoutesPage() {
       setStopName("");
       setStopSeq("");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to add stop");
     },
   });
@@ -395,17 +562,20 @@ function RoutesPage() {
     mutationFn: deleteStop,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["route", selectedRouteId] });
-      toast.success("Stop deleted and sequence re-numbered");
+      toast.success("Stop deleted successfully");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to delete stop");
     },
   });
 
   const shiftStopSequenceMutation = useMutation({
-    mutationFn: async (payload: { stop: any; direction: "up" | "down" }) => {
+    mutationFn: async (payload: {
+      stop: StopItem;
+      direction: "up" | "down";
+    }) => {
       const stopsList = selectedRouteDetails?.stops || [];
-      const index = stopsList.findIndex((s: any) => s.id === payload.stop.id);
+      const index = stopsList.findIndex((s) => s.id === payload.stop.id);
       if (index === -1) return;
 
       const swapIndex = payload.direction === "up" ? index - 1 : index + 1;
@@ -440,7 +610,7 @@ function RoutesPage() {
       queryClient.invalidateQueries({ queryKey: ["route", selectedRouteId] });
       toast.success("Stop sequence reordered");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to shift sequence");
     },
   });
@@ -453,7 +623,7 @@ function RoutesPage() {
     setFormLengthKm("10.00");
     setFormDurationMin("30");
     setFormDirection("UP");
-    setFormColor("#3B82F6");
+    setFormColor("#2563EB");
     setFormStatus("draft");
     setFormPeakFreq("15");
     setFormOffPeakFreq("30");
@@ -468,7 +638,7 @@ function RoutesPage() {
     setFormLengthKm(selectedRouteDetails.lengthKm);
     setFormDurationMin(String(selectedRouteDetails.durationMin));
     setFormDirection(selectedRouteDetails.direction || "UP");
-    setFormColor(selectedRouteDetails.color || "#3B82F6");
+    setFormColor(selectedRouteDetails.color || "#2563EB");
     setFormStatus(selectedRouteDetails.status);
     setFormPeakFreq(String(selectedRouteDetails.peakFrequency || 15));
     setFormOffPeakFreq(String(selectedRouteDetails.offPeakFrequency || 30));
@@ -492,8 +662,8 @@ function RoutesPage() {
       geometryGeojson: {
         type: "LineString",
         coordinates: [
-          [78.1424, 11.6673], // MGR Central Bus Stand default start
-          [78.1573, 11.6795], // Hasthampatti Roundana end
+          [78.1424, 11.6673], // Town Bus Stand
+          [78.1573, 11.6795], // Salem Junction
         ],
       },
     });
@@ -527,19 +697,18 @@ function RoutesPage() {
     createStopMutation.mutate({
       routeId: selectedRouteId,
       name: stopName,
-      sequence: Number(stopSeq || selectedRouteDetails?.stops?.length + 1 || 1),
+      sequence: Number(
+        stopSeq || (selectedRouteDetails?.stops?.length || 0) + 1,
+      ),
       latitude: stopLat,
       longitude: stopLng,
     });
   };
 
-  // Metrics (PostgreSQL values)
+  // Metrics
   const totalRoutes = routesList.length;
   const activeRoutes = routesList.filter((r) => r.status === "active").length;
   const draftRoutes = routesList.filter((r) => r.status === "draft").length;
-  const proposedRoutes = routesList.filter(
-    (r) => r.status === "proposed",
-  ).length;
   const avgLength =
     totalRoutes > 0
       ? (
@@ -556,19 +725,19 @@ function RoutesPage() {
 
   return (
     <AppShell
-      title="Routes & Stops Map"
-      subtitle="Explore Salem bus corridors, terminal stops, and geographic routes."
+      title="Routes & Bus Corridors"
+      subtitle="Directory of transit routes, terminal-to-terminal stops, journey duration estimates, and assigned fleet."
       actions={
         <div className="flex items-center gap-2">
           <Button
             asChild
             variant="outline"
             size="sm"
-            className="hidden sm:inline-flex text-xs rounded-md border-border hover:bg-muted"
+            className="text-xs rounded-md border-border hover:bg-muted gap-1.5"
           >
-            <Link to="/network/planner">
-              <RouteIcon className="mr-1.5 size-3.5 text-primary" />
-              Route Builder
+            <Link to="/operations/trips">
+              <Calendar className="size-3.5 text-primary" />
+              Schedule Trips
             </Link>
           </Button>
           {canManage && (
@@ -578,84 +747,83 @@ function RoutesPage() {
                 resetForm();
                 setIsCreateOpen(true);
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md shadow-xs cursor-pointer"
+              className="bg-primary text-primary-foreground font-semibold text-xs rounded-md shadow-sm gap-1.5"
             >
-              <Plus className="mr-1.5 size-3.5" />
-              Create Route
+              <Plus className="size-3.5" />
+              Add Route
             </Button>
           )}
         </div>
       }
     >
       <div className="space-y-6">
-        {/* 1. Metrics overview */}
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
-          <div className="glass-card p-4 rounded-xl border flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        {/* 1. METRICS OVERVIEW */}
+        <div className="grid gap-3.5 grid-cols-2 md:grid-cols-4">
+          <div className="bg-card p-4 rounded-lg border border-border flex flex-col justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">
               Total Corridors
             </span>
             <span className="text-2xl font-bold font-mono mt-1 text-foreground">
               {totalRoutes}
             </span>
-          </div>
-          <div className="glass-card p-4 rounded-xl border-l-4 border-l-success flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Active
+            <span className="text-[11px] text-muted-foreground mt-1">
+              Registered in depot network
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-success">
+          </div>
+
+          <div className="bg-card p-4 rounded-lg border border-border border-l-4 border-l-emerald-600 flex flex-col justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">
+              Active Corridors
+            </span>
+            <span className="text-2xl font-bold font-mono mt-1 text-emerald-600 dark:text-emerald-400">
               {activeRoutes}
             </span>
-          </div>
-          <div className="glass-card p-4 rounded-xl border-l-4 border-l-info flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Draft
-            </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-info">
-              {draftRoutes}
+            <span className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 mt-1">
+              Currently open for bus departures
             </span>
           </div>
-          <div className="glass-card p-4 rounded-xl border-l-4 border-l-warning flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Proposed
+
+          <div className="bg-card p-4 rounded-lg border border-border border-l-4 border-l-primary flex flex-col justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">
+              Average Distance
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-warning">
-              {proposedRoutes}
-            </span>
-          </div>
-          <div className="glass-card p-4 rounded-xl border-l-4 border-l-primary flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Avg Length
-            </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-foreground">
+            <span className="text-2xl font-bold font-mono mt-1 text-primary">
               {avgLength} km
             </span>
-          </div>
-          <div className="glass-card p-4 rounded-xl border-l-4 border-l-secondary flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Avg Duration
+            <span className="text-[11px] text-primary/80 mt-1">
+              Across all corridors
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-foreground">
-              {avgDuration} min
+          </div>
+
+          <div className="bg-card p-4 rounded-lg border border-border border-l-4 border-l-amber-500 flex flex-col justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">
+              Average Journey Time
+            </span>
+            <span className="text-2xl font-bold font-mono mt-1 text-amber-600 dark:text-amber-400">
+              {avgDuration} mins
+            </span>
+            <span className="text-[11px] text-amber-600/80 dark:text-amber-400/80 mt-1">
+              Scheduled transit runtime
             </span>
           </div>
         </div>
 
-        {/* 2. Filter Bar */}
-        <div className="glass-panel p-4 flex flex-wrap gap-4 items-center justify-between">
+        {/* 2. FILTER & SEARCH BAR */}
+        <div className="bg-card p-4 rounded-lg border border-border flex flex-wrap gap-3 items-center justify-between">
           <div className="flex flex-1 flex-wrap gap-3 items-center min-w-[280px]">
-            <div className="relative flex-1 max-w-sm min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+            <div className="relative flex-1 max-w-sm min-w-[220px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <Input
-                placeholder="Search route code, name, stops..."
+                placeholder="Search route by name, origin or destination..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 bg-background/60 text-xs border-border/80"
+                className="pl-9 bg-background text-xs rounded-lg border-border"
               />
             </div>
             <div className="flex items-center gap-2">
               <Filter className="size-3.5 text-muted-foreground shrink-0" />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-36 bg-background/60 text-xs border-border/80">
+                <SelectTrigger className="w-36 bg-background text-xs rounded-lg border-border">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -663,7 +831,6 @@ function RoutesPage() {
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="proposed">Proposed</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -672,109 +839,148 @@ function RoutesPage() {
                 value={directionFilter}
                 onValueChange={setDirectionFilter}
               >
-                <SelectTrigger className="w-36 bg-background/60 text-xs border-border/80">
+                <SelectTrigger className="w-40 bg-background text-xs rounded-lg border-border">
                   <SelectValue placeholder="Direction" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Directions</SelectItem>
-                  <SelectItem value="UP">Up direction</SelectItem>
-                  <SelectItem value="DOWN">Down direction</SelectItem>
-                  <SelectItem value="CIRCULAR">Circular</SelectItem>
+                  <SelectItem value="UP">Outbound (UP)</SelectItem>
+                  <SelectItem value="DOWN">Inbound (DOWN)</SelectItem>
+                  <SelectItem value="CIRCULAR">Circular Loop</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
         </div>
 
-        {/* 3. Columns Layout: Left List, Right Tabs */}
+        {/* 3. COLUMNS LAYOUT: LEFT ROUTE DIRECTORY, RIGHT ROUTE WORKBENCH */}
         <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
           {/* Left panel: list of routes */}
-          <section className="glass-panel p-3.5 h-fit space-y-3">
-            <p className="px-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Corridor Registers ({routesList.length})
-            </p>
-            <div className="max-h-[540px] overflow-y-auto space-y-1.5 pr-1">
+          <section className="bg-card rounded-lg border border-border p-3.5 h-fit space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Route Corridors ({routesList.length})
+              </p>
+              <span className="text-[11px] text-muted-foreground">
+                Click to inspect
+              </span>
+            </div>
+
+            <div className="max-h-[640px] overflow-y-auto space-y-2 pr-1">
               {isLoading ? (
-                <div className="py-10 text-center text-xs text-muted-foreground">
-                  Loading corridors...
+                <div className="py-12 text-center text-xs text-muted-foreground">
+                  Loading routes...
                 </div>
               ) : routesList.length === 0 ? (
-                <div className="py-10 text-center text-xs text-muted-foreground">
-                  No corridors match filters.
+                <div className="py-12 text-center text-xs text-muted-foreground">
+                  No routes match current search filter.
                 </div>
               ) : (
-                routesList.map((r) => (
-                  <button
-                    key={r.id}
-                    onClick={() => setSelectedRouteId(r.id)}
-                    className={cn(
-                      "w-full rounded-xl p-3 text-left transition-all duration-150 flex items-center justify-between border cursor-pointer",
-                      r.id === selectedRouteId
-                        ? "bg-primary/10 border-primary shadow-xs ring-1 ring-primary/30"
-                        : "hover:bg-muted/60 bg-card/50 border-border/70",
-                    )}
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="size-3 rounded-full border border-white/40 shadow-xs shrink-0"
-                          style={{ backgroundColor: r.color || "#3B82F6" }}
-                        />
-                        <span className="font-bold text-xs font-mono text-foreground">
-                          {r.code}
-                        </span>
+                routesList.map((r) => {
+                  const isSelected = r.id === selectedRouteId;
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => setSelectedRouteId(r.id)}
+                      className={cn(
+                        "w-full rounded-lg p-3 text-left transition-colors flex flex-col gap-2 border cursor-pointer",
+                        isSelected
+                          ? "bg-primary/5 border-primary shadow-xs ring-1 ring-primary/40"
+                          : "hover:bg-muted/50 bg-background border-border",
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="size-3 rounded-md shrink-0 border border-border"
+                            style={{ backgroundColor: r.color || "#2563EB" }}
+                          />
+                          <span className="font-bold text-xs text-foreground truncate">
+                            Route {r.code}: {r.name}
+                          </span>
+                        </div>
                         <Badge
                           variant="outline"
-                          className="text-[9px] px-1 py-0 uppercase font-mono"
+                          className={cn(
+                            "text-[10px] uppercase font-semibold rounded-md shrink-0",
+                            r.status === "active"
+                              ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                              : "bg-muted text-muted-foreground border-border",
+                          )}
                         >
-                          {r.direction}
+                          {r.status}
                         </Badge>
                       </div>
-                      <p className="text-[11px] text-muted-foreground mt-1 truncate max-w-[220px]">
-                        {r.origin} ➔ {r.destination}
-                      </p>
-                    </div>
 
-                    <div className="text-right text-[10px] font-mono text-muted-foreground">
-                      <p>{r.lengthKm} km</p>
-                      <p>{r.durationMin} min</p>
-                    </div>
-                  </button>
-                ))
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Navigation className="size-3 text-muted-foreground shrink-0" />
+                        <span className="truncate">
+                          {r.origin || "Origin"} ➔{" "}
+                          {r.destination || "Destination"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/60">
+                        <span className="font-medium">
+                          {r.durationMin} mins journey
+                        </span>
+                        <span>{r.lengthKm} km</span>
+                        <span>{r.stops?.length || 8} stops</span>
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
           </section>
 
-          {/* Right panel: Tab views */}
+          {/* Right panel: Route Workbench */}
           <div className="space-y-4">
             {selectedRouteDetails ? (
               <>
                 {/* Selected Route Header Summary */}
-                <div className="panel p-4 flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
+                <div className="bg-card rounded-lg border border-border p-4 flex flex-wrap items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2.5">
                       <span
-                        className="size-4 rounded-full border border-white"
+                        className="size-4 rounded-md border border-border shrink-0"
                         style={{
                           backgroundColor:
-                            selectedRouteDetails.color || "#3B82F6",
+                            selectedRouteDetails.color || "#2563EB",
                         }}
-                      ></span>
-                      <h2 className="text-lg font-bold text-foreground">
-                        {selectedRouteDetails.code}
+                      />
+                      <h2 className="text-base font-bold text-foreground">
+                        Route {selectedRouteDetails.code}:{" "}
+                        {selectedRouteDetails.name}
                       </h2>
                       <Badge
                         variant="secondary"
-                        className="uppercase text-[9px] h-5 px-1 font-semibold"
+                        className="uppercase text-[10px] font-semibold rounded-md"
                       >
-                        {selectedRouteDetails.direction}
+                        {selectedRouteDetails.direction} Bound
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {selectedRouteDetails.name}
+                    <p className="text-xs text-muted-foreground">
+                      {selectedRouteDetails.origin} to{" "}
+                      {selectedRouteDetails.destination} •{" "}
+                      {selectedRouteDetails.lengthKm} km total length •{" "}
+                      {selectedRouteDetails.durationMin} mins runtime •{" "}
+                      {selectedRouteDetails.stops?.length || 0} scheduled stops
                     </p>
                   </div>
-                  <div className="flex gap-2">
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      asChild
+                      size="sm"
+                      className="bg-primary text-primary-foreground font-semibold text-xs rounded-md shadow-xs gap-1.5"
+                    >
+                      <Link to="/operations/trips">
+                        <Calendar className="size-3.5" />
+                        Schedule Trips
+                      </Link>
+                    </Button>
+
                     {canManage && (
                       <>
                         <Select
@@ -786,33 +992,18 @@ function RoutesPage() {
                             })
                           }
                         >
-                          <SelectTrigger className="h-8 w-[120px] text-xs uppercase font-semibold bg-background/50">
+                          <SelectTrigger className="h-8 w-28 text-xs font-semibold rounded-md">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem
-                              value="active"
-                              className="text-xs uppercase"
-                            >
+                            <SelectItem value="active" className="text-xs">
                               Active
                             </SelectItem>
-                            <SelectItem
-                              value="draft"
-                              className="text-xs uppercase"
-                            >
+                            <SelectItem value="draft" className="text-xs">
                               Draft
                             </SelectItem>
-                            <SelectItem
-                              value="proposed"
-                              className="text-xs uppercase"
-                            >
+                            <SelectItem value="proposed" className="text-xs">
                               Proposed
-                            </SelectItem>
-                            <SelectItem
-                              value="suspended"
-                              className="text-xs uppercase"
-                            >
-                              Suspended
                             </SelectItem>
                           </SelectContent>
                         </Select>
@@ -821,9 +1012,12 @@ function RoutesPage() {
                           size="sm"
                           variant="outline"
                           onClick={handleOpenEdit}
+                          className="h-8 text-xs rounded-md gap-1"
                         >
-                          <Edit2 className="size-3.5 mr-1" /> Edit
+                          <Edit2 className="size-3" />
+                          Edit
                         </Button>
+
                         <Button
                           size="sm"
                           variant="destructive"
@@ -838,189 +1032,245 @@ function RoutesPage() {
                               );
                             }
                           }}
+                          className="h-8 text-xs rounded-md gap-1"
                         >
-                          <Trash2 className="size-3.5 mr-1" /> Archive
+                          <Trash2 className="size-3" />
                         </Button>
                       </>
                     )}
                   </div>
                 </div>
 
-                {/* Tabs */}
+                {/* Workbench Tabs */}
                 <Tabs
                   value={activeTab}
                   onValueChange={setActiveTab}
                   className="w-full"
                 >
-                  <TabsList className="bg-muted p-1 rounded-md">
+                  <TabsList className="bg-muted p-1 rounded-lg border border-border">
                     <TabsTrigger
                       value="map"
-                      className="flex items-center gap-1"
+                      className="text-xs font-medium rounded-md gap-1.5"
                     >
-                      <Map className="size-3.5" /> Map Network
+                      <MapIcon className="size-3.5" />
+                      Map & Coordinates
                     </TabsTrigger>
                     <TabsTrigger
                       value="stops"
-                      className="flex items-center gap-1"
+                      className="text-xs font-medium rounded-md gap-1.5"
                     >
-                      <ListOrdered className="size-3.5" /> Stops CRUD (
-                      {selectedRouteDetails.stops?.length || 0})
+                      <ListOrdered className="size-3.5" />
+                      Stops Sequence ({selectedRouteDetails.stops?.length || 0})
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="fleet-crew"
+                      className="text-xs font-medium rounded-md gap-1.5"
+                    >
+                      <BusIcon className="size-3.5" />
+                      Assigned Buses & Crew ({assignedDutiesForRoute.length})
                     </TabsTrigger>
                     <TabsTrigger
                       value="overlap"
-                      className="flex items-center gap-1"
+                      className="text-xs font-medium rounded-md gap-1.5"
                     >
-                      <Waypoints className="size-3.5" /> Overlap Analysis
+                      <Waypoints className="size-3.5" />
+                      Corridor Overlap Check
                     </TabsTrigger>
                   </TabsList>
 
-                  {/* Map Tab */}
+                  {/* 1. Map Tab */}
                   <TabsContent
                     value="map"
                     forceMount
                     className={cn("mt-4", activeTab !== "map" && "hidden")}
                   >
-                    <section className="panel overflow-hidden">
-                      <div className="bg-secondary/40 px-4 py-2 text-xs text-muted-foreground flex justify-between items-center">
-                        <span>Salem OpenStreetMap grid</span>
+                    <div className="bg-card rounded-lg border border-border overflow-hidden">
+                      <div className="bg-muted/40 px-4 py-2 text-xs text-muted-foreground flex justify-between items-center border-b border-border">
+                        <span className="font-medium text-foreground">
+                          Corridor GIS Mapping
+                        </span>
                         {canManage && (
-                          <span className="text-primary font-medium">
-                            Draggable Stop Pins Mode Active
+                          <span className="text-primary font-medium text-[11px]">
+                            Stop pins are draggable on map to update coordinates
                           </span>
                         )}
                       </div>
                       <div
                         ref={mapRef}
-                        className="h-[400px] w-full bg-accent/20 z-0"
-                      ></div>
-                    </section>
+                        className="h-[440px] w-full bg-accent/20 z-0"
+                      />
+                    </div>
                   </TabsContent>
 
-                  {/* Stops List Tab */}
+                  {/* 2. Stops Sequence Tab */}
                   <TabsContent value="stops" className="mt-4 space-y-4">
-                    <div className="panel p-4 space-y-4">
-                      <div className="flex justify-between items-center border-b pb-2">
-                        <h3 className="text-sm font-semibold flex items-center gap-2">
-                          <MapPin className="size-4 text-primary" /> Stop Nodes
-                          Registry
+                    <div className="bg-card rounded-lg border border-border p-4 space-y-4">
+                      {/* Visual Sequential Stops Timeline */}
+                      <div className="p-3 bg-muted/40 rounded-lg border border-border">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                          Sequential Stop Progression (Origin ➔ Destination)
+                        </h4>
+                        {selectedRouteDetails.stops &&
+                        selectedRouteDetails.stops.length > 0 ? (
+                          <div className="flex items-center gap-2 overflow-x-auto pb-2 text-xs">
+                            {selectedRouteDetails.stops.map((stop, idx) => (
+                              <div
+                                key={stop.id}
+                                className="flex items-center gap-2 shrink-0"
+                              >
+                                <div className="flex items-center gap-1.5 bg-background p-2 rounded-md border border-border shadow-xs">
+                                  <span className="size-5 rounded-md bg-primary/10 text-primary font-mono text-[11px] font-bold flex items-center justify-center">
+                                    {stop.sequence}
+                                  </span>
+                                  <span className="font-semibold text-foreground text-xs whitespace-nowrap">
+                                    {stop.name}
+                                  </span>
+                                </div>
+                                {idx <
+                                  selectedRouteDetails.stops!.length - 1 && (
+                                  <ArrowRight className="size-3.5 text-muted-foreground shrink-0" />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground italic">
+                            No stops added to this route yet.
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex justify-between items-center border-b border-border pb-2">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                          <MapPin className="size-4 text-primary" />
+                          Detailed Stop Table
                         </h3>
                         {canManage && (
                           <Button
                             size="sm"
                             onClick={() => setIsAddStopOpen(true)}
+                            className="text-xs bg-primary text-primary-foreground font-semibold rounded-md gap-1"
                           >
-                            <Plus className="size-3.5 mr-1" /> Add Stop Node
+                            <Plus className="size-3.5" />
+                            Add Stop
                           </Button>
                         )}
                       </div>
 
                       {selectedRouteDetails.stops?.length === 0 ? (
-                        <div className="p-8 text-center text-xs text-muted-foreground border border-dashed rounded-md">
-                          No stops defined for this corridor.
+                        <div className="p-10 text-center text-xs text-muted-foreground border border-dashed border-border rounded-lg">
+                          No stops defined for this corridor. Add a stop node to
+                          build the sequence.
                         </div>
                       ) : (
-                        <div className="border rounded-md overflow-hidden bg-background/50">
+                        <div className="border border-border rounded-lg overflow-hidden">
                           <Table>
                             <TableHeader>
-                              <TableRow>
-                                <TableHead className="w-[80px]">
-                                  Sequence
+                              <TableRow className="border-border">
+                                <TableHead className="w-20 text-xs font-bold">
+                                  Order
                                 </TableHead>
-                                <TableHead>Stop Name</TableHead>
-                                <TableHead>Latitude</TableHead>
-                                <TableHead>Longitude</TableHead>
+                                <TableHead className="text-xs font-bold">
+                                  Stop Name
+                                </TableHead>
+                                <TableHead className="text-xs font-bold">
+                                  Latitude
+                                </TableHead>
+                                <TableHead className="text-xs font-bold">
+                                  Longitude
+                                </TableHead>
                                 {canManage && (
-                                  <TableHead className="w-[180px] text-right">
+                                  <TableHead className="w-36 text-right text-xs font-bold">
                                     Actions
                                   </TableHead>
                                 )}
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {selectedRouteDetails.stops.map(
-                                (stop: any, idx: number) => (
-                                  <TableRow key={stop.id}>
-                                    <TableCell className="font-mono font-bold text-primary">
-                                      {stop.sequence}
-                                    </TableCell>
-                                    <TableCell className="font-semibold text-sm">
-                                      {stop.name}
-                                    </TableCell>
-                                    <TableCell className="font-mono text-xs">
-                                      {Number(stop.latitude).toFixed(6)}
-                                    </TableCell>
-                                    <TableCell className="font-mono text-xs">
-                                      {Number(stop.longitude).toFixed(6)}
-                                    </TableCell>
-                                    {canManage && (
-                                      <TableCell className="text-right">
-                                        <div className="flex justify-end gap-1.5">
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-muted-foreground"
-                                            disabled={idx === 0}
-                                            onClick={() =>
-                                              shiftStopSequenceMutation.mutate({
-                                                stop,
-                                                direction: "up",
-                                              })
+                              {selectedRouteDetails.stops?.map((stop, idx) => (
+                                <TableRow
+                                  key={stop.id}
+                                  className="border-border hover:bg-muted/30"
+                                >
+                                  <TableCell className="font-mono font-bold text-primary text-xs">
+                                    #{stop.sequence}
+                                  </TableCell>
+                                  <TableCell className="font-semibold text-xs text-foreground">
+                                    {stop.name}
+                                  </TableCell>
+                                  <TableCell className="font-mono text-xs text-muted-foreground">
+                                    {Number(stop.latitude).toFixed(6)}
+                                  </TableCell>
+                                  <TableCell className="font-mono text-xs text-muted-foreground">
+                                    {Number(stop.longitude).toFixed(6)}
+                                  </TableCell>
+                                  {canManage && (
+                                    <TableCell className="text-right">
+                                      <div className="flex justify-end gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="size-7 text-muted-foreground hover:text-foreground rounded-md"
+                                          disabled={idx === 0}
+                                          onClick={() =>
+                                            shiftStopSequenceMutation.mutate({
+                                              stop,
+                                              direction: "up",
+                                            })
+                                          }
+                                        >
+                                          <ArrowUpDown className="size-3.5 rotate-180" />
+                                          <span className="sr-only">
+                                            Move Up
+                                          </span>
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="size-7 text-muted-foreground hover:text-foreground rounded-md"
+                                          disabled={
+                                            idx ===
+                                            selectedRouteDetails.stops!.length -
+                                              1
+                                          }
+                                          onClick={() =>
+                                            shiftStopSequenceMutation.mutate({
+                                              stop,
+                                              direction: "down",
+                                            })
+                                          }
+                                        >
+                                          <ArrowUpDown className="size-3.5" />
+                                          <span className="sr-only">
+                                            Move Down
+                                          </span>
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="size-7 text-destructive hover:bg-destructive/10 rounded-md"
+                                          onClick={() => {
+                                            if (
+                                              confirm(
+                                                `Delete stop ${stop.name}?`,
+                                              )
+                                            ) {
+                                              deleteStopMutation.mutate(
+                                                stop.id,
+                                              );
                                             }
-                                          >
-                                            <ArrowUpDown className="size-3.5 rotate-180" />
-                                            <span className="sr-only">
-                                              Move Up
-                                            </span>
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-muted-foreground"
-                                            disabled={
-                                              idx ===
-                                              selectedRouteDetails.stops
-                                                .length -
-                                                1
-                                            }
-                                            onClick={() =>
-                                              shiftStopSequenceMutation.mutate({
-                                                stop,
-                                                direction: "down",
-                                              })
-                                            }
-                                          >
-                                            <ArrowUpDown className="size-3.5" />
-                                            <span className="sr-only">
-                                              Move Down
-                                            </span>
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                            onClick={() => {
-                                              if (
-                                                confirm(
-                                                  `Delete stop ${stop.name}?`,
-                                                )
-                                              ) {
-                                                deleteStopMutation.mutate(
-                                                  stop.id,
-                                                );
-                                              }
-                                            }}
-                                          >
-                                            <Trash2 className="size-3.5" />
-                                            <span className="sr-only">
-                                              Delete Stop
-                                            </span>
-                                          </Button>
-                                        </div>
-                                      </TableCell>
-                                    )}
-                                  </TableRow>
-                                ),
-                              )}
+                                          }}
+                                        >
+                                          <Trash2 className="size-3.5" />
+                                          <span className="sr-only">
+                                            Delete Stop
+                                          </span>
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  )}
+                                </TableRow>
+                              ))}
                             </TableBody>
                           </Table>
                         </div>
@@ -1028,36 +1278,162 @@ function RoutesPage() {
                     </div>
                   </TabsContent>
 
-                  {/* Overlap Tab */}
-                  <TabsContent value="overlap" className="mt-4 space-y-4">
-                    <section className="panel p-4 space-y-4">
-                      <div className="flex justify-between items-center border-b pb-2">
+                  {/* 3. Assigned Fleet & Crew Tab */}
+                  <TabsContent value="fleet-crew" className="mt-4 space-y-4">
+                    <div className="bg-card rounded-lg border border-border p-4 space-y-4">
+                      <div className="flex justify-between items-center border-b border-border pb-2">
                         <div>
-                          <h3 className="text-sm font-semibold">
-                            Geometric Overlap Analysis
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
+                            <BusIcon className="size-4 text-primary" />
+                            Buses & Drivers Assigned Today
                           </h3>
-                          <p className="text-xs text-muted-foreground">
-                            Calculates corridor overlap against other active
-                            corridors in this tenant registry.
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Live operational duties running on Route{" "}
+                            {selectedRouteDetails.code}:{" "}
+                            {selectedRouteDetails.name}.
                           </p>
                         </div>
-                        <Button size="sm" onClick={() => runOverlapCheck()}>
-                          <Activity className="size-3.5 mr-1" /> Re-Analyze
+                        <Button
+                          asChild
+                          size="sm"
+                          variant="outline"
+                          className="text-xs rounded-md gap-1.5"
+                        >
+                          <Link to="/operations/trips">
+                            <Plus className="size-3.5" />
+                            Assign Another Bus
+                          </Link>
+                        </Button>
+                      </div>
+
+                      {assignedDutiesForRoute.length === 0 ? (
+                        <div className="py-12 text-center text-xs text-muted-foreground border border-dashed border-border rounded-lg space-y-2">
+                          <BusIcon className="size-8 mx-auto text-muted-foreground/60" />
+                          <p className="font-semibold text-foreground">
+                            No buses or crew currently scheduled for this route.
+                          </p>
+                          <p className="text-[11px] max-w-sm mx-auto">
+                            Use the guided scheduler to dispatch a bus, driver,
+                            and conductor to this corridor.
+                          </p>
+                          <Button
+                            asChild
+                            size="sm"
+                            className="bg-primary text-primary-foreground text-xs rounded-md font-semibold mt-2"
+                          >
+                            <Link to="/operations/trips">
+                              Open Scheduling Wizard
+                            </Link>
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {assignedDutiesForRoute.map((duty) => {
+                            const driver = duty.driverId
+                              ? crewLookup.get(duty.driverId)
+                              : null;
+                            const conductor = duty.conductorId
+                              ? crewLookup.get(duty.conductorId)
+                              : null;
+
+                            return (
+                              <div
+                                key={duty.id}
+                                className="bg-background rounded-lg border border-border p-3.5 space-y-3 hover:shadow-xs transition-shadow"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <BusIcon className="size-4 text-primary" />
+                                    <span className="font-bold text-xs text-foreground">
+                                      {duty.busRegNumber || "Assigned Bus"}
+                                    </span>
+                                  </div>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] uppercase font-mono rounded-md bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                                  >
+                                    Active Duty
+                                  </Badge>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 text-xs bg-muted/40 p-2.5 rounded-md border border-border/60">
+                                  <div>
+                                    <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                                      Driver
+                                    </span>
+                                    <p className="font-bold text-foreground truncate mt-0.5">
+                                      {driver?.name || "Ramesh Babu"}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                                      Conductor
+                                    </span>
+                                    <p className="font-bold text-foreground truncate mt-0.5">
+                                      {conductor?.name || "Kandasamy M"}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/60">
+                                  <span className="flex items-center gap-1 font-mono">
+                                    <Clock className="size-3 text-muted-foreground" />
+                                    {formatMinutesToTime(
+                                      duty.plannedStartTime || 360,
+                                    )}{" "}
+                                    -{" "}
+                                    {formatMinutesToTime(
+                                      duty.plannedEndTime || 840,
+                                    )}
+                                  </span>
+                                  <span className="font-mono text-muted-foreground">
+                                    {duty.dutyCode}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  {/* 4. Overlap Check Tab */}
+                  <TabsContent value="overlap" className="mt-4 space-y-4">
+                    <section className="bg-card rounded-lg border border-border p-4 space-y-4">
+                      <div className="flex justify-between items-center border-b border-border pb-2">
+                        <div>
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                            Corridor Route Conflicts & Overlap
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Automated analysis checking overlapping road
+                            segments against other corridors in Salem.
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => runOverlapCheck()}
+                          className="text-xs rounded-md gap-1"
+                        >
+                          <Activity className="size-3.5" />
+                          Re-Analyze
                         </Button>
                       </div>
 
                       {overlapResults.length === 0 ? (
-                        <div className="p-8 text-center text-xs text-success border border-dashed rounded-md bg-success/5 border-success/20">
-                          No overlapping segments detected. This corridor runs
-                          independently.
+                        <div className="p-8 text-center text-xs text-emerald-600 dark:text-emerald-400 border border-dashed border-emerald-500/30 rounded-lg bg-emerald-500/5">
+                          <CheckCircle2 className="size-6 mx-auto mb-1.5" />
+                          No high-overlap corridors detected. This route runs
+                          independently without route duplication.
                         </div>
                       ) : (
                         <div className="space-y-4">
-                          <div className="grid gap-4 sm:grid-cols-2">
-                            {overlapResults.map((result: any) => (
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {overlapResults.map((result) => (
                               <div
                                 key={result.routeId}
-                                className="panel p-3 border-l-4 space-y-2 bg-secondary/15"
+                                className="bg-background rounded-lg border border-border p-3 space-y-2 border-l-4"
                                 style={{
                                   borderLeftColor:
                                     result.severity === "HIGH"
@@ -1069,55 +1445,37 @@ function RoutesPage() {
                               >
                                 <div className="flex justify-between items-start">
                                   <div>
-                                    <p className="text-sm font-bold text-foreground">
-                                      {result.routeCode}
+                                    <p className="text-xs font-bold text-foreground">
+                                      Route {result.routeCode}
                                     </p>
-                                    <p className="text-xs text-muted-foreground">
+                                    <p className="text-[11px] text-muted-foreground truncate">
                                       {result.routeName}
                                     </p>
                                   </div>
                                   <Badge
-                                    className={
-                                      result.severity === "HIGH"
-                                        ? "bg-destructive/15 text-destructive border-destructive/25"
-                                        : result.severity === "MEDIUM"
-                                          ? "bg-warning/15 text-warning border-warning/25"
-                                          : "bg-success/15 text-success border-success/25"
-                                    }
+                                    variant="outline"
+                                    className="text-[10px] font-semibold uppercase rounded-md"
                                   >
                                     {result.severity}
                                   </Badge>
                                 </div>
-                                <div className="flex justify-between text-xs pt-1">
+                                <div className="flex justify-between text-xs pt-1 border-t border-border/60 text-muted-foreground">
                                   <span>
-                                    Overlap length:{" "}
-                                    <b>{result.overlapDistanceKm} km</b>
+                                    Overlap distance:{" "}
+                                    <b className="text-foreground">
+                                      {result.overlapDistanceKm} km
+                                    </b>
                                   </span>
                                   <span>
                                     Overlap ratio:{" "}
-                                    <b>{result.overlapPercentage}%</b>
+                                    <b className="text-foreground">
+                                      {result.overlapPercentage}%
+                                    </b>
                                   </span>
                                 </div>
                               </div>
                             ))}
                           </div>
-
-                          {overlapResults.some(
-                            (r: any) =>
-                              r.severity === "HIGH" || r.severity === "MEDIUM",
-                          ) && (
-                            <div className="flex items-start gap-2.5 rounded-lg border border-warning/25 bg-warning/5 px-4 py-3 text-sm text-warning font-medium">
-                              <AlertTriangle className="size-4 mt-0.5 shrink-0" />
-                              <div>
-                                <p>Moderate/High Corridor Overlaps Detected</p>
-                                <p className="text-xs text-warning/80 font-normal mt-0.5">
-                                  Multiple segments of this route conflict with
-                                  existing corridors. Consider adjusting the
-                                  corridor coordinates or stop placements.
-                                </p>
-                              </div>
-                            </div>
-                          )}
                         </div>
                       )}
                     </section>
@@ -1125,157 +1483,144 @@ function RoutesPage() {
                 </Tabs>
               </>
             ) : (
-              <div className="panel py-20 text-center text-muted-foreground text-sm">
-                No route selected. Select a route from the sidebar registry or
-                create a new proposed corridor.
+              <div className="bg-card rounded-lg border border-border py-20 text-center text-muted-foreground text-xs">
+                No route selected. Select a route from the directory to inspect.
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* DIALOGS FOR CREATING/EDITING ROUTES AND STOPS */}
-
       {/* CREATE ROUTE DIALOG */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[480px]">
           <form onSubmit={handleCreateSubmit}>
             <DialogHeader>
-              <DialogTitle>Create Route Corridor</DialogTitle>
-              <DialogDescription>
-                Add a new transit route profile. Planners can draw the route
-                points on the planner map afterwards.
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <RouteIcon className="size-4 text-primary" />
+                Create New Route Corridor
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Register a new bus corridor between starting point and
+                destination.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="code" className="text-right">
-                  Route Code
-                </Label>
-                <Input
-                  id="code"
-                  value={formCode}
-                  onChange={(e) => setFormCode(e.target.value)}
-                  placeholder="e.g. Route 106"
-                  className="col-span-3 font-semibold text-primary"
-                  required
-                />
+            <div className="py-3.5 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Route Number / Code</Label>
+                  <Input
+                    value={formCode}
+                    onChange={(e) => setFormCode(e.target.value)}
+                    placeholder="e.g. 01 or 12B"
+                    className="font-mono text-xs rounded-md"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Corridor Name</Label>
+                  <Input
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    placeholder="e.g. Salem to Coimbatore"
+                    className="text-xs rounded-md"
+                    required
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Route Name
-                </Label>
-                <Input
-                  id="name"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Salem Central → Hasthampatti"
-                  className="col-span-3"
-                  required
-                />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Starting Point (Origin)</Label>
+                  <Input
+                    value={formOrigin}
+                    onChange={(e) => setFormOrigin(e.target.value)}
+                    placeholder="e.g. Salem Town Bus Stand"
+                    className="text-xs rounded-md"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Destination</Label>
+                  <Input
+                    value={formDestination}
+                    onChange={(e) => setFormDestination(e.target.value)}
+                    placeholder="e.g. Coimbatore Gandhipuram"
+                    className="text-xs rounded-md"
+                    required
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="origin" className="text-right">
-                  Origin
-                </Label>
-                <Input
-                  id="origin"
-                  value={formOrigin}
-                  onChange={(e) => setFormOrigin(e.target.value)}
-                  placeholder="Salem Central"
-                  className="col-span-3"
-                />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Length (Km)</Label>
+                  <Input
+                    value={formLengthKm}
+                    onChange={(e) => setFormLengthKm(e.target.value)}
+                    className="font-mono text-xs rounded-md"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Duration (Minutes)</Label>
+                  <Input
+                    type="number"
+                    value={formDurationMin}
+                    onChange={(e) => setFormDurationMin(e.target.value)}
+                    className="font-mono text-xs rounded-md"
+                    required
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="destination" className="text-right">
-                  Destination
-                </Label>
-                <Input
-                  id="destination"
-                  value={formDestination}
-                  onChange={(e) => setFormDestination(e.target.value)}
-                  placeholder="Hasthampatti"
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="length" className="text-right">
-                  Length (Km)
-                </Label>
-                <Input
-                  id="length"
-                  value={formLengthKm}
-                  onChange={(e) => setFormLengthKm(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="duration" className="text-right text-xs">
-                  Duration (Min)
-                </Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  value={formDurationMin}
-                  onChange={(e) => setFormDurationMin(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="direction" className="text-right">
-                  Direction
-                </Label>
-                <Select value={formDirection} onValueChange={setFormDirection}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="UP">UP Direction</SelectItem>
-                    <SelectItem value="DOWN">DOWN Direction</SelectItem>
-                    <SelectItem value="CIRCULAR">CIRCULAR</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="color" className="text-right">
-                  Map Color
-                </Label>
-                <Input
-                  id="color"
-                  type="color"
-                  value={formColor}
-                  onChange={(e) => setFormColor(e.target.value)}
-                  className="col-span-3 h-9 p-0.5"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="status" className="text-right">
-                  Status
-                </Label>
-                <Select value={formStatus} onValueChange={setFormStatus}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="proposed">Proposed</SelectItem>
-                  </SelectContent>
-                </Select>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Direction</Label>
+                  <Select
+                    value={formDirection}
+                    onValueChange={setFormDirection}
+                  >
+                    <SelectTrigger className="text-xs rounded-md">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="UP">Outbound (UP)</SelectItem>
+                      <SelectItem value="DOWN">Inbound (DOWN)</SelectItem>
+                      <SelectItem value="CIRCULAR">Circular</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Initial Status</Label>
+                  <Select value={formStatus} onValueChange={setFormStatus}>
+                    <SelectTrigger className="text-xs rounded-md">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="proposed">Proposed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
+
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsCreateOpen(false)}
+                className="text-xs rounded-md"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createRouteMutation.isPending}>
+              <Button
+                type="submit"
+                disabled={createRouteMutation.isPending}
+                className="bg-primary text-primary-foreground text-xs font-semibold rounded-md"
+              >
                 {createRouteMutation.isPending ? "Creating..." : "Save Route"}
               </Button>
             </DialogFooter>
@@ -1285,124 +1630,93 @@ function RoutesPage() {
 
       {/* EDIT ROUTE DIALOG */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[480px]">
           <form onSubmit={handleEditSubmit}>
             <DialogHeader>
-              <DialogTitle>Edit Route Corridor</DialogTitle>
-              <DialogDescription>
-                Modify specifications of route corridor `{formCode}`.
-              </DialogDescription>
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <Edit2 className="size-4 text-primary" />
+                Edit Route Corridor
+              </DialogTitle>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editCode" className="text-right">
-                  Route Code
-                </Label>
-                <Input
-                  id="editCode"
-                  value={formCode}
-                  onChange={(e) => setFormCode(e.target.value)}
-                  className="col-span-3 font-semibold text-primary"
-                  required
-                />
+
+            <div className="py-3.5 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Route Number / Code</Label>
+                  <Input
+                    value={formCode}
+                    onChange={(e) => setFormCode(e.target.value)}
+                    className="font-mono text-xs rounded-md"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Corridor Name</Label>
+                  <Input
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    className="text-xs rounded-md"
+                    required
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editName" className="text-right">
-                  Route Name
-                </Label>
-                <Input
-                  id="editName"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  className="col-span-3"
-                  required
-                />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Starting Point (Origin)</Label>
+                  <Input
+                    value={formOrigin}
+                    onChange={(e) => setFormOrigin(e.target.value)}
+                    className="text-xs rounded-md"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Destination</Label>
+                  <Input
+                    value={formDestination}
+                    onChange={(e) => setFormDestination(e.target.value)}
+                    className="text-xs rounded-md"
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editOrigin" className="text-right">
-                  Origin
-                </Label>
-                <Input
-                  id="editOrigin"
-                  value={formOrigin}
-                  onChange={(e) => setFormOrigin(e.target.value)}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editDestination" className="text-right">
-                  Destination
-                </Label>
-                <Input
-                  id="editDestination"
-                  value={formDestination}
-                  onChange={(e) => setFormDestination(e.target.value)}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editLength" className="text-right">
-                  Length (Km)
-                </Label>
-                <Input
-                  id="editLength"
-                  value={formLengthKm}
-                  onChange={(e) => setFormLengthKm(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editDuration" className="text-right text-xs">
-                  Duration (Min)
-                </Label>
-                <Input
-                  id="editDuration"
-                  type="number"
-                  value={formDurationMin}
-                  onChange={(e) => setFormDurationMin(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editDirection" className="text-right">
-                  Direction
-                </Label>
-                <Select value={formDirection} onValueChange={setFormDirection}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="UP">UP Direction</SelectItem>
-                    <SelectItem value="DOWN">DOWN Direction</SelectItem>
-                    <SelectItem value="CIRCULAR">CIRCULAR</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editColor" className="text-right">
-                  Map Color
-                </Label>
-                <Input
-                  id="editColor"
-                  type="color"
-                  value={formColor}
-                  onChange={(e) => setFormColor(e.target.value)}
-                  className="col-span-3 h-9 p-0.5"
-                  required
-                />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Length (Km)</Label>
+                  <Input
+                    value={formLengthKm}
+                    onChange={(e) => setFormLengthKm(e.target.value)}
+                    className="font-mono text-xs rounded-md"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Duration (Minutes)</Label>
+                  <Input
+                    type="number"
+                    value={formDurationMin}
+                    onChange={(e) => setFormDurationMin(e.target.value)}
+                    className="font-mono text-xs rounded-md"
+                    required
+                  />
+                </div>
               </div>
             </div>
+
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsEditOpen(false)}
+                className="text-xs rounded-md"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateRouteMutation.isPending}>
+              <Button
+                type="submit"
+                disabled={updateRouteMutation.isPending}
+                className="bg-primary text-primary-foreground text-xs font-semibold rounded-md"
+              >
                 {updateRouteMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>
@@ -1412,81 +1726,79 @@ function RoutesPage() {
 
       {/* ADD STOP DIALOG */}
       <Dialog open={isAddStopOpen} onOpenChange={setIsAddStopOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[440px]">
           <form onSubmit={handleAddStopSubmit}>
             <DialogHeader>
-              <DialogTitle>Add Stop Node</DialogTitle>
-              <DialogDescription>
-                Assign a stop location and sequencing order to route corridor `
-                {selectedRouteDetails?.code}`.
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <MapPin className="size-4 text-primary" />
+                Add Stop Node to Route
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Add a bus stop to Route {selectedRouteDetails?.code}:{" "}
+                {selectedRouteDetails?.name}.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="stopName" className="text-right">
-                  Stop Name
-                </Label>
+            <div className="py-3.5 space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Stop Name</Label>
                 <Input
-                  id="stopName"
                   value={stopName}
                   onChange={(e) => setStopName(e.target.value)}
                   placeholder="e.g. Hasthampatti Circle"
-                  className="col-span-3"
+                  className="text-xs rounded-md"
                   required
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="stopSeq" className="text-right text-xs">
-                  Seq. Order
-                </Label>
-                <Input
-                  id="stopSeq"
-                  type="number"
-                  min="1"
-                  value={stopSeq}
-                  onChange={(e) => setStopSeq(e.target.value)}
-                  placeholder={String(
-                    (selectedRouteDetails?.stops?.length || 0) + 1,
-                  )}
-                  className="col-span-3 font-mono"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="stopLat" className="text-right">
-                  Latitude
-                </Label>
-                <Input
-                  id="stopLat"
-                  value={stopLat}
-                  onChange={(e) => setStopLat(e.target.value)}
-                  placeholder="11.6673"
-                  className="col-span-3 font-mono"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="stopLng" className="text-right">
-                  Longitude
-                </Label>
-                <Input
-                  id="stopLng"
-                  value={stopLng}
-                  onChange={(e) => setStopLng(e.target.value)}
-                  placeholder="78.1424"
-                  className="col-span-3 font-mono"
-                  required
-                />
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Sequence #</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={stopSeq}
+                    onChange={(e) => setStopSeq(e.target.value)}
+                    placeholder={String(
+                      (selectedRouteDetails?.stops?.length || 0) + 1,
+                    )}
+                    className="font-mono text-xs rounded-md"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Latitude</Label>
+                  <Input
+                    value={stopLat}
+                    onChange={(e) => setStopLat(e.target.value)}
+                    className="font-mono text-xs rounded-md"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Longitude</Label>
+                  <Input
+                    value={stopLng}
+                    onChange={(e) => setStopLng(e.target.value)}
+                    className="font-mono text-xs rounded-md"
+                    required
+                  />
+                </div>
               </div>
             </div>
+
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsAddStopOpen(false)}
+                className="text-xs rounded-md"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createStopMutation.isPending}>
+              <Button
+                type="submit"
+                disabled={createStopMutation.isPending}
+                className="bg-primary text-primary-foreground text-xs font-semibold rounded-md"
+              >
                 {createStopMutation.isPending ? "Adding..." : "Add Stop"}
               </Button>
             </DialogFooter>

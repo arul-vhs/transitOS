@@ -113,7 +113,7 @@ function OperationsTodayPage() {
   dutiesList.forEach((d) => {
     if (d.driverId) assignedDriversSet.add(d.driverId);
     if (d.crewSegments) {
-      d.crewSegments.forEach((seg: any) => {
+      d.crewSegments.forEach((seg: { driverId?: string }) => {
         if (seg.driverId) assignedDriversSet.add(seg.driverId);
       });
     }
@@ -124,7 +124,7 @@ function OperationsTodayPage() {
   const assignedTripIds = new Set<string>();
   dutiesList.forEach((d) => {
     if (d.trips) {
-      d.trips.forEach((t: any) => assignedTripIds.add(t.id));
+      d.trips.forEach((t: { id: string }) => assignedTripIds.add(t.id));
     }
   });
   const unassignedTrips = tripsList.filter((t) => !assignedTripIds.has(t.id));
@@ -478,60 +478,70 @@ function OperationsTodayPage() {
                 </div>
               ) : (
                 <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
-                  {incidentsList.map((inc: any) => (
-                    <div
-                      key={inc.id}
-                      className="p-3 rounded-lg border border-border/70 bg-card/60 text-xs space-y-1.5 hover:border-warning/50 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-foreground font-mono text-xs">
-                          {inc.type}
-                        </span>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[9px] uppercase font-mono font-bold",
-                            inc.severity === "critical"
-                              ? "border-destructive/40 text-destructive bg-destructive/5"
-                              : "border-warning/40 text-warning bg-warning/5",
-                          )}
-                        >
-                          {inc.severity}
-                        </Badge>
+                  {incidentsList.map(
+                    (inc: {
+                      id: string;
+                      type: string;
+                      severity: string;
+                      description?: string;
+                      startTime: number;
+                    }) => (
+                      <div
+                        key={inc.id}
+                        className="p-3 rounded-lg border border-border/70 bg-card/60 text-xs space-y-1.5 hover:border-warning/50 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-foreground font-mono text-xs">
+                            {inc.type}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[9px] uppercase font-mono font-bold",
+                              inc.severity === "critical"
+                                ? "border-destructive/40 text-destructive bg-destructive/5"
+                                : "border-warning/40 text-warning bg-warning/5",
+                            )}
+                          >
+                            {inc.severity}
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground leading-tight">
+                          {inc.description ||
+                            "Operational disruption reported on vehicle/crew."}
+                        </p>
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/40 font-mono">
+                          <span>
+                            Time: {formatMinutesToTime(inc.startTime)}
+                          </span>
+                          <Link
+                            to="/operations/incidents"
+                            className="text-primary font-bold hover:underline"
+                          >
+                            Inspect ➔
+                          </Link>
+                        </div>
                       </div>
-                      <p className="text-[11px] text-muted-foreground leading-tight">
-                        {inc.description ||
-                          "Operational disruption reported on vehicle/crew."}
-                      </p>
-                      <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/40 font-mono">
-                        <span>Time: {formatMinutesToTime(inc.startTime)}</span>
-                        <Link
-                          to="/operations/incidents"
-                          className="text-primary font-bold hover:underline"
-                        >
-                          Inspect ➔
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
+                    ),
+                  )}
                 </div>
               )}
             </div>
 
             {/* Quick Dispatch Action Box */}
-            <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 space-y-2.5">
+            <div className="p-4 rounded-lg border border-primary/20 bg-primary/5 space-y-2.5">
               <div className="flex items-center gap-2 text-xs font-bold text-primary">
                 <Zap className="size-4" />
                 <span>Dispatcher Quick Access</span>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Need to re-route or generate algorithmic recovery proposals?
-                Access the Disruption Recovery Engine.
+                Need to re-route or generate recovery proposals? Access the
+                Disruption Recovery Engine.
               </p>
               <Button
                 asChild
                 size="sm"
-                className="w-full text-xs font-semibold bg-primary text-primary-foreground"
+                className="w-full text-xs font-semibold bg-primary text-primary-foreground rounded-md"
               >
                 <Link to="/operations/incidents">Open Disruption Recovery</Link>
               </Button>
@@ -551,7 +561,7 @@ function MetricTile({
   badgeColor,
   isDestructive,
 }: {
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string | number;
   badge?: string;
@@ -561,7 +571,7 @@ function MetricTile({
   return (
     <div
       className={cn(
-        "glass-card p-4 rounded-xl border flex flex-col justify-between transition-all",
+        "glass-card p-4 rounded-lg border flex flex-col justify-between transition-all",
         isDestructive
           ? "border-destructive/40 bg-destructive/5"
           : "border-border/70",

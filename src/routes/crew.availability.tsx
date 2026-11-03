@@ -417,7 +417,7 @@ function CrewAvailabilityPage() {
             type="button"
             onClick={() => setStatusFilter("all")}
             className={cn(
-              "glass-panel p-3.5 rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer group",
+              "glass-panel p-3.5 rounded-lg flex items-center justify-between text-left transition-all cursor-pointer group",
               statusFilter === "all"
                 ? "ring-2 ring-primary/60 bg-primary/5 shadow-sm"
                 : "hover:bg-muted/30",
@@ -457,7 +457,7 @@ function CrewAvailabilityPage() {
               )
             }
             className={cn(
-              "glass-panel p-3.5 rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer group border-emerald-500/20 bg-emerald-500/5",
+              "glass-panel p-3.5 rounded-lg flex items-center justify-between text-left transition-all cursor-pointer group border-emerald-500/20 bg-emerald-500/5",
               statusFilter === "available"
                 ? "ring-2 ring-emerald-500 bg-emerald-500/15 shadow-sm"
                 : "hover:bg-emerald-500/10",
@@ -498,7 +498,7 @@ function CrewAvailabilityPage() {
               setStatusFilter(statusFilter === "on-duty" ? "all" : "on-duty")
             }
             className={cn(
-              "glass-panel p-3.5 rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer group border-indigo-500/20 bg-indigo-500/5",
+              "glass-panel p-3.5 rounded-lg flex items-center justify-between text-left transition-all cursor-pointer group border-indigo-500/20 bg-indigo-500/5",
               statusFilter === "on-duty"
                 ? "ring-2 ring-indigo-500 bg-indigo-500/15 shadow-sm"
                 : "hover:bg-indigo-500/10",
@@ -539,7 +539,7 @@ function CrewAvailabilityPage() {
               setStatusFilter(statusFilter === "resting" ? "all" : "resting")
             }
             className={cn(
-              "glass-panel p-3.5 rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer group border-amber-500/20 bg-amber-500/5",
+              "glass-panel p-3.5 rounded-lg flex items-center justify-between text-left transition-all cursor-pointer group border-amber-500/20 bg-amber-500/5",
               statusFilter === "resting"
                 ? "ring-2 ring-amber-500 bg-amber-500/15 shadow-sm"
                 : "hover:bg-amber-500/10",
@@ -580,7 +580,7 @@ function CrewAvailabilityPage() {
               setStatusFilter(statusFilter === "leave" ? "all" : "leave")
             }
             className={cn(
-              "glass-panel p-3.5 rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer group border-rose-500/20 bg-rose-500/5",
+              "glass-panel p-3.5 rounded-lg flex items-center justify-between text-left transition-all cursor-pointer group border-rose-500/20 bg-rose-500/5",
               statusFilter === "leave"
                 ? "ring-2 ring-rose-500 bg-rose-500/15 shadow-sm"
                 : "hover:bg-rose-500/10",
@@ -614,7 +614,7 @@ function CrewAvailabilityPage() {
         </div>
 
         {/* 2. REFINED FILTER & VIEW BAR */}
-        <div className="glass-panel p-3.5 sm:p-4 rounded-2xl space-y-3">
+        <div className="glass-panel p-3.5 sm:p-4 rounded-lg space-y-3">
           {/* Main Controls Row */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             {/* Left: Role Tabs & Depot */}
@@ -894,7 +894,7 @@ function CrewAvailabilityPage() {
             </div>
           ) : filteredCrew.length === 0 ? (
             <div className="py-20 text-center space-y-3">
-              <div className="size-12 rounded-2xl bg-muted/60 text-muted-foreground flex items-center justify-center mx-auto">
+              <div className="size-12 rounded-lg bg-muted/60 text-muted-foreground flex items-center justify-center mx-auto">
                 <Users className="size-6" />
               </div>
               <p className="text-sm font-bold text-foreground">
@@ -1229,7 +1229,7 @@ function CrewAvailabilityPage() {
                   <div className="flex items-center gap-3">
                     <div
                       className={cn(
-                        "size-12 rounded-2xl flex items-center justify-center font-bold text-base shrink-0",
+                        "size-12 rounded-lg flex items-center justify-center font-bold text-base shrink-0",
                         selectedMember.role === "driver"
                           ? "bg-primary/10 text-primary border border-primary/20"
                           : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20",
@@ -1318,7 +1318,7 @@ function CrewAvailabilityPage() {
                     Compliance & Statutory Limits
                   </h4>
 
-                  <div className="bg-muted/40 p-3.5 rounded-2xl border border-border/60 space-y-2.5 text-xs">
+                  <div className="bg-muted/40 p-3.5 rounded-lg border border-border/60 space-y-2.5 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">
                         MVA 8-Hour Rest Compliance
@@ -1353,7 +1353,7 @@ function CrewAvailabilityPage() {
                     Credentials & Contact
                   </h4>
 
-                  <div className="bg-muted/40 p-3.5 rounded-2xl border border-border/60 space-y-2 text-xs">
+                  <div className="bg-muted/40 p-3.5 rounded-lg border border-border/60 space-y-2 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">
                         Contact Phone
