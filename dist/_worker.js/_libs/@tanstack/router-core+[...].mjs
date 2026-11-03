@@ -1,8 +1,13 @@
+import { n as __esmMin } from "../../_runtime.mjs";
 import { C as createInlineCssPlaceholderAsset, E as getStylesheetHref, M as createLRUCache, N as decodePath, P as dehydrateSsrMatchId, S as TSR_SCRIPT_BARRIER_ID, j as invariant, k as _getRenderedMatches, w as createInlineCssStyleAsset, x as GLOBAL_TSR, z as rootRouteId } from "./react-router+[...].mjs";
 //#region node_modules/unenv/dist/runtime/polyfill/globalthis.mjs
-var globalthis_default = globalThis;
+var globalthis_default;
+var init_globalthis = __esmMin((() => {
+	globalthis_default = globalThis;
+}));
 //#endregion
 //#region node_modules/seroval/dist/index.js
+init_globalthis();
 var SYM_ASYNC_ITERATOR = Symbol.asyncIterator;
 var SYM_HAS_INSTANCE = Symbol.hasInstance;
 var SYM_IS_CONCAT_SPREADABLE = Symbol.isConcatSpreadable;
@@ -3630,4 +3635,4 @@ function waitForRequest(value, signal, onLate) {
 	});
 }
 //#endregion
-export { getOrigin as a, createSerializationAdapter as c, toCrossJSONAsync as d, toCrossJSONStream as f, getNormalizedURL as i, makeSerovalPlugin as l, mergeHeaders as n, defaultSerovalPlugins as o, attachRouterServerSsrUtils as r, createRawStreamRPCPlugin as s, waitForRequest as t, fromJSON as u };
+export { getOrigin as a, createSerializationAdapter as c, toCrossJSONAsync as d, toCrossJSONStream as f, getNormalizedURL as i, makeSerovalPlugin as l, init_globalthis as m, mergeHeaders as n, defaultSerovalPlugins as o, globalthis_default as p, attachRouterServerSsrUtils as r, createRawStreamRPCPlugin as s, waitForRequest as t, fromJSON as u };

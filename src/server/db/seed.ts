@@ -1,4 +1,13 @@
-import { db } from "./index";
+// Load environment variables in Node runtime if not already loaded
+if (typeof process.loadEnvFile === "function") {
+  try {
+    process.loadEnvFile();
+  } catch {
+    // Ignore error if .env file does not exist
+  }
+}
+
+import { db, pool } from "./index";
 import {
   tenants,
   buses,
@@ -1001,10 +1010,17 @@ async function main() {
 
   console.log(`Seeded 18 duties (14 linked, 4 unlinked) with realistic crew handovers.`);
   console.log("[SUCCESS] Real-world Salem City data seeding completed successfully!");
+  await pool.end();
   process.exit(0);
 }
 
-main().catch((err) => {
-  console.error("[ERROR] Seeding failed with error:", err);
+main().catch((err: any) => {
+  console.error("\n[ERROR] Seeding failed with error:", err.message);
+  console.error("\nTroubleshooting tips:");
+  console.error("1. Ensure PostgreSQL is running (e.g. docker compose up -d).");
+  console.error("2. Verify migrations have run first (npm run db:migrate).");
+  console.error("3. Verify your DATABASE_URL in .env.");
   process.exit(1);
+
+
 });

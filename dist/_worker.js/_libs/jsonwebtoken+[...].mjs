@@ -1,4 +1,4 @@
-import { r as __require, t as __commonJSMin } from "../_runtime.mjs";
+import { i as __require, t as __commonJSMin } from "../_runtime.mjs";
 import { n as require_safe_buffer, t as require_ecdsa_sig_formatter } from "./ecdsa-sig-formatter+[...].mjs";
 import { t as require_buffer_equal_constant_time } from "./buffer-equal-constant-time.mjs";
 import processModule from "node:process";
