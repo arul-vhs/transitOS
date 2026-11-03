@@ -758,3 +758,122 @@ export const operationalEventsRelations = relations(operationalEvents, ({ one })
     references: [users.id],
   }),
 }));
+
+// 19. Demand Surges Table
+export const demandSurges = pgTable(
+  "demand_surges",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    routeId: uuid("route_id")
+      .notNull()
+      .references(() => routes.id, { onDelete: "cascade" }),
+    corridorName: varchar("corridor_name", { length: 255 }).notNull(),
+    serviceDate: varchar("service_date", { length: 50 }).notNull(),
+    timePeriod: varchar("time_period", { length: 100 }).notNull(),
+    baselineDemand: integer("baseline_demand").notNull().default(0),
+    actualDemand: integer("actual_demand").notNull().default(0),
+    surgePercentage: decimal("surge_percentage", { precision: 6, scale: 2 }).notNull().default("0"),
+    currentCapacity: integer("current_capacity").notNull().default(0),
+    shortageSeverity: varchar("shortage_severity", { length: 50 }).notNull().default("NORMAL"),
+    status: varchar("status", { length: 50 }).notNull().default("ACTIVE"),
+    detectedAt: timestamp("detected_at").notNull().defaultNow(),
+    resolvedAt: timestamp("resolved_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("demand_surges_tenant_id_idx").on(table.tenantId),
+    index("demand_surges_route_id_idx").on(table.routeId),
+    index("demand_surges_service_date_idx").on(table.serviceDate),
+  ],
+);
+
+export const demandSurgesRelations = relations(demandSurges, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [demandSurges.tenantId],
+    references: [tenants.id],
+  }),
+  route: one(routes, {
+    fields: [demandSurges.routeId],
+    references: [routes.id],
+  }),
+  allocations: many(fleetAllocations),
+}));
+
+// 20. Fleet Allocations Table
+export const fleetAllocations = pgTable(
+  "fleet_allocations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    surgeId: uuid("surge_id").references(() => demandSurges.id, { onDelete: "set null" }),
+    targetRouteId: uuid("target_route_id")
+      .notNull()
+      .references(() => routes.id, { onDelete: "cascade" }),
+    busId: uuid("bus_id")
+      .notNull()
+      .references(() => buses.id, { onDelete: "cascade" }),
+    driverId: uuid("driver_id").references(() => crew.id, { onDelete: "set null" }),
+    conductorId: uuid("conductor_id").references(() => crew.id, { onDelete: "set null" }),
+    sourceType: varchar("source_type", { length: 50 }).notNull().default("DEPOT_RESERVE"),
+    sourceDepot: varchar("source_depot", { length: 255 }),
+    donorRouteId: uuid("donor_route_id").references(() => routes.id, { onDelete: "set null" }),
+    allocationStrategy: varchar("allocation_strategy", { length: 50 }).notNull().default("BALANCED_SLA"),
+    deadheadKm: decimal("deadhead_km", { precision: 8, scale: 2 }).notNull().default("0"),
+    deadheadMinutes: integer("deadhead_minutes").notNull().default(0),
+    estimatedCost: decimal("estimated_cost", { precision: 10, scale: 2 }).notNull().default("0"),
+    headwayBeforeMin: integer("headway_before_min").notNull().default(0),
+    headwayAfterMin: integer("headway_after_min").notNull().default(0),
+    waitTimeBeforeMin: decimal("wait_time_before_min", { precision: 6, scale: 2 }).notNull().default("0"),
+    waitTimeAfterMin: decimal("wait_time_after_min", { precision: 6, scale: 2 }).notNull().default("0"),
+    loadFactorBefore: decimal("load_factor_before", { precision: 6, scale: 2 }).notNull().default("0"),
+    loadFactorAfter: decimal("load_factor_after", { precision: 6, scale: 2 }).notNull().default("0"),
+    status: varchar("status", { length: 50 }).notNull().default("RECOMMENDED"),
+    dispatchedAt: timestamp("dispatched_at"),
+    dispatchedBy: uuid("dispatched_by").references(() => users.id, { onDelete: "set null" }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("fleet_allocations_tenant_id_idx").on(table.tenantId),
+    index("fleet_allocations_target_route_idx").on(table.targetRouteId),
+    index("fleet_allocations_bus_id_idx").on(table.busId),
+  ],
+);
+
+export const fleetAllocationsRelations = relations(fleetAllocations, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [fleetAllocations.tenantId],
+    references: [tenants.id],
+  }),
+  surge: one(demandSurges, {
+    fields: [fleetAllocations.surgeId],
+    references: [demandSurges.id],
+  }),
+  targetRoute: one(routes, {
+    fields: [fleetAllocations.targetRouteId],
+    references: [routes.id],
+  }),
+  bus: one(buses, {
+    fields: [fleetAllocations.busId],
+    references: [buses.id],
+  }),
+  driver: one(crew, {
+    fields: [fleetAllocations.driverId],
+    references: [crew.id],
+  }),
+  conductor: one(crew, {
+    fields: [fleetAllocations.conductorId],
+    references: [crew.id],
+  }),
+  dispatcher: one(users, {
+    fields: [fleetAllocations.dispatchedBy],
+    references: [users.id],
+  }),
+}));
