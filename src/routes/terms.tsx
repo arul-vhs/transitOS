@@ -11,7 +11,10 @@ export const Route = createFileRoute("/terms")({
         content:
           "Enterprise master service agreement, licensing terms, and operational warranties for TransitOS.",
       },
-      { property: "og:title", content: "Terms and Conditions: TransitOS Platform" },
+      {
+        property: "og:title",
+        content: "Terms and Conditions: TransitOS Platform",
+      },
       {
         property: "og:description",
         content:
@@ -36,8 +39,15 @@ function TermsPage() {
             <span>Back to TransitOS</span>
           </Link>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-slate-500">Document Rev: 2026.1</span>
-            <Button asChild size="sm" variant="outline" className="h-8 text-xs rounded-md">
+            <span className="text-xs font-mono text-slate-500">
+              Document Rev: 2026.1
+            </span>
+            <Button
+              asChild
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs rounded-md"
+            >
               <Link to="/login">Sign In</Link>
             </Button>
           </div>
@@ -55,8 +65,8 @@ function TermsPage() {
             TransitOS Terms and Conditions
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Effective Date: January 1, 2026. By accessing TransitOS, the subscribing transit
-            authority agrees to these terms.
+            Effective Date: January 1, 2026. By accessing TransitOS, the
+            subscribing transit authority agrees to these terms.
           </p>
         </div>
 
@@ -67,9 +77,10 @@ function TermsPage() {
               1. Platform Subscription and License Grant
             </h2>
             <p>
-              Subject to timely payment of subscription fees and compliance with this Agreement,
-              TransitOS grants the Customer a non-exclusive, non-transferable, worldwide license to
-              access and utilize the cloud-hosted TransitOS platform across authorized municipal bus
+              Subject to timely payment of subscription fees and compliance with
+              this Agreement, TransitOS grants the Customer a non-exclusive,
+              non-transferable, worldwide license to access and utilize the
+              cloud-hosted TransitOS platform across authorized municipal bus
               depots, dispatch control rooms, and planning terminals.
             </p>
           </section>
@@ -79,19 +90,24 @@ function TermsPage() {
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">
               2. Authorized Roles and Account Responsibilities
             </h2>
-            <p>Customer access is governed by role-based credentials. The Customer agrees that:</p>
+            <p>
+              Customer access is governed by role-based credentials. The
+              Customer agrees that:
+            </p>
             <ul className="list-disc pl-5 space-y-1 text-slate-600 dark:text-slate-400">
               <li>
-                Administrative credentials (Organization Admin) may only be assigned to authorized
-                depot superintendents and designated IT officers.
+                Administrative credentials (Organization Admin) may only be
+                assigned to authorized depot superintendents and designated IT
+                officers.
               </li>
               <li>
-                Each individual operator must possess distinct authentication credentials. Shared
-                generic logins outside pre-approved training environments are prohibited.
+                Each individual operator must possess distinct authentication
+                credentials. Shared generic logins outside pre-approved training
+                environments are prohibited.
               </li>
               <li>
-                The Customer remains responsible for safeguarding access tokens and promptly
-                disabling accounts of departed personnel.
+                The Customer remains responsible for safeguarding access tokens
+                and promptly disabling accounts of departed personnel.
               </li>
             </ul>
           </section>
@@ -102,26 +118,30 @@ function TermsPage() {
               3. Operational Dispatcher Responsibility and Regulatory Disclaimer
             </h2>
             <p>
-              TransitOS incorporates mathematical constraint optimization algorithms (including
-              Google OR-Tools solvers) and automated disruption recovery recommendations. The
-              Customer explicitly acknowledges:
+              TransitOS incorporates mathematical constraint optimization
+              algorithms (including Google OR-Tools solvers) and automated
+              disruption recovery recommendations. The Customer explicitly
+              acknowledges:
             </p>
             <div className="rounded-md border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200 space-y-2">
               <p className="font-semibold uppercase tracking-wider">
                 Human-in-the-Loop Operational Mandate:
               </p>
               <p>
-                Algorithmic duty pairings and incident recovery plans are computer-generated
-                proposals. Final operational publication remains the strict responsibility of the
-                Customer&apos;s licensed chief scheduler or depot manager. TransitOS provides
-                decision-support tools but does not replace mandatory human safety verification or
-                physical vehicle roadworthiness inspections.
+                Algorithmic duty pairings and incident recovery plans are
+                computer-generated proposals. Final operational publication
+                remains the strict responsibility of the Customer&apos;s
+                licensed chief scheduler or depot manager. TransitOS provides
+                decision-support tools but does not replace mandatory human
+                safety verification or physical vehicle roadworthiness
+                inspections.
               </p>
             </div>
             <p className="text-xs text-slate-500">
-              The Customer retains legal responsibility for ensuring physical driver fitness,
-              physical vehicle brake and tire compliance, and local route transit permits under the
-              Motor Vehicle Act 1988 and municipal transport regulations.
+              The Customer retains legal responsibility for ensuring physical
+              driver fitness, physical vehicle brake and tire compliance, and
+              local route transit permits under the Motor Vehicle Act 1988 and
+              municipal transport regulations.
             </p>
           </section>
 
@@ -131,19 +151,27 @@ function TermsPage() {
               4. Data Ownership and Customer IP
             </h2>
             <p>
-              The Customer retains full, unencumbered ownership of all operational data entered into
-              the platform, including:
+              The Customer retains full, unencumbered ownership of all
+              operational data entered into the platform, including:
             </p>
             <ul className="list-disc pl-5 space-y-1 text-slate-600 dark:text-slate-400">
               <li>
-                Fleet registration records, vehicle telemetry, and bus stop GeoJSON coordinates.
+                Fleet registration records, vehicle telemetry, and bus stop
+                GeoJSON coordinates.
               </li>
-              <li>Driver duty histories, shift rosters, and conductor assignment tables.</li>
-              <li>Official timetable schedules, headway plans, and historical incident logs.</li>
+              <li>
+                Driver duty histories, shift rosters, and conductor assignment
+                tables.
+              </li>
+              <li>
+                Official timetable schedules, headway plans, and historical
+                incident logs.
+              </li>
             </ul>
             <p>
-              TransitOS receives only the limited right to process and store customer data to
-              deliver the hosted services and provide system telemetry performance analytics.
+              TransitOS receives only the limited right to process and store
+              customer data to deliver the hosted services and provide system
+              telemetry performance analytics.
             </p>
           </section>
 
@@ -153,10 +181,11 @@ function TermsPage() {
               5. Service Level Agreement (SLA) and System Availability
             </h2>
             <p>
-              TransitOS commits to a minimum system availability uptime of <strong>99.9%</strong>{" "}
-              during each calendar month, excluding scheduled maintenance windows announced at least
-              48 hours in advance. Scheduled maintenance is restricted to off-peak hours (01:00 to
-              04:00 local depot time).
+              TransitOS commits to a minimum system availability uptime of{" "}
+              <strong>99.9%</strong> during each calendar month, excluding
+              scheduled maintenance windows announced at least 48 hours in
+              advance. Scheduled maintenance is restricted to off-peak hours
+              (01:00 to 04:00 local depot time).
             </p>
           </section>
 
@@ -166,11 +195,13 @@ function TermsPage() {
               6. Limitation of Liability
             </h2>
             <p>
-              To the maximum extent permitted by applicable law, neither party shall be liable for
-              indirect, incidental, punitive, or consequential damages, including loss of passenger
-              revenue, traffic fines, or third-party claims arising from delays. Total aggregate
-              liability under any service order shall not exceed the subscription fees paid by the
-              Customer during the twelve (12) months preceding the incident.
+              To the maximum extent permitted by applicable law, neither party
+              shall be liable for indirect, incidental, punitive, or
+              consequential damages, including loss of passenger revenue,
+              traffic fines, or third-party claims arising from delays. Total
+              aggregate liability under any service order shall not exceed the
+              subscription fees paid by the Customer during the twelve (12)
+              months preceding the incident.
             </p>
           </section>
 
@@ -180,9 +211,10 @@ function TermsPage() {
               7. Custom Domain and Network Connectivity
             </h2>
             <p>
-              Enterprise tiers support custom domain bindings (e.g. transit.authority.gov). The
-              Customer is responsible for maintaining ownership and DNS propagation of its
-              designated custom domains and third-party telematics SIM/APN data connections.
+              Enterprise tiers support custom domain bindings (e.g.
+              transit.authority.gov). The Customer is responsible for
+              maintaining ownership and DNS propagation of its designated custom
+              domains and third-party telematics SIM/APN data connections.
             </p>
           </section>
 
@@ -192,9 +224,10 @@ function TermsPage() {
               8. Governing Law and Dispute Resolution
             </h2>
             <p>
-              This Agreement shall be governed by and construed in accordance with the laws of the
-              jurisdiction specified in the applicable municipal procurement order. Any disputes
-              arising out of or in connection with this agreement shall be settled through binding
+              This Agreement shall be governed by and construed in accordance
+              with the laws of the jurisdiction specified in the applicable
+              municipal procurement order. Any disputes arising out of or in
+              connection with this agreement shall be settled through binding
               commercial arbitration.
             </p>
           </section>

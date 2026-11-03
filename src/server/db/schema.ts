@@ -51,7 +51,9 @@ export const buses = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id, { onDelete: "cascade" }),
-    registrationNumber: varchar("registration_number", { length: 50 }).notNull(),
+    registrationNumber: varchar("registration_number", {
+      length: 50,
+    }).notNull(),
     fleetNumber: varchar("fleet_number", { length: 50 }),
     depot: varchar("depot", { length: 255 }).notNull(),
     status: varchar("status", { length: 50 }).notNull().default("available"),
@@ -63,8 +65,14 @@ export const buses = pgTable(
   },
   (table) => [
     index("buses_tenant_id_idx").on(table.tenantId),
-    unique("buses_tenant_registration_number_unique").on(table.tenantId, table.registrationNumber),
-    unique("buses_tenant_fleet_number_unique").on(table.tenantId, table.fleetNumber),
+    unique("buses_tenant_registration_number_unique").on(
+      table.tenantId,
+      table.registrationNumber,
+    ),
+    unique("buses_tenant_fleet_number_unique").on(
+      table.tenantId,
+      table.fleetNumber,
+    ),
   ],
 );
 
@@ -90,7 +98,10 @@ export const crew = pgTable(
   },
   (table) => [
     index("crew_tenant_id_idx").on(table.tenantId),
-    unique("crew_tenant_employee_id_unique").on(table.tenantId, table.employeeId),
+    unique("crew_tenant_employee_id_unique").on(
+      table.tenantId,
+      table.employeeId,
+    ),
   ],
 );
 
@@ -158,11 +169,15 @@ export const trips = pgTable(
       .notNull()
       .references(() => routes.id, { onDelete: "cascade" }),
     tripCode: varchar("trip_code", { length: 50 }).notNull(),
-    direction: varchar("direction", { length: 50 }).notNull().default("OUTBOUND"),
+    direction: varchar("direction", { length: 50 })
+      .notNull()
+      .default("OUTBOUND"),
     startTime: integer("start_time").notNull(),
     endTime: integer("end_time").notNull(),
     durationMin: integer("duration_min").notNull().default(0),
-    distanceKm: decimal("distance_km", { precision: 10, scale: 2 }).notNull().default("0.00"),
+    distanceKm: decimal("distance_km", { precision: 10, scale: 2 })
+      .notNull()
+      .default("0.00"),
     origin: varchar("origin", { length: 255 }).notNull().default(""),
     destination: varchar("destination", { length: 255 }).notNull().default(""),
     status: varchar("status", { length: 50 }).notNull().default("scheduled"),
@@ -223,8 +238,12 @@ export const duties = pgTable(
     endTime: integer("end_time").notNull().default(0),
     status: varchar("status", { length: 50 }).notNull().default("draft"), // draft, generated, assigned, published, cancelled
     busId: uuid("bus_id").references(() => buses.id, { onDelete: "set null" }),
-    driverId: uuid("driver_id").references(() => crew.id, { onDelete: "set null" }),
-    conductorId: uuid("conductor_id").references(() => crew.id, { onDelete: "set null" }),
+    driverId: uuid("driver_id").references(() => crew.id, {
+      onDelete: "set null",
+    }),
+    conductorId: uuid("conductor_id").references(() => crew.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -273,8 +292,12 @@ export const dutyCrewSegments = pgTable(
     dutyId: uuid("duty_id")
       .notNull()
       .references(() => duties.id, { onDelete: "cascade" }),
-    driverId: uuid("driver_id").references(() => crew.id, { onDelete: "set null" }),
-    conductorId: uuid("conductor_id").references(() => crew.id, { onDelete: "set null" }),
+    driverId: uuid("driver_id").references(() => crew.id, {
+      onDelete: "set null",
+    }),
+    conductorId: uuid("conductor_id").references(() => crew.id, {
+      onDelete: "set null",
+    }),
     startTime: integer("start_time").notNull(),
     endTime: integer("end_time").notNull(),
     sequence: integer("sequence").notNull(),
@@ -294,17 +317,25 @@ export const incidents = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id, { onDelete: "cascade" }),
-    scheduleId: uuid("schedule_id").references(() => schedules.id, { onDelete: "cascade" }), // nullable context link
+    scheduleId: uuid("schedule_id").references(() => schedules.id, {
+      onDelete: "cascade",
+    }), // nullable context link
     type: varchar("type", { length: 50 }).notNull(), // BUS_BREAKDOWN, DRIVER_ABSENT, CONDUCTOR_ABSENT, TRIP_DELAY, TRIP_CANCELLED, ROUTE_BLOCKED, MANUAL_DISRUPTION
     status: varchar("status", { length: 50 }).notNull().default("OPEN"), // OPEN, ANALYZING, RECOVERY_PROPOSED, APPROVED, APPLIED, RESOLVED, CANCELLED
     severity: varchar("severity", { length: 50 }).notNull().default("medium"), // low, medium, high, critical
     serviceDate: varchar("service_date", { length: 100 }).notNull(),
     resourceType: varchar("resource_type", { length: 50 }), // bus, crew
     resourceId: uuid("resource_id"), // busId or driverId/conductorId
-    tripId: uuid("trip_id").references(() => trips.id, { onDelete: "set null" }),
-    routeId: uuid("route_id").references(() => routes.id, { onDelete: "set null" }),
+    tripId: uuid("trip_id").references(() => trips.id, {
+      onDelete: "set null",
+    }),
+    routeId: uuid("route_id").references(() => routes.id, {
+      onDelete: "set null",
+    }),
     reportedAt: timestamp("reported_at").notNull().defaultNow(),
-    reportedBy: uuid("reported_by").references(() => users.id, { onDelete: "set null" }),
+    reportedBy: uuid("reported_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     startTime: integer("start_time").notNull().default(0),
     expectedEndTime: integer("expected_end_time"),
     actualEndTime: integer("actual_end_time"),
@@ -472,24 +503,27 @@ export const dutyTripsRelations = relations(dutyTrips, ({ one }) => ({
   }),
 }));
 
-export const dutyCrewSegmentsRelations = relations(dutyCrewSegments, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [dutyCrewSegments.tenantId],
-    references: [tenants.id],
+export const dutyCrewSegmentsRelations = relations(
+  dutyCrewSegments,
+  ({ one }) => ({
+    tenant: one(tenants, {
+      fields: [dutyCrewSegments.tenantId],
+      references: [tenants.id],
+    }),
+    duty: one(duties, {
+      fields: [dutyCrewSegments.dutyId],
+      references: [duties.id],
+    }),
+    driver: one(crew, {
+      fields: [dutyCrewSegments.driverId],
+      references: [crew.id],
+    }),
+    conductor: one(crew, {
+      fields: [dutyCrewSegments.conductorId],
+      references: [crew.id],
+    }),
   }),
-  duty: one(duties, {
-    fields: [dutyCrewSegments.dutyId],
-    references: [duties.id],
-  }),
-  driver: one(crew, {
-    fields: [dutyCrewSegments.driverId],
-    references: [crew.id],
-  }),
-  conductor: one(crew, {
-    fields: [dutyCrewSegments.conductorId],
-    references: [crew.id],
-  }),
-}));
+);
 
 export const incidentsRelations = relations(incidents, ({ one, many }) => ({
   tenant: one(tenants, {
@@ -512,32 +546,39 @@ export const incidentsRelations = relations(incidents, ({ one, many }) => ({
   reschedulingRuns: many(reschedulingRuns),
 }));
 
-export const rescheduleActionsRelations = relations(rescheduleActions, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [rescheduleActions.tenantId],
-    references: [tenants.id],
+export const rescheduleActionsRelations = relations(
+  rescheduleActions,
+  ({ one }) => ({
+    tenant: one(tenants, {
+      fields: [rescheduleActions.tenantId],
+      references: [tenants.id],
+    }),
+    schedule: one(schedules, {
+      fields: [rescheduleActions.scheduleId],
+      references: [schedules.id],
+    }),
+    incident: one(incidents, {
+      fields: [rescheduleActions.incidentId],
+      references: [incidents.id],
+    }),
+    duty: one(duties, {
+      fields: [rescheduleActions.dutyId],
+      references: [duties.id],
+    }),
   }),
-  schedule: one(schedules, {
-    fields: [rescheduleActions.scheduleId],
-    references: [schedules.id],
-  }),
-  incident: one(incidents, {
-    fields: [rescheduleActions.incidentId],
-    references: [incidents.id],
-  }),
-  duty: one(duties, {
-    fields: [rescheduleActions.dutyId],
-    references: [duties.id],
-  }),
-}));
+);
 
 // 12. Audit Logs Table
 export const auditLogs = pgTable(
   "audit_logs",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    tenantId: uuid("tenant_id").references(() => tenants.id, {
+      onDelete: "cascade",
+    }),
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     email: varchar("email", { length: 255 }),
     action: varchar("action", { length: 50 }).notNull(),
     details: text("details"),
@@ -575,8 +616,13 @@ export const optimizationRuns = pgTable(
     completedAt: timestamp("completed_at"),
     inputSnapshot: jsonb("input_snapshot"),
     resultSummary: jsonb("result_summary"),
-    objectiveScore: decimal("objective_score", { precision: 15, scale: 2 }).default("0.00"),
-    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    objectiveScore: decimal("objective_score", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -586,16 +632,19 @@ export const optimizationRuns = pgTable(
   ],
 );
 
-export const optimizationRunsRelations = relations(optimizationRuns, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [optimizationRuns.tenantId],
-    references: [tenants.id],
+export const optimizationRunsRelations = relations(
+  optimizationRuns,
+  ({ one }) => ({
+    tenant: one(tenants, {
+      fields: [optimizationRuns.tenantId],
+      references: [tenants.id],
+    }),
+    creator: one(users, {
+      fields: [optimizationRuns.createdBy],
+      references: [users.id],
+    }),
   }),
-  creator: one(users, {
-    fields: [optimizationRuns.createdBy],
-    references: [users.id],
-  }),
-}));
+);
 
 // temporary placeholder for migration drop run
 // 15. Incident Impacts Table
@@ -607,10 +656,16 @@ export const incidentImpacts = pgTable(
       .notNull()
       .references(() => incidents.id, { onDelete: "cascade" }),
     tripId: uuid("trip_id").references(() => trips.id, { onDelete: "cascade" }),
-    dutyId: uuid("duty_id").references(() => duties.id, { onDelete: "cascade" }),
+    dutyId: uuid("duty_id").references(() => duties.id, {
+      onDelete: "cascade",
+    }),
     busId: uuid("bus_id").references(() => buses.id, { onDelete: "cascade" }),
-    driverId: uuid("driver_id").references(() => crew.id, { onDelete: "cascade" }),
-    conductorId: uuid("conductor_id").references(() => crew.id, { onDelete: "cascade" }),
+    driverId: uuid("driver_id").references(() => crew.id, {
+      onDelete: "cascade",
+    }),
+    conductorId: uuid("conductor_id").references(() => crew.id, {
+      onDelete: "cascade",
+    }),
     impactType: varchar("impact_type", { length: 50 }).notNull(), // BUS_LOST, CREW_LOST, DELAYED, CANCELLED, TURNAROUND_VIOLATION, CREW_REST_CONFLICT, UNASSIGNED
     impactLevel: varchar("impact_level", { length: 50 }).notNull(), // DIRECT, DOWNSTREAM, SECONDARY
     reason: text("reason"),
@@ -633,8 +688,13 @@ export const reschedulingRuns = pgTable(
     status: varchar("status", { length: 50 }).notNull().default("QUEUED"), // QUEUED, RUNNING, COMPLETED, FAILED, EXPIRED, APPROVED, APPLIED
     startedAt: timestamp("started_at").notNull().defaultNow(),
     completedAt: timestamp("completed_at"),
-    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
-    objectiveScore: decimal("objective_score", { precision: 15, scale: 2 }).default("0.00"),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    objectiveScore: decimal("objective_score", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
     tripsAffected: integer("trips_affected").notNull().default(0),
     tripsRecovered: integer("trips_recovered").notNull().default(0),
     tripsUnassigned: integer("trips_unassigned").notNull().default(0),
@@ -657,7 +717,10 @@ export const recoveryProposals = pgTable(
       .references(() => reschedulingRuns.id, { onDelete: "cascade" }),
     proposalNumber: integer("proposal_number").notNull(),
     status: varchar("status", { length: 50 }).notNull().default("PROPOSED"), // PROPOSED, SELECTED, REJECTED, EXPIRED, APPLIED
-    objectiveScore: decimal("objective_score", { precision: 15, scale: 2 }).default("0.00"),
+    objectiveScore: decimal("objective_score", {
+      precision: 15,
+      scale: 2,
+    }).default("0.00"),
     tripsRecovered: integer("trips_recovered").notNull().default(0),
     tripsUnassigned: integer("trips_unassigned").notNull().default(0),
     busesUsed: integer("buses_used").notNull().default(0),
@@ -672,55 +735,64 @@ export const recoveryProposals = pgTable(
   (table) => [index("recovery_proposals_run_id_idx").on(table.runId)],
 );
 
-export const incidentImpactsRelations = relations(incidentImpacts, ({ one }) => ({
-  incident: one(incidents, {
-    fields: [incidentImpacts.incidentId],
-    references: [incidents.id],
+export const incidentImpactsRelations = relations(
+  incidentImpacts,
+  ({ one }) => ({
+    incident: one(incidents, {
+      fields: [incidentImpacts.incidentId],
+      references: [incidents.id],
+    }),
+    trip: one(trips, {
+      fields: [incidentImpacts.tripId],
+      references: [trips.id],
+    }),
+    duty: one(duties, {
+      fields: [incidentImpacts.dutyId],
+      references: [duties.id],
+    }),
+    bus: one(buses, {
+      fields: [incidentImpacts.busId],
+      references: [buses.id],
+    }),
+    driver: one(crew, {
+      fields: [incidentImpacts.driverId],
+      references: [crew.id],
+    }),
+    conductor: one(crew, {
+      fields: [incidentImpacts.conductorId],
+      references: [crew.id],
+    }),
   }),
-  trip: one(trips, {
-    fields: [incidentImpacts.tripId],
-    references: [trips.id],
-  }),
-  duty: one(duties, {
-    fields: [incidentImpacts.dutyId],
-    references: [duties.id],
-  }),
-  bus: one(buses, {
-    fields: [incidentImpacts.busId],
-    references: [buses.id],
-  }),
-  driver: one(crew, {
-    fields: [incidentImpacts.driverId],
-    references: [crew.id],
-  }),
-  conductor: one(crew, {
-    fields: [incidentImpacts.conductorId],
-    references: [crew.id],
-  }),
-}));
+);
 
-export const reschedulingRunsRelations = relations(reschedulingRuns, ({ one, many }) => ({
-  tenant: one(tenants, {
-    fields: [reschedulingRuns.tenantId],
-    references: [tenants.id],
+export const reschedulingRunsRelations = relations(
+  reschedulingRuns,
+  ({ one, many }) => ({
+    tenant: one(tenants, {
+      fields: [reschedulingRuns.tenantId],
+      references: [tenants.id],
+    }),
+    incident: one(incidents, {
+      fields: [reschedulingRuns.incidentId],
+      references: [incidents.id],
+    }),
+    creator: one(users, {
+      fields: [reschedulingRuns.createdBy],
+      references: [users.id],
+    }),
+    proposals: many(recoveryProposals),
   }),
-  incident: one(incidents, {
-    fields: [reschedulingRuns.incidentId],
-    references: [incidents.id],
-  }),
-  creator: one(users, {
-    fields: [reschedulingRuns.createdBy],
-    references: [users.id],
-  }),
-  proposals: many(recoveryProposals),
-}));
+);
 
-export const recoveryProposalsRelations = relations(recoveryProposals, ({ one }) => ({
-  run: one(reschedulingRuns, {
-    fields: [recoveryProposals.runId],
-    references: [reschedulingRuns.id],
+export const recoveryProposalsRelations = relations(
+  recoveryProposals,
+  ({ one }) => ({
+    run: one(reschedulingRuns, {
+      fields: [recoveryProposals.runId],
+      references: [reschedulingRuns.id],
+    }),
   }),
-}));
+);
 
 // 18. Operational Events Table
 export const operationalEvents = pgTable(
@@ -733,7 +805,9 @@ export const operationalEvents = pgTable(
     tripId: uuid("trip_id").references(() => trips.id, { onDelete: "cascade" }),
     eventType: varchar("event_type", { length: 100 }).notNull(), // TRIP_DISPATCHED, TRIP_STARTED, TRIP_COMPLETED, TRIP_DELAYED, TRIP_CANCELLED, BUS_ASSIGNED, BUS_CHANGED, DRIVER_CHANGED, CONDUCTOR_CHANGED, INCIDENT_CREATED, RECOVERY_APPLIED
     eventTime: timestamp("event_time").notNull().defaultNow(),
-    recordedBy: uuid("recorded_by").references(() => users.id, { onDelete: "set null" }),
+    recordedBy: uuid("recorded_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     metadata: jsonb("metadata"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
@@ -744,20 +818,23 @@ export const operationalEvents = pgTable(
   ],
 );
 
-export const operationalEventsRelations = relations(operationalEvents, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [operationalEvents.tenantId],
-    references: [tenants.id],
+export const operationalEventsRelations = relations(
+  operationalEvents,
+  ({ one }) => ({
+    tenant: one(tenants, {
+      fields: [operationalEvents.tenantId],
+      references: [tenants.id],
+    }),
+    trip: one(trips, {
+      fields: [operationalEvents.tripId],
+      references: [trips.id],
+    }),
+    user: one(users, {
+      fields: [operationalEvents.recordedBy],
+      references: [users.id],
+    }),
   }),
-  trip: one(trips, {
-    fields: [operationalEvents.tripId],
-    references: [trips.id],
-  }),
-  user: one(users, {
-    fields: [operationalEvents.recordedBy],
-    references: [users.id],
-  }),
-}));
+);
 
 // 19. Demand Surges Table
 export const demandSurges = pgTable(
@@ -775,9 +852,13 @@ export const demandSurges = pgTable(
     timePeriod: varchar("time_period", { length: 100 }).notNull(),
     baselineDemand: integer("baseline_demand").notNull().default(0),
     actualDemand: integer("actual_demand").notNull().default(0),
-    surgePercentage: decimal("surge_percentage", { precision: 6, scale: 2 }).notNull().default("0"),
+    surgePercentage: decimal("surge_percentage", { precision: 6, scale: 2 })
+      .notNull()
+      .default("0"),
     currentCapacity: integer("current_capacity").notNull().default(0),
-    shortageSeverity: varchar("shortage_severity", { length: 50 }).notNull().default("NORMAL"),
+    shortageSeverity: varchar("shortage_severity", { length: 50 })
+      .notNull()
+      .default("NORMAL"),
     status: varchar("status", { length: 50 }).notNull().default("ACTIVE"),
     detectedAt: timestamp("detected_at").notNull().defaultNow(),
     resolvedAt: timestamp("resolved_at"),
@@ -791,17 +872,20 @@ export const demandSurges = pgTable(
   ],
 );
 
-export const demandSurgesRelations = relations(demandSurges, ({ one, many }) => ({
-  tenant: one(tenants, {
-    fields: [demandSurges.tenantId],
-    references: [tenants.id],
+export const demandSurgesRelations = relations(
+  demandSurges,
+  ({ one, many }) => ({
+    tenant: one(tenants, {
+      fields: [demandSurges.tenantId],
+      references: [tenants.id],
+    }),
+    route: one(routes, {
+      fields: [demandSurges.routeId],
+      references: [routes.id],
+    }),
+    allocations: many(fleetAllocations),
   }),
-  route: one(routes, {
-    fields: [demandSurges.routeId],
-    references: [routes.id],
-  }),
-  allocations: many(fleetAllocations),
-}));
+);
 
 // 20. Fleet Allocations Table
 export const fleetAllocations = pgTable(
@@ -811,31 +895,60 @@ export const fleetAllocations = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id, { onDelete: "cascade" }),
-    surgeId: uuid("surge_id").references(() => demandSurges.id, { onDelete: "set null" }),
+    surgeId: uuid("surge_id").references(() => demandSurges.id, {
+      onDelete: "set null",
+    }),
     targetRouteId: uuid("target_route_id")
       .notNull()
       .references(() => routes.id, { onDelete: "cascade" }),
     busId: uuid("bus_id")
       .notNull()
       .references(() => buses.id, { onDelete: "cascade" }),
-    driverId: uuid("driver_id").references(() => crew.id, { onDelete: "set null" }),
-    conductorId: uuid("conductor_id").references(() => crew.id, { onDelete: "set null" }),
-    sourceType: varchar("source_type", { length: 50 }).notNull().default("DEPOT_RESERVE"),
+    driverId: uuid("driver_id").references(() => crew.id, {
+      onDelete: "set null",
+    }),
+    conductorId: uuid("conductor_id").references(() => crew.id, {
+      onDelete: "set null",
+    }),
+    sourceType: varchar("source_type", { length: 50 })
+      .notNull()
+      .default("DEPOT_RESERVE"),
     sourceDepot: varchar("source_depot", { length: 255 }),
-    donorRouteId: uuid("donor_route_id").references(() => routes.id, { onDelete: "set null" }),
-    allocationStrategy: varchar("allocation_strategy", { length: 50 }).notNull().default("BALANCED_SLA"),
-    deadheadKm: decimal("deadhead_km", { precision: 8, scale: 2 }).notNull().default("0"),
+    donorRouteId: uuid("donor_route_id").references(() => routes.id, {
+      onDelete: "set null",
+    }),
+    allocationStrategy: varchar("allocation_strategy", { length: 50 })
+      .notNull()
+      .default("BALANCED_SLA"),
+    deadheadKm: decimal("deadhead_km", { precision: 8, scale: 2 })
+      .notNull()
+      .default("0"),
     deadheadMinutes: integer("deadhead_minutes").notNull().default(0),
-    estimatedCost: decimal("estimated_cost", { precision: 10, scale: 2 }).notNull().default("0"),
+    estimatedCost: decimal("estimated_cost", { precision: 10, scale: 2 })
+      .notNull()
+      .default("0"),
     headwayBeforeMin: integer("headway_before_min").notNull().default(0),
     headwayAfterMin: integer("headway_after_min").notNull().default(0),
-    waitTimeBeforeMin: decimal("wait_time_before_min", { precision: 6, scale: 2 }).notNull().default("0"),
-    waitTimeAfterMin: decimal("wait_time_after_min", { precision: 6, scale: 2 }).notNull().default("0"),
-    loadFactorBefore: decimal("load_factor_before", { precision: 6, scale: 2 }).notNull().default("0"),
-    loadFactorAfter: decimal("load_factor_after", { precision: 6, scale: 2 }).notNull().default("0"),
+    waitTimeBeforeMin: decimal("wait_time_before_min", {
+      precision: 6,
+      scale: 2,
+    })
+      .notNull()
+      .default("0"),
+    waitTimeAfterMin: decimal("wait_time_after_min", { precision: 6, scale: 2 })
+      .notNull()
+      .default("0"),
+    loadFactorBefore: decimal("load_factor_before", { precision: 6, scale: 2 })
+      .notNull()
+      .default("0"),
+    loadFactorAfter: decimal("load_factor_after", { precision: 6, scale: 2 })
+      .notNull()
+      .default("0"),
     status: varchar("status", { length: 50 }).notNull().default("RECOMMENDED"),
     dispatchedAt: timestamp("dispatched_at"),
-    dispatchedBy: uuid("dispatched_by").references(() => users.id, { onDelete: "set null" }),
+    dispatchedBy: uuid("dispatched_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     notes: text("notes"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -847,33 +960,36 @@ export const fleetAllocations = pgTable(
   ],
 );
 
-export const fleetAllocationsRelations = relations(fleetAllocations, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [fleetAllocations.tenantId],
-    references: [tenants.id],
+export const fleetAllocationsRelations = relations(
+  fleetAllocations,
+  ({ one }) => ({
+    tenant: one(tenants, {
+      fields: [fleetAllocations.tenantId],
+      references: [tenants.id],
+    }),
+    surge: one(demandSurges, {
+      fields: [fleetAllocations.surgeId],
+      references: [demandSurges.id],
+    }),
+    targetRoute: one(routes, {
+      fields: [fleetAllocations.targetRouteId],
+      references: [routes.id],
+    }),
+    bus: one(buses, {
+      fields: [fleetAllocations.busId],
+      references: [buses.id],
+    }),
+    driver: one(crew, {
+      fields: [fleetAllocations.driverId],
+      references: [crew.id],
+    }),
+    conductor: one(crew, {
+      fields: [fleetAllocations.conductorId],
+      references: [crew.id],
+    }),
+    dispatcher: one(users, {
+      fields: [fleetAllocations.dispatchedBy],
+      references: [users.id],
+    }),
   }),
-  surge: one(demandSurges, {
-    fields: [fleetAllocations.surgeId],
-    references: [demandSurges.id],
-  }),
-  targetRoute: one(routes, {
-    fields: [fleetAllocations.targetRouteId],
-    references: [routes.id],
-  }),
-  bus: one(buses, {
-    fields: [fleetAllocations.busId],
-    references: [buses.id],
-  }),
-  driver: one(crew, {
-    fields: [fleetAllocations.driverId],
-    references: [crew.id],
-  }),
-  conductor: one(crew, {
-    fields: [fleetAllocations.conductorId],
-    references: [crew.id],
-  }),
-  dispatcher: one(users, {
-    fields: [fleetAllocations.dispatchedBy],
-    references: [users.id],
-  }),
-}));
+);

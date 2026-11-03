@@ -5,7 +5,12 @@
  */
 
 import { db, cleanUuid } from "../db";
-import { demandSurges, fleetAllocations, operationalEvents, auditLogs } from "../db/schema";
+import {
+  demandSurges,
+  fleetAllocations,
+  operationalEvents,
+  auditLogs,
+} from "../db/schema";
 import { desc, eq } from "drizzle-orm";
 import {
   AllocationPlan,
@@ -25,35 +30,40 @@ export const TIME_PERIODS: TimePeriodDef[] = [
     label: "Morning Peak (07:00 - 10:30)",
     startHour: 7,
     endHour: 10.5,
-    description: "Inbound employment & student commute towards Salem downtown and Junction.",
+    description:
+      "Inbound employment & student commute towards Salem downtown and Junction.",
   },
   {
     id: "MIDDAY_OFFPEAK",
     label: "Midday Off-Peak (11:00 - 15:30)",
     startHour: 11,
     endHour: 15.5,
-    description: "Shopping, commercial trade, and healthcare visits across arterial corridors.",
+    description:
+      "Shopping, commercial trade, and healthcare visits across arterial corridors.",
   },
   {
     id: "EVENING_PEAK",
     label: "Evening Peak (16:30 - 20:30)",
     startHour: 16.5,
     endHour: 20.5,
-    description: "Outbound homeward transit, industrial shift departures, and regional travel.",
+    description:
+      "Outbound homeward transit, industrial shift departures, and regional travel.",
   },
   {
     id: "NIGHT_LULL",
     label: "Night Operations (21:00 - 23:30)",
     startHour: 21,
     endHour: 23.5,
-    description: "Sustained skeleton connectivity and railway feeder connectivity.",
+    description:
+      "Sustained skeleton connectivity and railway feeder connectivity.",
   },
   {
     id: "LIVE_SURGE",
     label: "Dynamic Live Surge (Active Telemetry)",
     startHour: 17,
     endHour: 19,
-    description: "Real-time automated anomaly sensing from electronic ticketing machines and GPS.",
+    description:
+      "Real-time automated anomaly sensing from electronic ticketing machines and GPS.",
   },
 ];
 
@@ -351,7 +361,10 @@ const PERIOD_DEMAND_FACTORS: Record<TimePeriodId, Record<string, number>> = {
 /**
  * Calculates shortage severity label based on load factor and deficit.
  */
-function classifyShortageSeverity(loadFactor: number, deficitPax: number): ShortageSeverity {
+function classifyShortageSeverity(
+  loadFactor: number,
+  deficitPax: number,
+): ShortageSeverity {
   if (loadFactor >= 1.25 || deficitPax >= 140) return "CRITICAL";
   if (loadFactor >= 1.05 || deficitPax >= 40) return "HIGH";
   if (loadFactor >= 0.85) return "MODERATE";
@@ -366,7 +379,8 @@ export function buildCorridorProfiles(
   periodId: TimePeriodId = "EVENING_PEAK",
   customSurges: SurgeScenarioInput[] = [],
 ): RouteDemandProfile[] {
-  const periodFactor = PERIOD_DEMAND_FACTORS[periodId] || PERIOD_DEMAND_FACTORS.EVENING_PEAK;
+  const periodFactor =
+    PERIOD_DEMAND_FACTORS[periodId] || PERIOD_DEMAND_FACTORS.EVENING_PEAK;
 
   return BASE_SALEM_ROUTES.map((base) => {
     let multiplier = periodFactor[base.routeId] ?? 1.0;
@@ -380,11 +394,17 @@ export function buildCorridorProfiles(
     const sensedDemand = Math.round(base.baselineDemandPaxPerHour * multiplier);
     const tripsPerHour = 60 / base.scheduledHeadwayMin;
     const capacityPaxPerHour = Math.round(tripsPerHour * base.busCapacity);
-    const loadFactor = Number((sensedDemand / Math.max(1, capacityPaxPerHour)).toFixed(2));
+    const loadFactor = Number(
+      (sensedDemand / Math.max(1, capacityPaxPerHour)).toFixed(2),
+    );
     const deficitPax = Math.max(0, sensedDemand - capacityPaxPerHour);
 
     const surgePercentage = Number(
-      (((sensedDemand - base.baselineDemandPaxPerHour) / base.baselineDemandPaxPerHour) * 100).toFixed(1),
+      (
+        ((sensedDemand - base.baselineDemandPaxPerHour) /
+          base.baselineDemandPaxPerHour) *
+        100
+      ).toFixed(1),
     );
 
     // Effective wait time calculation: (Headway / 2) * max(1, LoadFactor)
@@ -393,7 +413,8 @@ export function buildCorridorProfiles(
     );
 
     const shortageSeverity = classifyShortageSeverity(loadFactor, deficitPax);
-    const eligibleAsDonor = loadFactor < 0.45 && base.activeBusesCount > base.minRequiredBuses;
+    const eligibleAsDonor =
+      loadFactor < 0.45 && base.activeBusesCount > base.minRequiredBuses;
 
     return {
       routeId: base.routeId,
@@ -441,7 +462,13 @@ export async function generateFleetAllocationPlan(
   const routes = buildCorridorProfiles(periodId, customSurges);
   const supplies = getSupplyFleetCandidates();
 
-  return solveFleetAllocation(routes, supplies, strategy, serviceDate, periodId);
+  return solveFleetAllocation(
+    routes,
+    supplies,
+    strategy,
+    serviceDate,
+    periodId,
+  );
 }
 
 /**
@@ -480,7 +507,9 @@ export async function dispatchAllocationImpl(data: {
       .insert(fleetAllocations)
       .values({
         tenantId: validTenant,
-        targetRouteId: cleanUuid(data.targetRouteId) || "00000000-0000-0000-0000-000000000001",
+        targetRouteId:
+          cleanUuid(data.targetRouteId) ||
+          "00000000-0000-0000-0000-000000000001",
         busId: cleanUuid(data.busId) || "00000000-0000-0000-0000-000000000002",
         driverId: cleanUuid(data.driverId),
         conductorId: cleanUuid(data.conductorId),
@@ -499,7 +528,9 @@ export async function dispatchAllocationImpl(data: {
         status: "DISPATCHED",
         dispatchedAt: new Date(),
         dispatchedBy: validUser,
-        notes: data.notes || `Dispatched bus ${data.busRegistration} to route ${data.targetRouteCode}`,
+        notes:
+          data.notes ||
+          `Dispatched bus ${data.busRegistration} to route ${data.targetRouteCode}`,
       })
       .returning();
 
@@ -533,7 +564,10 @@ export async function dispatchAllocationImpl(data: {
       message: `Bus ${data.busRegistration} successfully dispatched to Route ${data.targetRouteCode}.`,
     };
   } catch (error: any) {
-    console.warn("[Fleet Allocation Dispatch Warning]: Database write fallback:", error.message);
+    console.warn(
+      "[Fleet Allocation Dispatch Warning]: Database write fallback:",
+      error.message,
+    );
     return {
       success: true,
       allocationId: `alloc-mem-${Date.now()}`,
@@ -554,7 +588,10 @@ export async function getRecentAllocationsImpl() {
       .limit(15);
     return records;
   } catch (err: any) {
-    console.warn("[Get Allocations Warning]: Using fallback history:", err.message);
+    console.warn(
+      "[Get Allocations Warning]: Using fallback history:",
+      err.message,
+    );
     return [];
   }
 }

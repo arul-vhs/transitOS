@@ -80,7 +80,8 @@ export const Route = createFileRoute("/network/routes")({
       { title: "Route Network: TransitOS" },
       {
         name: "description",
-        content: "Explore Salem corridors, stop sequence coordinates and overlap.",
+        content:
+          "Explore Salem corridors, stop sequence coordinates and overlap.",
       },
     ],
   }),
@@ -153,9 +154,12 @@ function RoutesPage() {
   });
 
   // 3. Fetch Overlap Analysis for Selected Route
-  const { data: overlapResults = [], refetch: runOverlapCheck } = useQuery<any[]>({
+  const { data: overlapResults = [], refetch: runOverlapCheck } = useQuery<
+    any[]
+  >({
     queryKey: ["route-overlap-analysis", selectedRouteId],
-    queryFn: () => analyzeRouteOverlap(selectedRouteDetails?.geometryGeojson) as any,
+    queryFn: () =>
+      analyzeRouteOverlap(selectedRouteDetails?.geometryGeojson) as any,
     enabled: !!selectedRouteDetails?.geometryGeojson,
   });
 
@@ -212,7 +216,10 @@ function RoutesPage() {
     routesList.forEach((r: any) => {
       if (r.geometryGeojson?.coordinates?.length > 1) {
         const latlngs = r.geometryGeojson.coordinates
-          .filter((c: any) => Array.isArray(c) && !isNaN(Number(c[0])) && !isNaN(Number(c[1])))
+          .filter(
+            (c: any) =>
+              Array.isArray(c) && !isNaN(Number(c[0])) && !isNaN(Number(c[1])),
+          )
           .map((c: any) => [Number(c[1]), Number(c[0])]);
 
         if (latlngs.length > 1) {
@@ -264,7 +271,9 @@ function RoutesPage() {
                     longitude: String(newLatLng.lng.toFixed(6)),
                   },
                 });
-                queryClient.invalidateQueries({ queryKey: ["route", selectedRouteId] });
+                queryClient.invalidateQueries({
+                  queryKey: ["route", selectedRouteId],
+                });
                 toast.success(`Position of stop "${stop.name}" updated.`);
               } catch (err: any) {
                 toast.error(err.message || "Failed to update stop position");
@@ -280,7 +289,12 @@ function RoutesPage() {
       if (selectedRouteDetails.geometryGeojson?.coordinates?.length > 1) {
         try {
           const latlngs = selectedRouteDetails.geometryGeojson.coordinates
-            .filter((c: any) => Array.isArray(c) && !isNaN(Number(c[0])) && !isNaN(Number(c[1])))
+            .filter(
+              (c: any) =>
+                Array.isArray(c) &&
+                !isNaN(Number(c[0])) &&
+                !isNaN(Number(c[1])),
+            )
             .map((c: any) => [Number(c[1]), Number(c[0])]);
           if (latlngs.length > 0) {
             const bounds = L.latLngBounds(latlngs);
@@ -302,7 +316,14 @@ function RoutesPage() {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [L, routesList, selectedRouteId, selectedRouteDetails, canManage, activeTab]);
+  }, [
+    L,
+    routesList,
+    selectedRouteId,
+    selectedRouteDetails,
+    canManage,
+    activeTab,
+  ]);
 
   // Mutations
   const createRouteMutation = useMutation({
@@ -516,32 +537,38 @@ function RoutesPage() {
   const totalRoutes = routesList.length;
   const activeRoutes = routesList.filter((r) => r.status === "active").length;
   const draftRoutes = routesList.filter((r) => r.status === "draft").length;
-  const proposedRoutes = routesList.filter((r) => r.status === "proposed").length;
+  const proposedRoutes = routesList.filter(
+    (r) => r.status === "proposed",
+  ).length;
   const avgLength =
     totalRoutes > 0
-      ? (routesList.reduce((acc, r) => acc + Number(r.lengthKm), 0) / totalRoutes).toFixed(1)
+      ? (
+          routesList.reduce((acc, r) => acc + Number(r.lengthKm), 0) /
+          totalRoutes
+        ).toFixed(1)
       : "0";
   const avgDuration =
     totalRoutes > 0
-      ? Math.round(routesList.reduce((acc, r) => acc + r.durationMin, 0) / totalRoutes)
+      ? Math.round(
+          routesList.reduce((acc, r) => acc + r.durationMin, 0) / totalRoutes,
+        )
       : 0;
 
   return (
     <AppShell
-      title="Route Network"
-      subtitle="Operational corridor registries, coordinate stop sequencing, and geographic maps."
+      title="Routes & Stops Map"
+      subtitle="Explore Salem bus corridors, terminal stops, and geographic routes."
       actions={
         <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="hidden sm:inline-flex text-xs rounded-md border-border hover:bg-muted"
+          >
             <Link to="/network/planner">
               <RouteIcon className="mr-1.5 size-3.5 text-primary" />
-              Route Planner
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
-            <Link to="/scheduling/optimizer">
-              <Sparkles className="mr-1.5 size-3.5 text-primary" />
-              Schedule Optimizer
+              Route Builder
             </Link>
           </Button>
           {canManage && (
@@ -551,8 +578,9 @@ function RoutesPage() {
                 resetForm();
                 setIsCreateOpen(true);
               }}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md shadow-xs cursor-pointer"
             >
-              <Plus className="mr-2 size-4" />
+              <Plus className="mr-1.5 size-3.5" />
               Create Route
             </Button>
           )}
@@ -566,25 +594,33 @@ function RoutesPage() {
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               Total Corridors
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-foreground">{totalRoutes}</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-foreground">
+              {totalRoutes}
+            </span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-success flex flex-col justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               Active
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-success">{activeRoutes}</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-success">
+              {activeRoutes}
+            </span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-info flex flex-col justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               Draft
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-info">{draftRoutes}</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-info">
+              {draftRoutes}
+            </span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-warning flex flex-col justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               Proposed
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-warning">{proposedRoutes}</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-warning">
+              {proposedRoutes}
+            </span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-primary flex flex-col justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -632,7 +668,10 @@ function RoutesPage() {
               </Select>
             </div>
             <div className="flex items-center gap-2">
-              <Select value={directionFilter} onValueChange={setDirectionFilter}>
+              <Select
+                value={directionFilter}
+                onValueChange={setDirectionFilter}
+              >
                 <SelectTrigger className="w-36 bg-background/60 text-xs border-border/80">
                   <SelectValue placeholder="Direction" />
                 </SelectTrigger>
@@ -716,7 +755,10 @@ function RoutesPage() {
                     <div className="flex items-center gap-2">
                       <span
                         className="size-4 rounded-full border border-white"
-                        style={{ backgroundColor: selectedRouteDetails.color || "#3B82F6" }}
+                        style={{
+                          backgroundColor:
+                            selectedRouteDetails.color || "#3B82F6",
+                        }}
                       ></span>
                       <h2 className="text-lg font-bold text-foreground">
                         {selectedRouteDetails.code}
@@ -738,37 +780,62 @@ function RoutesPage() {
                         <Select
                           value={selectedRouteDetails.status}
                           onValueChange={(val) =>
-                            statusMutation.mutate({ id: selectedRouteDetails.id, status: val })
+                            statusMutation.mutate({
+                              id: selectedRouteDetails.id,
+                              status: val,
+                            })
                           }
                         >
                           <SelectTrigger className="h-8 w-[120px] text-xs uppercase font-semibold bg-background/50">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="active" className="text-xs uppercase">
+                            <SelectItem
+                              value="active"
+                              className="text-xs uppercase"
+                            >
                               Active
                             </SelectItem>
-                            <SelectItem value="draft" className="text-xs uppercase">
+                            <SelectItem
+                              value="draft"
+                              className="text-xs uppercase"
+                            >
                               Draft
                             </SelectItem>
-                            <SelectItem value="proposed" className="text-xs uppercase">
+                            <SelectItem
+                              value="proposed"
+                              className="text-xs uppercase"
+                            >
                               Proposed
                             </SelectItem>
-                            <SelectItem value="suspended" className="text-xs uppercase">
+                            <SelectItem
+                              value="suspended"
+                              className="text-xs uppercase"
+                            >
                               Suspended
                             </SelectItem>
                           </SelectContent>
                         </Select>
 
-                        <Button size="sm" variant="outline" onClick={handleOpenEdit}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleOpenEdit}
+                        >
                           <Edit2 className="size-3.5 mr-1" /> Edit
                         </Button>
                         <Button
                           size="sm"
                           variant="destructive"
                           onClick={() => {
-                            if (confirm(`Archive route ${selectedRouteDetails.code}?`)) {
-                              deleteRouteMutation.mutate(selectedRouteDetails.id);
+                            if (
+                              confirm(
+                                `Archive route ${selectedRouteDetails.code}?`,
+                              )
+                            ) {
+                              deleteRouteMutation.mutate(
+                                selectedRouteDetails.id,
+                              );
                             }
                           }}
                         >
@@ -780,16 +847,29 @@ function RoutesPage() {
                 </div>
 
                 {/* Tabs */}
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <Tabs
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  className="w-full"
+                >
                   <TabsList className="bg-muted p-1 rounded-md">
-                    <TabsTrigger value="map" className="flex items-center gap-1">
+                    <TabsTrigger
+                      value="map"
+                      className="flex items-center gap-1"
+                    >
                       <Map className="size-3.5" /> Map Network
                     </TabsTrigger>
-                    <TabsTrigger value="stops" className="flex items-center gap-1">
+                    <TabsTrigger
+                      value="stops"
+                      className="flex items-center gap-1"
+                    >
                       <ListOrdered className="size-3.5" /> Stops CRUD (
                       {selectedRouteDetails.stops?.length || 0})
                     </TabsTrigger>
-                    <TabsTrigger value="overlap" className="flex items-center gap-1">
+                    <TabsTrigger
+                      value="overlap"
+                      className="flex items-center gap-1"
+                    >
                       <Waypoints className="size-3.5" /> Overlap Analysis
                     </TabsTrigger>
                   </TabsList>
@@ -809,7 +889,10 @@ function RoutesPage() {
                           </span>
                         )}
                       </div>
-                      <div ref={mapRef} className="h-[400px] w-full bg-accent/20 z-0"></div>
+                      <div
+                        ref={mapRef}
+                        className="h-[400px] w-full bg-accent/20 z-0"
+                      ></div>
                     </section>
                   </TabsContent>
 
@@ -818,10 +901,14 @@ function RoutesPage() {
                     <div className="panel p-4 space-y-4">
                       <div className="flex justify-between items-center border-b pb-2">
                         <h3 className="text-sm font-semibold flex items-center gap-2">
-                          <MapPin className="size-4 text-primary" /> Stop Nodes Registry
+                          <MapPin className="size-4 text-primary" /> Stop Nodes
+                          Registry
                         </h3>
                         {canManage && (
-                          <Button size="sm" onClick={() => setIsAddStopOpen(true)}>
+                          <Button
+                            size="sm"
+                            onClick={() => setIsAddStopOpen(true)}
+                          >
                             <Plus className="size-3.5 mr-1" /> Add Stop Node
                           </Button>
                         )}
@@ -836,81 +923,104 @@ function RoutesPage() {
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead className="w-[80px]">Sequence</TableHead>
+                                <TableHead className="w-[80px]">
+                                  Sequence
+                                </TableHead>
                                 <TableHead>Stop Name</TableHead>
                                 <TableHead>Latitude</TableHead>
                                 <TableHead>Longitude</TableHead>
                                 {canManage && (
-                                  <TableHead className="w-[180px] text-right">Actions</TableHead>
+                                  <TableHead className="w-[180px] text-right">
+                                    Actions
+                                  </TableHead>
                                 )}
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {selectedRouteDetails.stops.map((stop: any, idx: number) => (
-                                <TableRow key={stop.id}>
-                                  <TableCell className="font-mono font-bold text-primary">
-                                    {stop.sequence}
-                                  </TableCell>
-                                  <TableCell className="font-semibold text-sm">
-                                    {stop.name}
-                                  </TableCell>
-                                  <TableCell className="font-mono text-xs">
-                                    {Number(stop.latitude).toFixed(6)}
-                                  </TableCell>
-                                  <TableCell className="font-mono text-xs">
-                                    {Number(stop.longitude).toFixed(6)}
-                                  </TableCell>
-                                  {canManage && (
-                                    <TableCell className="text-right">
-                                      <div className="flex justify-end gap-1.5">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 text-muted-foreground"
-                                          disabled={idx === 0}
-                                          onClick={() =>
-                                            shiftStopSequenceMutation.mutate({
-                                              stop,
-                                              direction: "up",
-                                            })
-                                          }
-                                        >
-                                          <ArrowUpDown className="size-3.5 rotate-180" />
-                                          <span className="sr-only">Move Up</span>
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 text-muted-foreground"
-                                          disabled={idx === selectedRouteDetails.stops.length - 1}
-                                          onClick={() =>
-                                            shiftStopSequenceMutation.mutate({
-                                              stop,
-                                              direction: "down",
-                                            })
-                                          }
-                                        >
-                                          <ArrowUpDown className="size-3.5" />
-                                          <span className="sr-only">Move Down</span>
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                          onClick={() => {
-                                            if (confirm(`Delete stop ${stop.name}?`)) {
-                                              deleteStopMutation.mutate(stop.id);
-                                            }
-                                          }}
-                                        >
-                                          <Trash2 className="size-3.5" />
-                                          <span className="sr-only">Delete Stop</span>
-                                        </Button>
-                                      </div>
+                              {selectedRouteDetails.stops.map(
+                                (stop: any, idx: number) => (
+                                  <TableRow key={stop.id}>
+                                    <TableCell className="font-mono font-bold text-primary">
+                                      {stop.sequence}
                                     </TableCell>
-                                  )}
-                                </TableRow>
-                              ))}
+                                    <TableCell className="font-semibold text-sm">
+                                      {stop.name}
+                                    </TableCell>
+                                    <TableCell className="font-mono text-xs">
+                                      {Number(stop.latitude).toFixed(6)}
+                                    </TableCell>
+                                    <TableCell className="font-mono text-xs">
+                                      {Number(stop.longitude).toFixed(6)}
+                                    </TableCell>
+                                    {canManage && (
+                                      <TableCell className="text-right">
+                                        <div className="flex justify-end gap-1.5">
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-muted-foreground"
+                                            disabled={idx === 0}
+                                            onClick={() =>
+                                              shiftStopSequenceMutation.mutate({
+                                                stop,
+                                                direction: "up",
+                                              })
+                                            }
+                                          >
+                                            <ArrowUpDown className="size-3.5 rotate-180" />
+                                            <span className="sr-only">
+                                              Move Up
+                                            </span>
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-muted-foreground"
+                                            disabled={
+                                              idx ===
+                                              selectedRouteDetails.stops
+                                                .length -
+                                                1
+                                            }
+                                            onClick={() =>
+                                              shiftStopSequenceMutation.mutate({
+                                                stop,
+                                                direction: "down",
+                                              })
+                                            }
+                                          >
+                                            <ArrowUpDown className="size-3.5" />
+                                            <span className="sr-only">
+                                              Move Down
+                                            </span>
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            onClick={() => {
+                                              if (
+                                                confirm(
+                                                  `Delete stop ${stop.name}?`,
+                                                )
+                                              ) {
+                                                deleteStopMutation.mutate(
+                                                  stop.id,
+                                                );
+                                              }
+                                            }}
+                                          >
+                                            <Trash2 className="size-3.5" />
+                                            <span className="sr-only">
+                                              Delete Stop
+                                            </span>
+                                          </Button>
+                                        </div>
+                                      </TableCell>
+                                    )}
+                                  </TableRow>
+                                ),
+                              )}
                             </TableBody>
                           </Table>
                         </div>
@@ -923,10 +1033,12 @@ function RoutesPage() {
                     <section className="panel p-4 space-y-4">
                       <div className="flex justify-between items-center border-b pb-2">
                         <div>
-                          <h3 className="text-sm font-semibold">Geometric Overlap Analysis</h3>
+                          <h3 className="text-sm font-semibold">
+                            Geometric Overlap Analysis
+                          </h3>
                           <p className="text-xs text-muted-foreground">
-                            Calculates corridor overlap against other active corridors in this
-                            tenant registry.
+                            Calculates corridor overlap against other active
+                            corridors in this tenant registry.
                           </p>
                         </div>
                         <Button size="sm" onClick={() => runOverlapCheck()}>
@@ -936,7 +1048,8 @@ function RoutesPage() {
 
                       {overlapResults.length === 0 ? (
                         <div className="p-8 text-center text-xs text-success border border-dashed rounded-md bg-success/5 border-success/20">
-                          No overlapping segments detected. This corridor runs independently.
+                          No overlapping segments detected. This corridor runs
+                          independently.
                         </div>
                       ) : (
                         <div className="space-y-4">
@@ -977,10 +1090,12 @@ function RoutesPage() {
                                 </div>
                                 <div className="flex justify-between text-xs pt-1">
                                   <span>
-                                    Overlap length: <b>{result.overlapDistanceKm} km</b>
+                                    Overlap length:{" "}
+                                    <b>{result.overlapDistanceKm} km</b>
                                   </span>
                                   <span>
-                                    Overlap ratio: <b>{result.overlapPercentage}%</b>
+                                    Overlap ratio:{" "}
+                                    <b>{result.overlapPercentage}%</b>
                                   </span>
                                 </div>
                               </div>
@@ -988,15 +1103,17 @@ function RoutesPage() {
                           </div>
 
                           {overlapResults.some(
-                            (r: any) => r.severity === "HIGH" || r.severity === "MEDIUM",
+                            (r: any) =>
+                              r.severity === "HIGH" || r.severity === "MEDIUM",
                           ) && (
                             <div className="flex items-start gap-2.5 rounded-lg border border-warning/25 bg-warning/5 px-4 py-3 text-sm text-warning font-medium">
                               <AlertTriangle className="size-4 mt-0.5 shrink-0" />
                               <div>
                                 <p>Moderate/High Corridor Overlaps Detected</p>
                                 <p className="text-xs text-warning/80 font-normal mt-0.5">
-                                  Multiple segments of this route conflict with existing corridors.
-                                  Consider adjusting the corridor coordinates or stop placements.
+                                  Multiple segments of this route conflict with
+                                  existing corridors. Consider adjusting the
+                                  corridor coordinates or stop placements.
                                 </p>
                               </div>
                             </div>
@@ -1009,8 +1126,8 @@ function RoutesPage() {
               </>
             ) : (
               <div className="panel py-20 text-center text-muted-foreground text-sm">
-                No route selected. Select a route from the sidebar registry or create a new proposed
-                corridor.
+                No route selected. Select a route from the sidebar registry or
+                create a new proposed corridor.
               </div>
             )}
           </div>
@@ -1026,8 +1143,8 @@ function RoutesPage() {
             <DialogHeader>
               <DialogTitle>Create Route Corridor</DialogTitle>
               <DialogDescription>
-                Add a new transit route profile. Planners can draw the route points on the planner
-                map afterwards.
+                Add a new transit route profile. Planners can draw the route
+                points on the planner map afterwards.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -1151,7 +1268,11 @@ function RoutesPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateOpen(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={createRouteMutation.isPending}>
@@ -1274,7 +1395,11 @@ function RoutesPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditOpen(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={updateRouteMutation.isPending}>
@@ -1320,7 +1445,9 @@ function RoutesPage() {
                   min="1"
                   value={stopSeq}
                   onChange={(e) => setStopSeq(e.target.value)}
-                  placeholder={String((selectedRouteDetails?.stops?.length || 0) + 1)}
+                  placeholder={String(
+                    (selectedRouteDetails?.stops?.length || 0) + 1,
+                  )}
                   className="col-span-3 font-mono"
                 />
               </div>
@@ -1352,7 +1479,11 @@ function RoutesPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsAddStopOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddStopOpen(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={createStopMutation.isPending}>

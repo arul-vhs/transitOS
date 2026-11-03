@@ -5,7 +5,8 @@ export type TimePeriodId =
   | "NIGHT_LULL"
   | "LIVE_SURGE";
 
-export type ShortageSeverity = "CRITICAL" | "HIGH" | "MODERATE" | "OPTIMAL" | "SURPLUS";
+export type ShortageSeverity =
+  "CRITICAL" | "HIGH" | "MODERATE" | "OPTIMAL" | "SURPLUS";
 
 export type AllocationStrategy = "BALANCED_SLA" | "COST_OPTIMAL" | "EQUITY";
 

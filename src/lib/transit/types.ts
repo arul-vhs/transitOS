@@ -1,4 +1,5 @@
-export type BusStatus = "available" | "in-service" | "breakdown" | "maintenance";
+export type BusStatus =
+  "available" | "in-service" | "breakdown" | "maintenance";
 export type CrewRole = "driver" | "conductor";
 export type CrewStatus = "available" | "on-duty" | "resting" | "unavailable";
 export type DutyType = "linked" | "unlinked";

@@ -3,7 +3,9 @@ import { toServerFnArgs } from "./server-fn-utils";
 
 // 1. Buses
 const _getBuses = createServerFn({ method: "GET" })
-  .validator((filters?: { status?: string; depot?: string; search?: string }) => filters)
+  .validator(
+    (filters?: { status?: string; depot?: string; search?: string }) => filters,
+  )
   .handler(async ({ data }) => {
     const { getBusesImpl } = await import("../server/fleet-crew");
     return await getBusesImpl(data);
@@ -131,14 +133,17 @@ const _updateBusStatus = createServerFn({ method: "POST" })
   });
 
 export const updateBusStatus = async (
-  payload: { id: string; status: string } | { data: { id: string; status: string } },
+  payload:
+    { id: string; status: string } | { data: { id: string; status: string } },
 ) => {
   return await _updateBusStatus(toServerFnArgs(payload)!);
 };
 
 // 2. Crew
 const _getDrivers = createServerFn({ method: "GET" })
-  .validator((filters?: { search?: string; status?: string; depot?: string }) => filters)
+  .validator(
+    (filters?: { search?: string; status?: string; depot?: string }) => filters,
+  )
   .handler(async ({ data }) => {
     const { getDriversImpl } = await import("../server/fleet-crew");
     return await getDriversImpl(data);
@@ -153,7 +158,9 @@ export const getDrivers = async (
 };
 
 const _getConductors = createServerFn({ method: "GET" })
-  .validator((filters?: { search?: string; status?: string; depot?: string }) => filters)
+  .validator(
+    (filters?: { search?: string; status?: string; depot?: string }) => filters,
+  )
   .handler(async ({ data }) => {
     const { getConductorsImpl } = await import("../server/fleet-crew");
     return await getConductorsImpl(data);
@@ -290,15 +297,18 @@ const _updateCrewStatus = createServerFn({ method: "POST" })
   });
 
 export const updateCrewStatus = async (
-  payload: { id: string; status: string } | { data: { id: string; status: string } },
+  payload:
+    { id: string; status: string } | { data: { id: string; status: string } },
 ) => {
   return await _updateCrewStatus(toServerFnArgs(payload)!);
 };
 
-const _getCrewAvailability = createServerFn({ method: "GET" }).handler(async () => {
-  const { getCrewAvailabilityImpl } = await import("../server/fleet-crew");
-  return await getCrewAvailabilityImpl();
-});
+const _getCrewAvailability = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const { getCrewAvailabilityImpl } = await import("../server/fleet-crew");
+    return await getCrewAvailabilityImpl();
+  },
+);
 
 export const getCrewAvailability = async () => {
   return await _getCrewAvailability();

@@ -52,7 +52,12 @@ import {
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
 import { getRoutes } from "@/lib/routes-gis-fns";
-import { getTrips, createTrip, cancelTrip, generateTrips } from "@/lib/scheduling-fns";
+import {
+  getTrips,
+  createTrip,
+  cancelTrip,
+  generateTrips,
+} from "@/lib/scheduling-fns";
 import { formatMinutesToTime } from "@/lib/utils";
 
 export const Route = createFileRoute("/operations/trips")({
@@ -64,7 +69,10 @@ export const Route = createFileRoute("/operations/trips")({
   head: () => ({
     meta: [
       { title: "Trip Management: TransitOS" },
-      { name: "description", content: "Timetable registers and frequency-based generators." },
+      {
+        name: "description",
+        content: "Timetable registers and frequency-based generators.",
+      },
     ],
   }),
   component: TripsPage,
@@ -142,7 +150,7 @@ function TripsPage() {
       setIsCreateOpen(false);
       setFormStartTime("06:00");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to create trip");
     },
   });
@@ -154,7 +162,7 @@ function TripsPage() {
       toast.success(`Generated ${tripsArray.length} trips successfully.`);
       setIsGeneratorOpen(false);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to generate trips");
     },
   });
@@ -165,7 +173,7 @@ function TripsPage() {
       queryClient.invalidateQueries({ queryKey: ["trips"] });
       toast.success(`Trip ${updatedT.tripCode} cancelled successfully.`);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to cancel trip");
     },
   });
@@ -195,8 +203,8 @@ function TripsPage() {
 
   return (
     <AppShell
-      title="Trip Management"
-      subtitle="Timetable corridors, scheduled trips, and automatic schedule generators."
+      title="Bus Schedules & Timetables"
+      subtitle="View daily departure times, add single trips, or auto-fill regular frequencies."
       actions={
         canModify ? (
           <div className="flex gap-2">
@@ -204,14 +212,18 @@ function TripsPage() {
               size="sm"
               variant="outline"
               onClick={() => setIsGeneratorOpen(true)}
-              className="bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary"
+              className="text-xs rounded-md border-border hover:bg-muted"
             >
-              <Sparkles className="mr-2 size-4" />
-              Generate Timetable
+              <CalendarClock className="mr-1.5 size-3.5 text-primary" />
+              Auto-Fill Timetable
             </Button>
-            <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 size-4" />
-              Create Trip
+            <Button
+              size="sm"
+              onClick={() => setIsCreateOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-xs cursor-pointer"
+            >
+              <Plus className="mr-1.5 size-3.5" />
+              Add Trip
             </Button>
           </div>
         ) : undefined
@@ -219,48 +231,37 @@ function TripsPage() {
     >
       <div className="space-y-6">
         {/* Context Guidance Card */}
-        <div className="rounded-xl border border-primary/25 bg-gradient-to-r from-primary/10 via-background to-primary/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+        <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
           <div className="flex items-start gap-3">
-            <div className="grid size-8 place-items-center rounded-lg bg-primary/15 text-primary shrink-0 mt-0.5">
+            <div className="grid size-8 place-items-center rounded bg-primary/10 text-primary shrink-0 mt-0.5">
               <Lightbulb className="size-4" />
             </div>
             <div className="text-xs">
               <p className="font-bold text-foreground flex items-center gap-1.5">
-                <span>Timetable Management Guide</span>
+                <span>Timetable & Daily Departures</span>
                 <Badge
                   variant="outline"
-                  className="text-[9px] font-mono border-primary/30 text-primary"
+                  className="text-[9px] font-mono border-primary/30 text-primary rounded"
                 >
-                  Step 2 of 4
+                  Step 2 of 3
                 </Badge>
               </p>
               <p className="text-muted-foreground mt-0.5 leading-relaxed">
-                A <strong>Trip</strong> is a single one-way bus journey at a scheduled departure
-                time. Once trips are listed here, open the <strong>AI Schedule Optimizer</strong> to
-                group them into driver shifts (duties) and bus rosters with zero legal rest
-                violations.
+                A <strong>Trip</strong> is a single one-way bus ride with a
+                scheduled departure time. Once trips are set up here, open{" "}
+                <strong>Driver Shifts</strong> to assign drivers and vehicles.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {canModify && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIsGeneratorOpen(true)}
-                className="text-xs h-8 border-primary/30 text-primary bg-primary/5 hover:bg-primary/15"
-              >
-                <Sparkles className="mr-1.5 size-3.5" />
-                Generate Timetable
-              </Button>
-            )}
             <Button
               asChild
               size="sm"
-              className="text-xs h-8 gap-1.5 bg-primary text-primary-foreground"
+              variant="outline"
+              className="text-xs h-8 gap-1.5 rounded-md border-border bg-card hover:bg-muted"
             >
-              <Link to="/scheduling/optimizer">
-                <span>Run AI Optimizer</span>
+              <Link to="/operations/duties">
+                <span>Assign Shifts</span>
                 <ArrowRight className="size-3" />
               </Link>
             </Button>
@@ -344,7 +345,10 @@ function TripsPage() {
             </div>
           </div>
 
-          <Badge variant="outline" className="font-mono text-xs border-primary/30 text-primary">
+          <Badge
+            variant="outline"
+            className="font-mono text-xs border-primary/30 text-primary"
+          >
             {
               tripsList.filter((t) => {
                 if (!searchQuery.trim()) return true;
@@ -368,8 +372,8 @@ function TripsPage() {
             </div>
           ) : tripsList.length === 0 ? (
             <div className="py-20 text-center text-xs text-muted-foreground">
-              No trips scheduled for this date matching the filters. Click "Generate Timetable" to
-              populate.
+              No trips scheduled for this date matching the filters. Click
+              "Generate Timetable" to populate.
             </div>
           ) : (
             <Table>
@@ -384,7 +388,11 @@ function TripsPage() {
                   <TableHead className="w-[100px]">Duration</TableHead>
                   <TableHead className="w-[100px]">Distance</TableHead>
                   <TableHead className="w-[110px]">Status</TableHead>
-                  {canModify && <TableHead className="w-[80px] text-right">Actions</TableHead>}
+                  {canModify && (
+                    <TableHead className="w-[80px] text-right">
+                      Actions
+                    </TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -401,13 +409,19 @@ function TripsPage() {
                   .map((t) => (
                     <TableRow
                       key={t.id}
-                      className={t.status === "cancelled" ? "opacity-60 bg-muted/5" : ""}
+                      className={
+                        t.status === "cancelled" ? "opacity-60 bg-muted/5" : ""
+                      }
                     >
                       <TableCell className="font-mono font-bold text-primary">
                         {t.tripCode}
                       </TableCell>
-                      <TableCell className="font-semibold text-xs">{t.routeCode}</TableCell>
-                      <TableCell className="text-sm font-medium">{t.routeName}</TableCell>
+                      <TableCell className="font-semibold text-xs">
+                        {t.routeCode}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">
+                        {t.routeName}
+                      </TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"
@@ -422,8 +436,12 @@ function TripsPage() {
                       <TableCell className="font-mono text-muted-foreground">
                         {formatMinutesToTime(t.endTime)}
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{t.durationMin} min</TableCell>
-                      <TableCell className="font-mono text-xs">{t.distanceKm} km</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {t.durationMin} min
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {t.distanceKm} km
+                      </TableCell>
                       <TableCell>
                         <Badge
                           variant={
@@ -472,8 +490,8 @@ function TripsPage() {
             <DialogHeader>
               <DialogTitle>Create Scheduled Trip</DialogTitle>
               <DialogDescription>
-                Schedule an individual trip. Code, duration and endpoints are auto-resolved from
-                route geometries.
+                Schedule an individual trip. Code, duration and endpoints are
+                auto-resolved from route geometries.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -535,7 +553,11 @@ function TripsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateOpen(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={createTripMutation.isPending}>
@@ -553,8 +575,8 @@ function TripsPage() {
             <DialogHeader>
               <DialogTitle>Generate Route Timetable</DialogTitle>
               <DialogDescription>
-                Generate multiple sequential trips for date <b>{serviceDate}</b> at a custom
-                frequency interval.
+                Generate multiple sequential trips for date <b>{serviceDate}</b>{" "}
+                at a custom frequency interval.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -635,9 +657,13 @@ function TripsPage() {
                 const startM = parseTimeToMinutes(genStartTime);
                 const endM = parseTimeToMinutes(genEndTime);
                 const freqM = Math.max(5, Number(genFrequency) || 30);
-                const estTrips = startM < endM ? Math.floor((endM - startM) / freqM) + 1 : 0;
-                const durationHours = startM < endM ? ((endM - startM) / 60).toFixed(1) : "0";
-                const selectedRouteObj = routesList.find((r) => r.id === genRouteId);
+                const estTrips =
+                  startM < endM ? Math.floor((endM - startM) / freqM) + 1 : 0;
+                const durationHours =
+                  startM < endM ? ((endM - startM) / 60).toFixed(1) : "0";
+                const selectedRouteObj = routesList.find(
+                  (r) => r.id === genRouteId,
+                );
 
                 return (
                   <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-1.5 text-xs">
@@ -663,23 +689,36 @@ function TripsPage() {
                       ({genDirection})
                     </p>
                     <p className="text-[11px] text-muted-foreground leading-snug">
-                      Frequency: Every <strong className="text-foreground">{freqM} minutes</strong>{" "}
-                      across a <strong className="text-foreground">{durationHours} hr</strong>{" "}
+                      Frequency: Every{" "}
+                      <strong className="text-foreground">
+                        {freqM} minutes
+                      </strong>{" "}
+                      across a{" "}
+                      <strong className="text-foreground">
+                        {durationHours} hr
+                      </strong>{" "}
                       service window ({genStartTime} to {genEndTime}).
                     </p>
                     <p className="text-[10px] text-muted-foreground pt-1 border-t border-border">
-                      Tip: Peak traffic headway is typically 15-20 min; off-peak is 30-45 min.
+                      Tip: Peak traffic headway is typically 15-20 min; off-peak
+                      is 30-45 min.
                     </p>
                   </div>
                 );
               })()}
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsGeneratorOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsGeneratorOpen(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={generateTripsMutation.isPending}>
-                {generateTripsMutation.isPending ? "Generating..." : "Generate Timetable"}
+                {generateTripsMutation.isPending
+                  ? "Generating..."
+                  : "Generate Timetable"}
               </Button>
             </DialogFooter>
           </form>

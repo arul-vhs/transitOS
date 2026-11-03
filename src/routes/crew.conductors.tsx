@@ -49,7 +49,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
@@ -73,7 +78,8 @@ export const Route = createFileRoute("/crew/conductors")({
       { title: "Conductor Roster & Profile: TransitOS" },
       {
         name: "description",
-        content: "Conductor rosters, ticketing machine registers and availability.",
+        content:
+          "Conductor rosters, ticketing machine registers and availability.",
       },
     ],
   }),
@@ -128,7 +134,9 @@ function ConductorsPage() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   // Selected conductor
-  const [selectedConductorId, setSelectedConductorId] = useState<string | null>(null);
+  const [selectedConductorId, setSelectedConductorId] = useState<string | null>(
+    null,
+  );
 
   // Form states
   const [formEmpId, setFormEmpId] = useState("");
@@ -177,7 +185,9 @@ function ConductorsPage() {
       queryClient.invalidateQueries({ queryKey: ["conductors"] });
       queryClient.invalidateQueries({ queryKey: ["crew-availability"] });
       if (selectedConductorId) {
-        queryClient.invalidateQueries({ queryKey: ["crew-member", selectedConductorId] });
+        queryClient.invalidateQueries({
+          queryKey: ["crew-member", selectedConductorId],
+        });
       }
       toast.success("Conductor updated successfully");
       setIsEditOpen(false);
@@ -255,9 +265,15 @@ function ConductorsPage() {
   };
 
   const totalCount = conductorsList.length;
-  const availableCount = conductorsList.filter((c) => c.status === "available").length;
-  const onDutyCount = conductorsList.filter((c) => c.status === "on-duty").length;
-  const restingCount = conductorsList.filter((c) => c.status === "resting").length;
+  const availableCount = conductorsList.filter(
+    (c) => c.status === "available",
+  ).length;
+  const onDutyCount = conductorsList.filter(
+    (c) => c.status === "on-duty",
+  ).length;
+  const restingCount = conductorsList.filter(
+    (c) => c.status === "resting",
+  ).length;
   const leaveCount = conductorsList.filter((c) => c.status === "leave").length;
 
   return (
@@ -287,31 +303,41 @@ function ConductorsPage() {
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               Total Conductors
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-foreground">{totalCount}</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-foreground">
+              {totalCount}
+            </span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-success flex flex-col justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               Available
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-success">{availableCount}</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-success">
+              {availableCount}
+            </span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-primary flex flex-col justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               On Active Duty
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-primary">{onDutyCount}</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-primary">
+              {onDutyCount}
+            </span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-warning flex flex-col justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               Resting
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-warning">{restingCount}</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-warning">
+              {restingCount}
+            </span>
           </div>
           <div className="glass-card p-4 rounded-xl border-l-4 border-l-destructive flex flex-col justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               On Leave
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-destructive">{leaveCount}</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-destructive">
+              {leaveCount}
+            </span>
           </div>
         </div>
 
@@ -351,9 +377,15 @@ function ConductorsPage() {
                 <SelectContent>
                   <SelectItem value="all">All Depots</SelectItem>
                   <SelectItem value="Meyyanur Depot">Meyyanur Depot</SelectItem>
-                  <SelectItem value="Johnsonpet Depot">Johnsonpet Depot</SelectItem>
-                  <SelectItem value="Hasthampatti Depot">Hasthampatti Depot</SelectItem>
-                  <SelectItem value="Steel Plant Depot">Steel Plant Depot</SelectItem>
+                  <SelectItem value="Johnsonpet Depot">
+                    Johnsonpet Depot
+                  </SelectItem>
+                  <SelectItem value="Hasthampatti Depot">
+                    Hasthampatti Depot
+                  </SelectItem>
+                  <SelectItem value="Steel Plant Depot">
+                    Steel Plant Depot
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -374,13 +406,25 @@ function ConductorsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="border-border/60">
-                  <TableHead className="w-32 text-xs font-bold">Emp ID</TableHead>
-                  <TableHead className="text-xs font-bold">Conductor Name</TableHead>
-                  <TableHead className="text-xs font-bold">Depot Location</TableHead>
-                  <TableHead className="text-xs font-bold">ETM Terminal</TableHead>
+                  <TableHead className="w-32 text-xs font-bold">
+                    Emp ID
+                  </TableHead>
+                  <TableHead className="text-xs font-bold">
+                    Conductor Name
+                  </TableHead>
+                  <TableHead className="text-xs font-bold">
+                    Depot Location
+                  </TableHead>
+                  <TableHead className="text-xs font-bold">
+                    ETM Terminal
+                  </TableHead>
                   <TableHead className="text-xs font-bold">Status</TableHead>
-                  <TableHead className="text-xs font-bold">Availability Window</TableHead>
-                  <TableHead className="w-28 text-right text-xs font-bold">Actions</TableHead>
+                  <TableHead className="text-xs font-bold">
+                    Availability Window
+                  </TableHead>
+                  <TableHead className="w-28 text-right text-xs font-bold">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -403,7 +447,9 @@ function ConductorsPage() {
                               .toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="font-bold text-xs text-foreground">{conductor.name}</span>
+                        <span className="font-bold text-xs text-foreground">
+                          {conductor.name}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
@@ -420,7 +466,10 @@ function ConductorsPage() {
                         <Select
                           value={conductor.status}
                           onValueChange={(val) =>
-                            statusMutation.mutate({ id: conductor.id, status: val })
+                            statusMutation.mutate({
+                              id: conductor.id,
+                              status: val,
+                            })
                           }
                         >
                           <SelectTrigger
@@ -438,7 +487,10 @@ function ConductorsPage() {
                             >
                               Available
                             </SelectItem>
-                            <SelectItem value="on-duty" className="text-xs uppercase text-primary">
+                            <SelectItem
+                              value="on-duty"
+                              className="text-xs uppercase text-primary"
+                            >
                               On Duty
                             </SelectItem>
                             <SelectItem
@@ -481,14 +533,17 @@ function ConductorsPage() {
                         </span>
                       ) : conductor.status === "available" ? (
                         <span className="text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">
-                          Ready (from {formatMinutesToTime(conductor.availableFrom)})
+                          Ready (from{" "}
+                          {formatMinutesToTime(conductor.availableFrom)})
                         </span>
                       ) : conductor.status === "on-duty" ? (
                         <span className="text-primary font-medium text-[11px]">
                           On Active Route
                         </span>
                       ) : (
-                        <span className="text-muted-foreground text-[11px]">Off Shift</span>
+                        <span className="text-muted-foreground text-[11px]">
+                          Off Shift
+                        </span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -568,7 +623,9 @@ function ConductorsPage() {
 
                 <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-border/60 font-mono">
                   <div>
-                    <span className="text-[10px] uppercase text-muted-foreground">Depot Base</span>
+                    <span className="text-[10px] uppercase text-muted-foreground">
+                      Depot Base
+                    </span>
                     <p className="font-medium text-foreground text-[11px] truncate">
                       {selectedConductorDetails.depot}
                     </p>
@@ -593,9 +650,13 @@ function ConductorsPage() {
 
                 <div className="p-2.5 rounded-lg border border-border/60 bg-secondary/20 space-y-1 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Available From:</span>
+                    <span className="text-muted-foreground">
+                      Available From:
+                    </span>
                     <span className="font-mono font-bold">
-                      {formatMinutesToTime(selectedConductorDetails.availableFrom)}
+                      {formatMinutesToTime(
+                        selectedConductorDetails.availableFrom,
+                      )}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -615,7 +676,8 @@ function ConductorsPage() {
                 </h4>
                 <div className="p-4 rounded-xl border border-dashed border-border/70 text-center text-xs text-muted-foreground bg-secondary/10">
                   <CheckCircle2 className="size-6 text-emerald-500/60 mx-auto mb-1" />
-                  Roster wave active. ETM device verified and checked out for Salem bus operations.
+                  Roster wave active. ETM device verified and checked out for
+                  Salem bus operations.
                 </div>
               </div>
             </div>

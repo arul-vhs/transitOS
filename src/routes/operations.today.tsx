@@ -45,7 +45,8 @@ export const Route = createFileRoute("/operations/today")({
       { title: "Today's Operations: TransitOS" },
       {
         name: "description",
-        content: "Live operational duty board, fleet telemetry, and dispatch monitoring.",
+        content:
+          "Live operational duty board, fleet telemetry, and dispatch monitoring.",
       },
     ],
   }),
@@ -55,7 +56,9 @@ export const Route = createFileRoute("/operations/today")({
 const SERVICE_DATE = "25 Aug 2026";
 
 function OperationsTodayPage() {
-  const [filterTab, setFilterTab] = useState<"all" | "active" | "issues">("all");
+  const [filterTab, setFilterTab] = useState<"all" | "active" | "issues">(
+    "all",
+  );
 
   // 1. Fetch Today's Trips
   const { data: tripsList = [], isLoading: tripsLoading } = useQuery({
@@ -79,13 +82,17 @@ function OperationsTodayPage() {
   const { data: dutyValidations = {} } = useQuery({
     queryKey: ["today-duties-validations", dutiesList],
     queryFn: async () => {
-      const results: Record<string, { isValid: boolean; issues: string[] }> = {};
+      const results: Record<string, { isValid: boolean; issues: string[] }> =
+        {};
       for (const d of dutiesList) {
         try {
           const res = await validateDuty({ dutyId: d.id });
           results[d.id] = res;
         } catch {
-          results[d.id] = { isValid: false, issues: ["Failed to run validation"] };
+          results[d.id] = {
+            isValid: false,
+            issues: ["Failed to run validation"],
+          };
         }
       }
       return results;
@@ -98,7 +105,8 @@ function OperationsTodayPage() {
   const totalDuties = dutiesList.length;
 
   // Assigned Buses count
-  const assignedBuses = new Set(dutiesList.map((d) => d.busId).filter(Boolean)).size;
+  const assignedBuses = new Set(dutiesList.map((d) => d.busId).filter(Boolean))
+    .size;
 
   // Assigned Drivers/Crew count
   const assignedDriversSet = new Set<string>();
@@ -144,29 +152,29 @@ function OperationsTodayPage() {
 
   return (
     <AppShell
-      title="Active Operations Board"
-      subtitle={`Real-time dispatch board, crew shift trackers, and corridor service compliance for ${SERVICE_DATE}.`}
+      title="Live Operations Board"
+      subtitle={`Live dispatch board, vehicle monitoring, and shift progress for ${SERVICE_DATE}.`}
       actions={
         <div className="flex items-center gap-2.5">
           <Button
             asChild
             size="sm"
             variant="outline"
-            className="text-xs h-8 border-border/80 bg-card/60"
+            className="text-xs h-8 border-border hover:bg-muted rounded-md"
           >
             <Link to="/operations/incidents">
               <AlertTriangle className="size-3.5 mr-1.5 text-warning" />
-              Disruptions ({incidentsList.length})
+              Delays & Incidents ({incidentsList.length})
             </Link>
           </Button>
           <Button
             asChild
             size="sm"
-            className="text-xs h-8 bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20"
+            className="text-xs h-8 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md shadow-xs"
           >
             <Link to="/operations/duties">
               <Sparkles className="size-3.5 mr-1.5" />
-              Duty Studio
+              Manage Shifts
             </Link>
           </Button>
         </div>
@@ -242,7 +250,8 @@ function OperationsTodayPage() {
                     Live Duty Dispatch Board
                   </h3>
                   <p className="text-[11px] text-muted-foreground">
-                    Monitors departure blocks, driver sign-ons, and vehicle assignments
+                    Monitors departure blocks, driver sign-ons, and vehicle
+                    assignments
                   </p>
                 </div>
               </div>
@@ -296,7 +305,9 @@ function OperationsTodayPage() {
             ) : filteredDuties.length === 0 ? (
               <div className="py-20 text-center text-xs text-muted-foreground flex flex-col items-center justify-center">
                 <CalendarClock className="size-8 text-muted-foreground/50 mb-2" />
-                <p className="font-semibold text-foreground">No duties matching current filter</p>
+                <p className="font-semibold text-foreground">
+                  No duties matching current filter
+                </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
                   Switch filter or open Duty Builder to schedule duties.
                 </p>
@@ -304,7 +315,10 @@ function OperationsTodayPage() {
             ) : (
               <div className="space-y-3 max-h-[580px] overflow-y-auto pr-1">
                 {filteredDuties.map((d) => {
-                  const val = dutyValidations[d.id] || { isValid: true, issues: [] };
+                  const val = dutyValidations[d.id] || {
+                    isValid: true,
+                    issues: [],
+                  };
                   const tripCount = d.trips?.length || 0;
 
                   return (
@@ -344,7 +358,8 @@ function OperationsTodayPage() {
                         <div className="flex items-center gap-3 text-xs">
                           <span className="font-mono font-semibold text-foreground flex items-center gap-1">
                             <Clock className="size-3 text-primary" />
-                            {formatMinutesToTime(d.startTime)} – {formatMinutesToTime(d.endTime)}
+                            {formatMinutesToTime(d.startTime)} –{" "}
+                            {formatMinutesToTime(d.endTime)}
                           </span>
                           <Button
                             asChild
@@ -384,8 +399,12 @@ function OperationsTodayPage() {
                               Rostered Crew:
                             </span>
                             <p className="font-medium text-foreground text-xs">
-                              {d.driverName ? `${d.driverName} (D)` : "No Driver"}
-                              {d.conductorName ? ` · ${d.conductorName} (C)` : ""}
+                              {d.driverName
+                                ? `${d.driverName} (D)`
+                                : "No Driver"}
+                              {d.conductorName
+                                ? ` · ${d.conductorName} (C)`
+                                : ""}
                             </p>
                           </div>
                         </div>
@@ -395,7 +414,8 @@ function OperationsTodayPage() {
                       <div className="space-y-1.5 pt-1">
                         <div className="flex justify-between text-[11px] text-muted-foreground">
                           <span>
-                            Trips Progress: <strong>{tripCount} corridor departures</strong>
+                            Trips Progress:{" "}
+                            <strong>{tripCount} corridor departures</strong>
                           </span>
                           <span className="font-mono text-primary font-semibold">
                             100% Scheduled
@@ -408,7 +428,9 @@ function OperationsTodayPage() {
                       {!val.isValid ? (
                         <div className="p-2 rounded-lg bg-destructive/10 text-destructive text-[11px] flex items-center gap-2">
                           <AlertTriangle className="size-3.5 shrink-0" />
-                          <span>{val.issues[0] || "Duty rule conflict detected"}</span>
+                          <span>
+                            {val.issues[0] || "Duty rule conflict detected"}
+                          </span>
                         </div>
                       ) : null}
                     </div>
@@ -430,7 +452,9 @@ function OperationsTodayPage() {
                     <h3 className="text-sm font-bold tracking-tight text-foreground">
                       Disruption Radar
                     </h3>
-                    <p className="text-[11px] text-muted-foreground">Real-time incident feed</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Real-time incident feed
+                    </p>
                   </div>
                 </div>
                 <Badge
@@ -444,9 +468,12 @@ function OperationsTodayPage() {
               {incidentsList.length === 0 ? (
                 <div className="p-6 rounded-xl border border-dashed border-border/70 text-center text-xs text-muted-foreground bg-background/30">
                   <CheckCircle2 className="size-8 text-emerald-500 mx-auto mb-2 opacity-80" />
-                  <p className="font-semibold text-foreground">Zero Active Disruptions</p>
+                  <p className="font-semibold text-foreground">
+                    Zero Active Disruptions
+                  </p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    All scheduled corridors operating within normal headway bounds.
+                    All scheduled corridors operating within normal headway
+                    bounds.
                   </p>
                 </div>
               ) : (
@@ -473,7 +500,8 @@ function OperationsTodayPage() {
                         </Badge>
                       </div>
                       <p className="text-[11px] text-muted-foreground leading-tight">
-                        {inc.description || "Operational disruption reported on vehicle/crew."}
+                        {inc.description ||
+                          "Operational disruption reported on vehicle/crew."}
                       </p>
                       <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/40 font-mono">
                         <span>Time: {formatMinutesToTime(inc.startTime)}</span>
@@ -497,8 +525,8 @@ function OperationsTodayPage() {
                 <span>Dispatcher Quick Access</span>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Need to re-route or generate algorithmic recovery proposals? Access the Disruption
-                Recovery Engine.
+                Need to re-route or generate algorithmic recovery proposals?
+                Access the Disruption Recovery Engine.
               </p>
               <Button
                 asChild
@@ -534,12 +562,21 @@ function MetricTile({
     <div
       className={cn(
         "glass-card p-4 rounded-xl border flex flex-col justify-between transition-all",
-        isDestructive ? "border-destructive/40 bg-destructive/5" : "border-border/70",
+        isDestructive
+          ? "border-destructive/40 bg-destructive/5"
+          : "border-border/70",
       )}
     >
       <div className="flex items-center justify-between text-muted-foreground">
-        <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
-        <Icon className={cn("size-4", isDestructive ? "text-destructive" : "text-primary")} />
+        <span className="text-[10px] font-bold uppercase tracking-wider">
+          {label}
+        </span>
+        <Icon
+          className={cn(
+            "size-4",
+            isDestructive ? "text-destructive" : "text-primary",
+          )}
+        />
       </div>
 
       <div className="mt-2 flex items-baseline justify-between">

@@ -15,7 +15,11 @@ import {
 } from "../db/schema";
 import { requireAuth, requirePermission } from "../auth";
 import { solveSchedule } from "../scheduling/solver";
-import { OptimizerInput, OptimizerResult, ProposedDuty } from "../scheduling/types";
+import {
+  OptimizerInput,
+  OptimizerResult,
+  ProposedDuty,
+} from "../scheduling/types";
 import { generateCandidates } from "../scheduling/candidate-generation";
 import { calculateRecoveryObjectiveScore } from "./recovery-objective";
 import { generateRecoveryExplanation } from "./recovery-explain";
@@ -47,7 +51,9 @@ export async function generateRecoveryProposalsImpl(incidentId: string) {
   });
 
   for (const oldRun of existingUnappliedRuns) {
-    await db.delete(recoveryProposals).where(eq(recoveryProposals.runId, oldRun.id));
+    await db
+      .delete(recoveryProposals)
+      .where(eq(recoveryProposals.runId, oldRun.id));
     await db.delete(reschedulingRuns).where(eq(reschedulingRuns.id, oldRun.id));
   }
 
@@ -68,14 +74,24 @@ export async function generateRecoveryProposalsImpl(incidentId: string) {
   try {
     // 2. Fetch all trips, duties, buses, and crew for the date
     const allTrips = await db.query.trips.findMany({
-      where: and(eq(trips.tenantId, tenantId), eq(trips.serviceDate, incidentObj.serviceDate)),
+      where: and(
+        eq(trips.tenantId, tenantId),
+        eq(trips.serviceDate, incidentObj.serviceDate),
+      ),
       orderBy: asc(trips.startTime),
     });
 
-    const allBuses = await db.query.buses.findMany({ where: eq(buses.tenantId, tenantId) });
-    const allCrew = await db.query.crew.findMany({ where: eq(crew.tenantId, tenantId) });
+    const allBuses = await db.query.buses.findMany({
+      where: eq(buses.tenantId, tenantId),
+    });
+    const allCrew = await db.query.crew.findMany({
+      where: eq(crew.tenantId, tenantId),
+    });
     const allDuties = await db.query.duties.findMany({
-      where: and(eq(duties.tenantId, tenantId), eq(duties.serviceDate, incidentObj.serviceDate)),
+      where: and(
+        eq(duties.tenantId, tenantId),
+        eq(duties.serviceDate, incidentObj.serviceDate),
+      ),
       with: {
         trips: true,
         crewSegments: true,
@@ -131,19 +147,31 @@ export async function generateRecoveryProposalsImpl(incidentId: string) {
     // 4. Generate Option A (Balanced Recovery objective)
     // We filter out resources that are unavailable due to incident
     const availableBuses = allBuses.filter((b) => {
-      if (incidentObj.type === "BUS_BREAKDOWN" && b.id === incidentObj.resourceId) return false;
+      if (
+        incidentObj.type === "BUS_BREAKDOWN" &&
+        b.id === incidentObj.resourceId
+      )
+        return false;
       if (b.status === "maintenance") return false;
       return true;
     });
 
     const availableDrivers = allCrew.filter((c) => {
-      if (incidentObj.type === "DRIVER_ABSENT" && c.id === incidentObj.resourceId) return false;
+      if (
+        incidentObj.type === "DRIVER_ABSENT" &&
+        c.id === incidentObj.resourceId
+      )
+        return false;
       if (c.role !== "driver" || c.status === "leave") return false;
       return true;
     });
 
     const availableConductors = allCrew.filter((c) => {
-      if (incidentObj.type === "CONDUCTOR_ABSENT" && c.id === incidentObj.resourceId) return false;
+      if (
+        incidentObj.type === "CONDUCTOR_ABSENT" &&
+        c.id === incidentObj.resourceId
+      )
+        return false;
       if (c.role !== "conductor" || c.status === "leave") return false;
       return true;
     });
@@ -384,7 +412,9 @@ export async function generateRecoveryProposalsImpl(incidentId: string) {
   }
 }
 
-export async function approveRecoveryProposalImpl(data: { proposalId: string }) {
+export async function approveRecoveryProposalImpl(data: {
+  proposalId: string;
+}) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "schedule.publish"); // Scheduler / Org Admin
 
@@ -403,13 +433,21 @@ export async function approveRecoveryProposalImpl(data: { proposalId: string }) 
 
   const runObj = prop.run;
   if (!runObj) throw new Error("Associated rescheduling run not found.");
-  if (runObj.status === "APPLIED") throw new Error("Recovery run already applied.");
+  if (runObj.status === "APPLIED")
+    throw new Error("Recovery run already applied.");
 
   // Stale protection: check resourceSnapshot vs current database state
-  const currentBuses = await db.query.buses.findMany({ where: eq(buses.tenantId, tenantId) });
-  const currentCrew = await db.query.crew.findMany({ where: eq(crew.tenantId, tenantId) });
+  const currentBuses = await db.query.buses.findMany({
+    where: eq(buses.tenantId, tenantId),
+  });
+  const currentCrew = await db.query.crew.findMany({
+    where: eq(crew.tenantId, tenantId),
+  });
   const currentTrips = await db.query.trips.findMany({
-    where: and(eq(trips.tenantId, tenantId), eq(trips.serviceDate, runObj.serviceDate)),
+    where: and(
+      eq(trips.tenantId, tenantId),
+      eq(trips.serviceDate, runObj.serviceDate),
+    ),
   });
 
   const snap = runObj.resourceSnapshot as any;
@@ -465,10 +503,12 @@ export async function approveRecoveryProposalImpl(data: { proposalId: string }) 
   // Transactionally apply the local recovery schedule modifications!
   await db.transaction(async (tx) => {
     // 1. Identify which trips were re-optimized inside the recovery window
-    const affectedTripIds = (prop.proposalData as OptimizerResult).assignments.map((a) => a.tripId);
-    const unassignedTripIds = (prop.proposalData as OptimizerResult).unassignedTrips.map(
-      (u) => u.tripId,
-    );
+    const affectedTripIds = (
+      prop.proposalData as OptimizerResult
+    ).assignments.map((a) => a.tripId);
+    const unassignedTripIds = (
+      prop.proposalData as OptimizerResult
+    ).unassignedTrips.map((u) => u.tripId);
     const totalTargetTripIds = [...affectedTripIds, ...unassignedTripIds];
 
     if (totalTargetTripIds.length > 0) {
@@ -481,7 +521,10 @@ export async function approveRecoveryProposalImpl(data: { proposalId: string }) 
 
     // Clean up empty duties (duties left with no trips assigned inside the recovery window)
     const allTenantDuties = await tx.query.duties.findMany({
-      where: and(eq(duties.tenantId, tenantId), eq(duties.serviceDate, runObj.serviceDate)),
+      where: and(
+        eq(duties.tenantId, tenantId),
+        eq(duties.serviceDate, runObj.serviceDate),
+      ),
       with: {
         trips: true,
       },
@@ -567,7 +610,10 @@ export async function approveRecoveryProposalImpl(data: { proposalId: string }) 
       .update(recoveryProposals)
       .set({ status: "REJECTED" })
       .where(
-        and(eq(recoveryProposals.runId, runObj.id), not(eq(recoveryProposals.id, data.proposalId))),
+        and(
+          eq(recoveryProposals.runId, runObj.id),
+          not(eq(recoveryProposals.id, data.proposalId)),
+        ),
       );
 
     await tx

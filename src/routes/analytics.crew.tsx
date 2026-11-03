@@ -44,8 +44,8 @@ function CrewAnalyticsPage() {
         {/* Crew Workload Table */}
         <section className="panel p-5 space-y-4">
           <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            <Users className="size-4 text-primary" /> Active Driver & Conductor Performance
-            Indicators
+            <Users className="size-4 text-primary" /> Active Driver & Conductor
+            Performance Indicators
           </h3>
 
           {isLoading ? (
@@ -75,7 +75,9 @@ function CrewAnalyticsPage() {
                 {crewStats.map((c: any) => (
                   <TableRow key={c.crewId}>
                     <TableCell className="font-bold text-xs">
-                      {c.name.substring(0, 1) + ". " + c.name.split(" ").slice(-1)[0]}
+                      {c.name.substring(0, 1) +
+                        ". " +
+                        c.name.split(" ").slice(-1)[0]}
                     </TableCell>
                     <TableCell className="text-xs">{c.role}</TableCell>
                     <TableCell className="text-xs">{c.depot}</TableCell>
@@ -90,7 +92,11 @@ function CrewAnalyticsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Badge
-                        variant={c.restCompliance === "COMPLIANT" ? "secondary" : "outline"}
+                        variant={
+                          c.restCompliance === "COMPLIANT"
+                            ? "secondary"
+                            : "outline"
+                        }
                         className="text-[9px]"
                       >
                         {c.restCompliance}

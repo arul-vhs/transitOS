@@ -73,16 +73,24 @@ function RoutesAnalyticsPage() {
         {/* Filters Panel */}
         <section className="panel p-4 flex gap-4 items-end max-w-md">
           <div className="space-y-1 flex-1">
-            <span className="text-xs font-semibold text-muted-foreground">Rank By Performance</span>
+            <span className="text-xs font-semibold text-muted-foreground">
+              Rank By Performance
+            </span>
             <Select value={rankingFilter} onValueChange={setRankingFilter}>
               <SelectTrigger className="bg-background/50 h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="default">Default Sort</SelectItem>
-                <SelectItem value="most-reliable">Most Reliable (On-Time %)</SelectItem>
-                <SelectItem value="least-reliable">Least Reliable (On-Time %)</SelectItem>
-                <SelectItem value="most-delayed">Most Delayed (Avg Delay)</SelectItem>
+                <SelectItem value="most-reliable">
+                  Most Reliable (On-Time %)
+                </SelectItem>
+                <SelectItem value="least-reliable">
+                  Least Reliable (On-Time %)
+                </SelectItem>
+                <SelectItem value="most-delayed">
+                  Most Delayed (Avg Delay)
+                </SelectItem>
                 <SelectItem value="most-cancelled">Most Cancelled</SelectItem>
               </SelectContent>
             </Select>
@@ -92,7 +100,8 @@ function RoutesAnalyticsPage() {
         {/* Route Stats Table */}
         <section className="panel p-5 space-y-4">
           <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            <Compass className="size-4 text-primary" /> Corridor Reliability Matrix
+            <Compass className="size-4 text-primary" /> Corridor Reliability
+            Matrix
           </h3>
 
           {isLoading ? (
@@ -113,14 +122,18 @@ function RoutesAnalyticsPage() {
                   <TableHead className="text-right">Completed</TableHead>
                   <TableHead className="text-right">Cancelled</TableHead>
                   <TableHead className="text-right">Completion %</TableHead>
-                  <TableHead className="text-right text-primary font-bold">On-Time %</TableHead>
+                  <TableHead className="text-right text-primary font-bold">
+                    On-Time %
+                  </TableHead>
                   <TableHead className="text-right">Avg Delay</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {sortedList.map((r: any) => (
                   <TableRow key={r.routeId}>
-                    <TableCell className="font-bold text-xs">{r.routeCode}</TableCell>
+                    <TableCell className="font-bold text-xs">
+                      {r.routeCode}
+                    </TableCell>
                     <TableCell className="text-xs">{r.routeName}</TableCell>
                     <TableCell className="text-right text-xs font-mono">
                       {r.tripsScheduled}

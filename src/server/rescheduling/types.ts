@@ -10,7 +10,13 @@ export type IncidentType =
   | "MANUAL_DISRUPTION";
 
 export type IncidentStatus =
-  "OPEN" | "ANALYZING" | "RECOVERY_PROPOSED" | "APPROVED" | "APPLIED" | "RESOLVED" | "CANCELLED";
+  | "OPEN"
+  | "ANALYZING"
+  | "RECOVERY_PROPOSED"
+  | "APPROVED"
+  | "APPLIED"
+  | "RESOLVED"
+  | "CANCELLED";
 
 export type ImpactType =
   | "BUS_LOST"
@@ -62,7 +68,14 @@ export interface ReschedulingRunRecord {
   tenantId: string;
   incidentId: string;
   serviceDate: string;
-  status: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "EXPIRED" | "APPROVED" | "APPLIED";
+  status:
+    | "QUEUED"
+    | "RUNNING"
+    | "COMPLETED"
+    | "FAILED"
+    | "EXPIRED"
+    | "APPROVED"
+    | "APPLIED";
   startedAt: Date;
   completedAt: Date | null;
   createdBy: string | null;

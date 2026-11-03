@@ -53,7 +53,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Route as RootRoute } from "@/routes/__root";
@@ -78,7 +83,8 @@ export const Route = createFileRoute("/crew/drivers")({
       { title: "Driver Roster & Profile: TransitOS" },
       {
         name: "description",
-        content: "Driver registry, HPV licensing compliance, availability timeline and shift logs.",
+        content:
+          "Driver registry, HPV licensing compliance, availability timeline and shift logs.",
       },
     ],
   }),
@@ -142,7 +148,9 @@ function DriversPage() {
   const [formDepot, setFormDepot] = useState("Salem Central Depot");
   const [formAvailableFrom, setFormAvailableFrom] = useState("05:30");
   const [formRestUntil, setFormRestUntil] = useState("05:30");
-  const [formLicenseCategory, setFormLicenseCategory] = useState("Heavy Passenger Vehicle (HPV)");
+  const [formLicenseCategory, setFormLicenseCategory] = useState(
+    "Heavy Passenger Vehicle (HPV)",
+  );
   const [formLicenseExpiry, setFormLicenseExpiry] = useState("2028-12-31");
 
   // 1. Fetch Drivers
@@ -184,7 +192,9 @@ function DriversPage() {
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
       queryClient.invalidateQueries({ queryKey: ["crew-availability"] });
       if (selectedDriverId) {
-        queryClient.invalidateQueries({ queryKey: ["crew-member", selectedDriverId] });
+        queryClient.invalidateQueries({
+          queryKey: ["crew-member", selectedDriverId],
+        });
       }
       toast.success("Driver updated successfully");
       setIsEditOpen(false);
@@ -226,7 +236,9 @@ function DriversPage() {
     setFormDepot(driver.depot);
     setFormAvailableFrom(formatMinutesToTime(driver.availableFrom));
     setFormRestUntil(formatMinutesToTime(driver.restUntil));
-    setFormLicenseCategory(driver.licenseCategory || "Heavy Passenger Vehicle (HPV)");
+    setFormLicenseCategory(
+      driver.licenseCategory || "Heavy Passenger Vehicle (HPV)",
+    );
     setFormLicenseExpiry(
       driver.licenseExpiry
         ? new Date(driver.licenseExpiry).toISOString().split("T")[0]!
@@ -274,15 +286,17 @@ function DriversPage() {
   };
 
   const totalCount = driversList.length;
-  const availableCount = driversList.filter((d) => d.status === "available").length;
+  const availableCount = driversList.filter(
+    (d) => d.status === "available",
+  ).length;
   const onDutyCount = driversList.filter((d) => d.status === "on-duty").length;
   const restingCount = driversList.filter((d) => d.status === "resting").length;
   const leaveCount = driversList.filter((d) => d.status === "leave").length;
 
   return (
     <AppShell
-      title="Driver Roster & Registry"
-      subtitle="Driver registry, heavy passenger vehicle licensing, availability compliance and shift assignments."
+      title="Drivers & Crew Staff"
+      subtitle="Driver registry, licensing status, and duty availability."
       actions={
         canManage ? (
           <Button
@@ -291,9 +305,9 @@ function DriversPage() {
               resetForm();
               setIsCreateOpen(true);
             }}
-            className="bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20 text-xs hover:scale-[1.02] transition-all"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md shadow-xs cursor-pointer"
           >
-            <Plus className="mr-1.5 size-4" />
+            <Plus className="mr-1.5 size-3.5" />
             Add Driver
           </Button>
         ) : undefined
@@ -302,35 +316,45 @@ function DriversPage() {
       <div className="space-y-6">
         {/* 1. METRICS OVERVIEW */}
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
-          <div className="glass-card p-4 rounded-xl border flex flex-col justify-between">
+          <div className="glass-card p-4 rounded-lg border flex flex-col justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               Total Drivers
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-foreground">{totalCount}</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-foreground">
+              {totalCount}
+            </span>
           </div>
-          <div className="glass-card p-4 rounded-xl border-l-4 border-l-success flex flex-col justify-between">
+          <div className="glass-card p-4 rounded-lg border-l-4 border-l-success flex flex-col justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               Available
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-success">{availableCount}</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-success">
+              {availableCount}
+            </span>
           </div>
-          <div className="glass-card p-4 rounded-xl border-l-4 border-l-primary flex flex-col justify-between">
+          <div className="glass-card p-4 rounded-lg border-l-4 border-l-primary flex flex-col justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               On Active Duty
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-primary">{onDutyCount}</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-primary">
+              {onDutyCount}
+            </span>
           </div>
-          <div className="glass-card p-4 rounded-xl border-l-4 border-l-warning flex flex-col justify-between">
+          <div className="glass-card p-4 rounded-lg border-l-4 border-l-warning flex flex-col justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               Mandatory Rest
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-warning">{restingCount}</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-warning">
+              {restingCount}
+            </span>
           </div>
-          <div className="glass-card p-4 rounded-xl border-l-4 border-l-destructive flex flex-col justify-between">
+          <div className="glass-card p-4 rounded-lg border-l-4 border-l-destructive flex flex-col justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               On Leave
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-destructive">{leaveCount}</span>
+            <span className="text-2xl font-bold font-mono mt-1 text-destructive">
+              {leaveCount}
+            </span>
           </div>
         </div>
 
@@ -370,9 +394,15 @@ function DriversPage() {
                 <SelectContent>
                   <SelectItem value="all">All Depots</SelectItem>
                   <SelectItem value="Meyyanur Depot">Meyyanur Depot</SelectItem>
-                  <SelectItem value="Johnsonpet Depot">Johnsonpet Depot</SelectItem>
-                  <SelectItem value="Hasthampatti Depot">Hasthampatti Depot</SelectItem>
-                  <SelectItem value="Steel Plant Depot">Steel Plant Depot</SelectItem>
+                  <SelectItem value="Johnsonpet Depot">
+                    Johnsonpet Depot
+                  </SelectItem>
+                  <SelectItem value="Hasthampatti Depot">
+                    Hasthampatti Depot
+                  </SelectItem>
+                  <SelectItem value="Steel Plant Depot">
+                    Steel Plant Depot
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -393,14 +423,28 @@ function DriversPage() {
             <Table>
               <TableHeader>
                 <TableRow className="border-border/60">
-                  <TableHead className="w-32 text-xs font-bold">Emp ID</TableHead>
-                  <TableHead className="text-xs font-bold">Driver Name</TableHead>
-                  <TableHead className="text-xs font-bold">Depot Location</TableHead>
-                  <TableHead className="text-xs font-bold">License Category</TableHead>
-                  <TableHead className="text-xs font-bold">License Expiry</TableHead>
+                  <TableHead className="w-32 text-xs font-bold">
+                    Emp ID
+                  </TableHead>
+                  <TableHead className="text-xs font-bold">
+                    Driver Name
+                  </TableHead>
+                  <TableHead className="text-xs font-bold">
+                    Depot Location
+                  </TableHead>
+                  <TableHead className="text-xs font-bold">
+                    License Category
+                  </TableHead>
+                  <TableHead className="text-xs font-bold">
+                    License Expiry
+                  </TableHead>
                   <TableHead className="text-xs font-bold">Status</TableHead>
-                  <TableHead className="text-xs font-bold">Shift / Rest Limit</TableHead>
-                  <TableHead className="w-28 text-right text-xs font-bold">Actions</TableHead>
+                  <TableHead className="text-xs font-bold">
+                    Shift / Rest Limit
+                  </TableHead>
+                  <TableHead className="w-28 text-right text-xs font-bold">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -423,10 +467,14 @@ function DriversPage() {
                               .toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="font-bold text-xs text-foreground">{driver.name}</span>
+                        <span className="font-bold text-xs text-foreground">
+                          {driver.name}
+                        </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{driver.depot}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {driver.depot}
+                    </TableCell>
                     <TableCell className="text-xs font-medium">
                       <span className="inline-flex items-center gap-1">
                         <Award className="size-3 text-primary" />
@@ -435,11 +483,14 @@ function DriversPage() {
                     </TableCell>
                     <TableCell className="text-xs font-mono text-muted-foreground">
                       {driver.licenseExpiry
-                        ? new Date(driver.licenseExpiry).toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })
+                        ? new Date(driver.licenseExpiry).toLocaleDateString(
+                            "en-GB",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            },
+                          )
                         : "-"}
                     </TableCell>
                     <TableCell>
@@ -447,7 +498,10 @@ function DriversPage() {
                         <Select
                           value={driver.status}
                           onValueChange={(val) =>
-                            statusMutation.mutate({ id: driver.id, status: val })
+                            statusMutation.mutate({
+                              id: driver.id,
+                              status: val,
+                            })
                           }
                         >
                           <SelectTrigger
@@ -465,7 +519,10 @@ function DriversPage() {
                             >
                               Available
                             </SelectItem>
-                            <SelectItem value="on-duty" className="text-xs uppercase text-primary">
+                            <SelectItem
+                              value="on-duty"
+                              className="text-xs uppercase text-primary"
+                            >
                               On Duty
                             </SelectItem>
                             <SelectItem
@@ -508,14 +565,17 @@ function DriversPage() {
                         </span>
                       ) : driver.status === "available" ? (
                         <span className="text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">
-                          Ready (from {formatMinutesToTime(driver.availableFrom)})
+                          Ready (from{" "}
+                          {formatMinutesToTime(driver.availableFrom)})
                         </span>
                       ) : driver.status === "on-duty" ? (
                         <span className="text-primary font-medium text-[11px]">
                           On Active Route
                         </span>
                       ) : (
-                        <span className="text-muted-foreground text-[11px]">Off Shift</span>
+                        <span className="text-muted-foreground text-[11px]">
+                          Off Shift
+                        </span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -595,7 +655,9 @@ function DriversPage() {
 
                 <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-border/60 font-mono">
                   <div>
-                    <span className="text-[10px] uppercase text-muted-foreground">Depot Base</span>
+                    <span className="text-[10px] uppercase text-muted-foreground">
+                      Depot Base
+                    </span>
                     <p className="font-medium text-foreground text-[11px] truncate">
                       {selectedDriverDetails.depot}
                     </p>
@@ -620,8 +682,12 @@ function DriversPage() {
 
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs font-mono">
-                    <span className="text-muted-foreground">Weekly Driving Log</span>
-                    <span className="font-bold text-foreground">32 / 48 hrs</span>
+                    <span className="text-muted-foreground">
+                      Weekly Driving Log
+                    </span>
+                    <span className="font-bold text-foreground">
+                      32 / 48 hrs
+                    </span>
                   </div>
                   <Progress value={66} className="h-2 bg-secondary" />
                   <p className="text-[10px] text-muted-foreground">
@@ -631,13 +697,17 @@ function DriversPage() {
 
                 <div className="p-2.5 rounded-lg border border-border/60 bg-secondary/20 space-y-1 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Earliest Available:</span>
+                    <span className="text-muted-foreground">
+                      Earliest Available:
+                    </span>
                     <span className="font-mono font-bold">
                       {formatMinutesToTime(selectedDriverDetails.availableFrom)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Mandatory Rest Until:</span>
+                    <span className="text-muted-foreground">
+                      Mandatory Rest Until:
+                    </span>
                     <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
                       {formatMinutesToTime(selectedDriverDetails.restUntil)}
                     </span>
@@ -653,8 +723,8 @@ function DriversPage() {
                 </h4>
                 <div className="p-4 rounded-xl border border-dashed border-border/70 text-center text-xs text-muted-foreground bg-secondary/10">
                   <CheckCircle2 className="size-6 text-emerald-500/60 mx-auto mb-1" />
-                  Roster wave compliant. Active sign-on recorded for Salem Central morning peak
-                  corridor.
+                  Roster wave compliant. Active sign-on recorded for Salem
+                  Central morning peak corridor.
                 </div>
               </div>
             </div>
@@ -676,7 +746,8 @@ function DriversPage() {
                 Register New Driver
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Add an HPV licensed driver to the Salem transport depot registry.
+                Add an HPV licensed driver to the Salem transport depot
+                registry.
               </DialogDescription>
             </DialogHeader>
 
@@ -709,7 +780,10 @@ function DriversPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">License Category</Label>
-                  <Select value={formLicenseCategory} onValueChange={setFormLicenseCategory}>
+                  <Select
+                    value={formLicenseCategory}
+                    onValueChange={setFormLicenseCategory}
+                  >
                     <SelectTrigger className="text-xs font-mono">
                       <SelectValue />
                     </SelectTrigger>
@@ -717,7 +791,9 @@ function DriversPage() {
                       <SelectItem value="Heavy Passenger Vehicle (HPV)">
                         Heavy Passenger Vehicle (HPV)
                       </SelectItem>
-                      <SelectItem value="Commercial Bus Licence">Commercial Bus Licence</SelectItem>
+                      <SelectItem value="Commercial Bus Licence">
+                        Commercial Bus Licence
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

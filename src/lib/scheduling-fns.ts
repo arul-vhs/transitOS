@@ -3,8 +3,12 @@ import { toServerFnArgs } from "./server-fn-utils";
 
 const _getTrips = createServerFn({ method: "GET" })
   .validator(
-    (filters?: { serviceDate?: string; routeId?: string; status?: string; direction?: string }) =>
-      filters,
+    (filters?: {
+      serviceDate?: string;
+      routeId?: string;
+      status?: string;
+      direction?: string;
+    }) => filters,
   )
   .handler(async ({ data }) => {
     const { getTripsImpl } = await import("../server/scheduling-ops");
@@ -13,8 +17,20 @@ const _getTrips = createServerFn({ method: "GET" })
 
 export const getTrips = async (
   filters?:
-    | { serviceDate?: string; routeId?: string; status?: string; direction?: string }
-    | { data?: { serviceDate?: string; routeId?: string; status?: string; direction?: string } },
+    | {
+        serviceDate?: string;
+        routeId?: string;
+        status?: string;
+        direction?: string;
+      }
+    | {
+        data?: {
+          serviceDate?: string;
+          routeId?: string;
+          status?: string;
+          direction?: string;
+        };
+      },
 ) => {
   return await _getTrips(toServerFnArgs(filters));
 };
@@ -128,7 +144,9 @@ export const getDuty = async (id: string | { data: string }) => {
 };
 
 const _createDuty = createServerFn({ method: "POST" })
-  .validator((data: { dutyCode: string; dutyType: string; serviceDate: string }) => data)
+  .validator(
+    (data: { dutyCode: string; dutyType: string; serviceDate: string }) => data,
+  )
   .handler(async ({ data }) => {
     const { createDutyImpl } = await import("../server/scheduling-ops");
     return await createDutyImpl(data);
@@ -181,7 +199,9 @@ const _addTripToDuty = createServerFn({ method: "POST" })
   });
 
 export const addTripToDuty = async (
-  payload: { dutyId: string; tripId: string } | { data: { dutyId: string; tripId: string } },
+  payload:
+    | { dutyId: string; tripId: string }
+    | { data: { dutyId: string; tripId: string } },
 ) => {
   return await _addTripToDuty(toServerFnArgs(payload)!);
 };
@@ -194,7 +214,9 @@ const _removeTripFromDuty = createServerFn({ method: "POST" })
   });
 
 export const removeTripFromDuty = async (
-  payload: { dutyId: string; tripId: string } | { data: { dutyId: string; tripId: string } },
+  payload:
+    | { dutyId: string; tripId: string }
+    | { data: { dutyId: string; tripId: string } },
 ) => {
   return await _removeTripFromDuty(toServerFnArgs(payload)!);
 };
@@ -208,18 +230,27 @@ const _assignBusToDuty = createServerFn({ method: "POST" })
 
 export const assignBusToDuty = async (
   payload:
-    { dutyId: string; busId: string | null } | { data: { dutyId: string; busId: string | null } },
+    | { dutyId: string; busId: string | null }
+    | { data: { dutyId: string; busId: string | null } },
 ) => {
   return await _assignBusToDuty(toServerFnArgs(payload)!);
 };
 
 const _assignCrewToDuty = createServerFn({ method: "POST" })
   .validator(
-    (payload: { dutyId: string; driverId: string | null; conductorId: string | null }) => payload,
+    (payload: {
+      dutyId: string;
+      driverId: string | null;
+      conductorId: string | null;
+    }) => payload,
   )
   .handler(async ({ data }) => {
     const { assignCrewToDutyImpl } = await import("../server/scheduling-ops");
-    return await assignCrewToDutyImpl(data.dutyId, data.driverId, data.conductorId);
+    return await assignCrewToDutyImpl(
+      data.dutyId,
+      data.driverId,
+      data.conductorId,
+    );
   });
 
 export const assignCrewToDuty = async (
@@ -262,11 +293,14 @@ export const createCrewHandover = async (data: any) => {
 const _clearHandoverSegments = createServerFn({ method: "POST" })
   .validator((dutyId: string) => dutyId)
   .handler(async ({ data }) => {
-    const { clearHandoverSegmentsImpl } = await import("../server/scheduling-ops");
+    const { clearHandoverSegmentsImpl } =
+      await import("../server/scheduling-ops");
     return await clearHandoverSegmentsImpl(data);
   });
 
-export const clearHandoverSegments = async (dutyId: string | { data: string }) => {
+export const clearHandoverSegments = async (
+  dutyId: string | { data: string },
+) => {
   return await _clearHandoverSegments(toServerFnArgs(dutyId)!);
 };
 

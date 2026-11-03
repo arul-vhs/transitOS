@@ -97,7 +97,11 @@ export const Route = createFileRoute("/operations/allocation")({
   component: DynamicFleetAllocationPage,
 });
 
-const STRATEGY_OPTIONS: { id: AllocationStrategy; label: string; desc: string }[] = [
+const STRATEGY_OPTIONS: {
+  id: AllocationStrategy;
+  label: string;
+  desc: string;
+}[] = [
   {
     id: "BALANCED_SLA",
     label: "Balanced SLA & Efficiency",
@@ -120,25 +124,29 @@ const PRESET_SCENARIOS = [
     name: "Yercaud Tourist Return Surge",
     routeId: "route-slm-13",
     surgePercent: 65,
-    cause: "Weekend excursion homeward rush from Yercaud Foothills to downtown Salem.",
+    cause:
+      "Weekend excursion homeward rush from Yercaud Foothills to downtown Salem.",
   },
   {
     name: "Salem Junction Express Arrival",
     routeId: "route-slm-01",
     surgePercent: 55,
-    cause: "Simultaneous arrival of West Coast Express and Vande Bharat at Salem Junction.",
+    cause:
+      "Simultaneous arrival of West Coast Express and Vande Bharat at Salem Junction.",
   },
   {
     name: "Steel Plant Evening Shift Release",
     routeId: "route-slm-33",
     surgePercent: 50,
-    cause: "Shift change and plant dismissal toward central Salem residential corridors.",
+    cause:
+      "Shift change and plant dismissal toward central Salem residential corridors.",
   },
   {
     name: "Omalur Industrial Hub Surge",
     routeId: "route-slm-74",
     surgePercent: 45,
-    cause: "Suburban evening commute from Omalur industrial sector to Central Salem.",
+    cause:
+      "Suburban evening commute from Omalur industrial sector to Central Salem.",
   },
 ];
 
@@ -184,8 +192,10 @@ function DynamicFleetAllocationPage() {
   const canDispatch = hasPermission(user?.role || "", "schedule.publish");
 
   // Operational Solver Parameters
-  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriodId>("EVENING_PEAK");
-  const [selectedStrategy, setSelectedStrategy] = useState<AllocationStrategy>("BALANCED_SLA");
+  const [selectedPeriod, setSelectedPeriod] =
+    useState<TimePeriodId>("EVENING_PEAK");
+  const [selectedStrategy, setSelectedStrategy] =
+    useState<AllocationStrategy>("BALANCED_SLA");
   const [activeScenarios, setActiveScenarios] = useState<SurgeScenarioInput[]>([
     {
       routeId: "route-slm-13",
@@ -199,11 +209,17 @@ function DynamicFleetAllocationPage() {
   const [customSurgePercent, setCustomSurgePercent] = useState<number>(35);
 
   // Dispatch confirmation dialog
-  const [confirmingRec, setConfirmingRec] = useState<AllocationRecommendation | null>(null);
+  const [confirmingRec, setConfirmingRec] =
+    useState<AllocationRecommendation | null>(null);
 
   // Fetch Plan Query
   const planQuery = useQuery({
-    queryKey: ["fleet-allocation-plan", selectedPeriod, selectedStrategy, activeScenarios],
+    queryKey: [
+      "fleet-allocation-plan",
+      selectedPeriod,
+      selectedStrategy,
+      activeScenarios,
+    ],
     queryFn: () =>
       getAllocationPlan({
         periodId: selectedPeriod,
@@ -297,13 +313,16 @@ function DynamicFleetAllocationPage() {
       },
     ]);
     toast.success(`Injected +${customSurgePercent}% surge on Route`, {
-      description: "Graph solver re-calculating multi-depot bipartite allocation.",
+      description:
+        "Graph solver re-calculating multi-depot bipartite allocation.",
     });
   };
 
   const handleClearScenarios = () => {
     setActiveScenarios([]);
-    toast.info("Cleared all scenario injections. Displaying baseline diurnal demand.");
+    toast.info(
+      "Cleared all scenario injections. Displaying baseline diurnal demand.",
+    );
   };
 
   return (
@@ -321,7 +340,8 @@ function DynamicFleetAllocationPage() {
               </h1>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              Dynamic capacity rebalancing, real-time surge detection, and multi-depot reserve dispatch for the Salem transit network.
+              Dynamic capacity rebalancing, real-time surge detection, and
+              multi-depot reserve dispatch for the Salem transit network.
             </p>
           </div>
 
@@ -336,17 +356,27 @@ function DynamicFleetAllocationPage() {
                 <SelectValue placeholder="Time Period" />
               </SelectTrigger>
               <SelectContent className="rounded-md">
-                <SelectItem value="MORNING_PEAK">Morning Peak (07:00 - 10:30)</SelectItem>
-                <SelectItem value="MIDDAY_OFFPEAK">Midday Off-Peak (11:00 - 15:30)</SelectItem>
-                <SelectItem value="EVENING_PEAK">Evening Peak (16:30 - 20:30)</SelectItem>
-                <SelectItem value="NIGHT_LULL">Night Operations (21:00 - 23:30)</SelectItem>
+                <SelectItem value="MORNING_PEAK">
+                  Morning Peak (07:00 - 10:30)
+                </SelectItem>
+                <SelectItem value="MIDDAY_OFFPEAK">
+                  Midday Off-Peak (11:00 - 15:30)
+                </SelectItem>
+                <SelectItem value="EVENING_PEAK">
+                  Evening Peak (16:30 - 20:30)
+                </SelectItem>
+                <SelectItem value="NIGHT_LULL">
+                  Night Operations (21:00 - 23:30)
+                </SelectItem>
                 <SelectItem value="LIVE_SURGE">Live Telemetry Surge</SelectItem>
               </SelectContent>
             </Select>
 
             <Select
               value={selectedStrategy}
-              onValueChange={(val) => setSelectedStrategy(val as AllocationStrategy)}
+              onValueChange={(val) =>
+                setSelectedStrategy(val as AllocationStrategy)
+              }
             >
               <SelectTrigger className="w-[210px] h-9 rounded-md text-xs">
                 <GitFork className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
@@ -368,7 +398,12 @@ function DynamicFleetAllocationPage() {
               disabled={planQuery.isFetching}
               className="h-9 rounded-md gap-2"
             >
-              <RefreshCw className={cn("h-3.5 w-3.5", planQuery.isFetching && "animate-spin")} />
+              <RefreshCw
+                className={cn(
+                  "h-3.5 w-3.5",
+                  planQuery.isFetching && "animate-spin",
+                )}
+              />
               <span>Re-Solve</span>
             </Button>
           </div>
@@ -379,7 +414,9 @@ function DynamicFleetAllocationPage() {
           <Card className="rounded-lg shadow-sm border-border/70 bg-card">
             <CardHeader className="p-4 pb-2">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-medium uppercase tracking-wider">Shortage Corridors</span>
+                <span className="text-xs font-medium uppercase tracking-wider">
+                  Shortage Corridors
+                </span>
                 <AlertCircle className="h-4 w-4 text-amber-500" />
               </div>
             </CardHeader>
@@ -391,7 +428,8 @@ function DynamicFleetAllocationPage() {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                <span className="text-amber-500 font-medium">Overcapacity</span> on arterial sectors
+                <span className="text-amber-500 font-medium">Overcapacity</span>{" "}
+                on arterial sectors
               </p>
             </CardContent>
           </Card>
@@ -399,14 +437,18 @@ function DynamicFleetAllocationPage() {
           <Card className="rounded-lg shadow-sm border-border/70 bg-card">
             <CardHeader className="p-4 pb-2">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-medium uppercase tracking-wider">Surge Deficit</span>
+                <span className="text-xs font-medium uppercase tracking-wider">
+                  Surge Deficit
+                </span>
                 <TrendingUp className="h-4 w-4 text-red-500" />
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className="text-2xl font-bold text-foreground">
                 +{plan?.totalSurgeDemandPaxPerHour ?? 0}
-                <span className="text-xs font-normal text-muted-foreground ml-1.5">pax / hour</span>
+                <span className="text-xs font-normal text-muted-foreground ml-1.5">
+                  pax / hour
+                </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Excess passenger volume above timetable
@@ -417,14 +459,18 @@ function DynamicFleetAllocationPage() {
           <Card className="rounded-lg shadow-sm border-border/70 bg-card">
             <CardHeader className="p-4 pb-2">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-medium uppercase tracking-wider">Buses Rebalanced</span>
+                <span className="text-xs font-medium uppercase tracking-wider">
+                  Buses Rebalanced
+                </span>
                 <BusIcon className="h-4 w-4 text-blue-500" />
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className="text-2xl font-bold text-foreground">
                 {plan?.busesAllocated ?? 0}
-                <span className="text-xs font-normal text-muted-foreground ml-1.5">assigned</span>
+                <span className="text-xs font-normal text-muted-foreground ml-1.5">
+                  assigned
+                </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 From 4 depots via GIS road matrix
@@ -435,14 +481,18 @@ function DynamicFleetAllocationPage() {
           <Card className="rounded-lg shadow-sm border-border/70 bg-card">
             <CardHeader className="p-4 pb-2">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-medium uppercase tracking-wider">Avg Wait Time Drop</span>
+                <span className="text-xs font-medium uppercase tracking-wider">
+                  Avg Wait Time Drop
+                </span>
                 <TrendingDown className="h-4 w-4 text-emerald-500" />
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                 -{plan?.avgWaitTimeReductionMin ?? 0}
-                <span className="text-xs font-normal text-muted-foreground ml-1.5">minutes</span>
+                <span className="text-xs font-normal text-muted-foreground ml-1.5">
+                  minutes
+                </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Queue reduction on crowded corridors
@@ -453,7 +503,9 @@ function DynamicFleetAllocationPage() {
           <Card className="rounded-lg shadow-sm border-border/70 bg-card">
             <CardHeader className="p-4 pb-2">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-medium uppercase tracking-wider">Network Load Factor</span>
+                <span className="text-xs font-medium uppercase tracking-wider">
+                  Network Load Factor
+                </span>
                 <Activity className="h-4 w-4 text-blue-500" />
               </div>
             </CardHeader>
@@ -484,7 +536,8 @@ function DynamicFleetAllocationPage() {
                   Corridor Demand Stress Simulator
                 </CardTitle>
                 <CardDescription className="text-xs mt-0.5">
-                  Inject unexpected passenger surges, tourist influx, or train arrival shocks to verify dynamic re-allocation resilience.
+                  Inject unexpected passenger surges, tourist influx, or train
+                  arrival shocks to verify dynamic re-allocation resilience.
                 </CardDescription>
               </div>
 
@@ -510,7 +563,9 @@ function DynamicFleetAllocationPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                 {PRESET_SCENARIOS.map((preset) => {
                   const isActive = activeScenarios.some(
-                    (s) => s.routeId === preset.routeId && s.surgePercent === preset.surgePercent,
+                    (s) =>
+                      s.routeId === preset.routeId &&
+                      s.surgePercent === preset.surgePercent,
                   );
                   return (
                     <button
@@ -560,7 +615,9 @@ function DynamicFleetAllocationPage() {
 
               <div className="flex-1 space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Simulate Inflow Surge Percentage:</span>
+                  <span className="text-muted-foreground">
+                    Simulate Inflow Surge Percentage:
+                  </span>
                   <span className="font-mono font-semibold text-amber-500">
                     +{customSurgePercent}%
                   </span>
@@ -601,10 +658,14 @@ function DynamicFleetAllocationPage() {
                     Salem Corridor Demand vs Capacity Profile
                   </CardTitle>
                   <CardDescription className="text-xs mt-0.5">
-                    Hourly passenger rate comparison across active arterial corridors.
+                    Hourly passenger rate comparison across active arterial
+                    corridors.
                   </CardDescription>
                 </div>
-                <Badge variant="outline" className="rounded-md font-mono text-[11px]">
+                <Badge
+                  variant="outline"
+                  className="rounded-md font-mono text-[11px]"
+                >
                   {selectedPeriod}
                 </Badge>
               </div>
@@ -612,7 +673,10 @@ function DynamicFleetAllocationPage() {
             <CardContent className="p-5 pt-2">
               <div className="h-[280px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <BarChart
+                    data={chartData}
+                    margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
@@ -622,18 +686,26 @@ function DynamicFleetAllocationPage() {
                           const data = payload[0].payload;
                           return (
                             <div className="bg-popover border border-border p-2.5 rounded-md shadow-md text-xs space-y-1">
-                              <p className="font-semibold text-foreground">{data.fullRoute}</p>
+                              <p className="font-semibold text-foreground">
+                                {data.fullRoute}
+                              </p>
                               <p className="text-muted-foreground">
                                 Baseline Demand:{" "}
-                                <span className="font-mono text-foreground">{data.Baseline} pax/hr</span>
+                                <span className="font-mono text-foreground">
+                                  {data.Baseline} pax/hr
+                                </span>
                               </p>
                               <p className="text-amber-500">
                                 Sensed Demand:{" "}
-                                <span className="font-mono font-bold">{data.SensedDemand} pax/hr</span>
+                                <span className="font-mono font-bold">
+                                  {data.SensedDemand} pax/hr
+                                </span>
                               </p>
                               <p className="text-blue-500">
                                 Scheduled Capacity:{" "}
-                                <span className="font-mono">{data.Capacity} pax/hr</span>
+                                <span className="font-mono">
+                                  {data.Capacity} pax/hr
+                                </span>
                               </p>
                               {data.Deficit > 0 && (
                                 <p className="text-red-500 font-semibold">
@@ -652,9 +724,21 @@ function DynamicFleetAllocationPage() {
                       iconSize={8}
                       wrapperStyle={{ fontSize: "11px", paddingBottom: "10px" }}
                     />
-                    <Bar dataKey="Baseline" fill="#94a3b8" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="SensedDemand" fill="#f59e0b" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="Capacity" fill="#2563eb" radius={[3, 3, 0, 0]} />
+                    <Bar
+                      dataKey="Baseline"
+                      fill="#94a3b8"
+                      radius={[3, 3, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="SensedDemand"
+                      fill="#f59e0b"
+                      radius={[3, 3, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="Capacity"
+                      fill="#2563eb"
+                      radius={[3, 3, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -676,35 +760,46 @@ function DynamicFleetAllocationPage() {
               <div className="p-3 bg-muted/50 border border-border/60 rounded-md text-xs space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-foreground">
-                    {STRATEGY_OPTIONS.find((s) => s.id === selectedStrategy)?.label}
+                    {
+                      STRATEGY_OPTIONS.find((s) => s.id === selectedStrategy)
+                        ?.label
+                    }
                   </span>
                   <Badge variant="outline" className="rounded-md text-[10px]">
                     Active Policy
                   </Badge>
                 </div>
                 <p className="text-muted-foreground text-[11px] leading-relaxed">
-                  {STRATEGY_OPTIONS.find((s) => s.id === selectedStrategy)?.desc}
+                  {
+                    STRATEGY_OPTIONS.find((s) => s.id === selectedStrategy)
+                      ?.desc
+                  }
                 </p>
               </div>
 
               <div className="space-y-2 text-xs">
-                <span className="font-medium text-foreground block">Enforced Hard Constraints:</span>
+                <span className="font-medium text-foreground block">
+                  Enforced Hard Constraints:
+                </span>
                 <div className="flex items-start gap-2 text-muted-foreground text-[11px]">
                   <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                   <span>
-                    <strong>Minimum Service Headway:</strong> Donor route headways cannot exceed 25 minutes SLA ceiling.
+                    <strong>Minimum Service Headway:</strong> Donor route
+                    headways cannot exceed 25 minutes SLA ceiling.
                   </span>
                 </div>
                 <div className="flex items-start gap-2 text-muted-foreground text-[11px]">
                   <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                   <span>
-                    <strong>Driver Hours & Rest:</strong> Reserve crew must retain ≥ 2.5 hours remaining shift time.
+                    <strong>Driver Hours & Rest:</strong> Reserve crew must
+                    retain ≥ 2.5 hours remaining shift time.
                   </span>
                 </div>
                 <div className="flex items-start gap-2 text-muted-foreground text-[11px]">
                   <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                   <span>
-                    <strong>GIS Deadhead Radius:</strong> Maximum positioning time constrained to ≤ 50 minutes.
+                    <strong>GIS Deadhead Radius:</strong> Maximum positioning
+                    time constrained to ≤ 50 minutes.
                   </span>
                 </div>
               </div>
@@ -712,7 +807,8 @@ function DynamicFleetAllocationPage() {
             <div className="p-5 pt-0 border-t border-border/50 text-[11px] text-muted-foreground flex items-center justify-between mt-2">
               <span>Total Deadhead Estimated:</span>
               <span className="font-mono font-semibold text-foreground">
-                {plan?.totalDeadheadKm ?? 0} km (₹{plan?.totalOperatingCost ?? 0})
+                {plan?.totalDeadheadKm ?? 0} km (₹
+                {plan?.totalOperatingCost ?? 0})
               </span>
             </div>
           </Card>
@@ -725,7 +821,8 @@ function DynamicFleetAllocationPage() {
               Salem Transit Corridors & Capacity Health
             </CardTitle>
             <CardDescription className="text-xs">
-              Live headway, load factors, and deficit calculations across Salem bus routes.
+              Live headway, load factors, and deficit calculations across Salem
+              bus routes.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -746,14 +843,22 @@ function DynamicFleetAllocationPage() {
                 </thead>
                 <tbody className="divide-y divide-border/60">
                   {(plan?.routeProfiles || []).map((route) => (
-                    <tr key={route.routeId} className="hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={route.routeId}
+                      className="hover:bg-muted/30 transition-colors"
+                    >
                       <td className="px-4 py-3 font-bold text-foreground">
-                        <Badge variant="outline" className="rounded-md font-mono text-xs">
+                        <Badge
+                          variant="outline"
+                          className="rounded-md font-mono text-xs"
+                        >
                           {route.code}
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-foreground font-medium">
-                        {route.origin} <span className="text-muted-foreground mx-1">→</span> {route.destination}
+                        {route.origin}{" "}
+                        <span className="text-muted-foreground mx-1">→</span>{" "}
+                        {route.destination}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground font-mono">
                         {route.lengthKm} km ({route.durationMin}m)
@@ -769,7 +874,9 @@ function DynamicFleetAllocationPage() {
                           {route.sensedDemandPaxPerHour}
                         </span>
                         <span className="text-[10px] text-muted-foreground block">
-                          {route.surgePercentage > 0 ? `+${route.surgePercentage}%` : "Baseline"}
+                          {route.surgePercentage > 0
+                            ? `+${route.surgePercentage}%`
+                            : "Baseline"}
                         </span>
                       </td>
                       <td className="px-4 py-3 font-mono text-muted-foreground">
@@ -782,8 +889,8 @@ function DynamicFleetAllocationPage() {
                             route.loadFactor > 1.05
                               ? "text-red-500"
                               : route.loadFactor > 0.85
-                              ? "text-amber-500"
-                              : "text-emerald-500",
+                                ? "text-amber-500"
+                                : "text-emerald-500",
                           )}
                         >
                           {Math.round(route.loadFactor * 100)}%
@@ -792,7 +899,9 @@ function DynamicFleetAllocationPage() {
                       <td className="px-4 py-3 font-mono text-foreground">
                         {route.passengerWaitTimeMin} min
                       </td>
-                      <td className="px-4 py-3">{getSeverityBadge(route.shortageSeverity)}</td>
+                      <td className="px-4 py-3">
+                        {getSeverityBadge(route.shortageSeverity)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -810,10 +919,14 @@ function DynamicFleetAllocationPage() {
                 Algorithm Dispatch Recommendations
               </h2>
               <p className="text-xs text-muted-foreground">
-                Optimal bipartite matching results balancing depot reserve proximity, crew shifts, and passenger wait time relief.
+                Optimal bipartite matching results balancing depot reserve
+                proximity, crew shifts, and passenger wait time relief.
               </p>
             </div>
-            <Badge variant="outline" className="rounded-md text-xs font-mono w-fit">
+            <Badge
+              variant="outline"
+              className="rounded-md text-xs font-mono w-fit"
+            >
               {plan?.recommendations.length ?? 0} Feasible Proposals
             </Badge>
           </div>
@@ -825,7 +938,9 @@ function DynamicFleetAllocationPage() {
                 Fleet Capacity Well-Balanced
               </h3>
               <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1">
-                No active corridor breaches SLA thresholds under the current time period. All route load factors remain within optimal operational limits.
+                No active corridor breaches SLA thresholds under the current
+                time period. All route load factors remain within optimal
+                operational limits.
               </p>
             </Card>
           ) : (
@@ -845,7 +960,10 @@ function DynamicFleetAllocationPage() {
                           {rec.targetRouteName}
                         </span>
                       </div>
-                      <Badge variant="outline" className="rounded-md font-mono text-[10px] text-emerald-500 border-emerald-500/30">
+                      <Badge
+                        variant="outline"
+                        className="rounded-md font-mono text-[10px] text-emerald-500 border-emerald-500/30"
+                      >
                         Score {rec.benefitScore}
                       </Badge>
                     </div>
@@ -859,8 +977,13 @@ function DynamicFleetAllocationPage() {
                           <BusIcon className="h-3.5 w-3.5 text-blue-500" />
                           {rec.supply.registrationNumber}
                         </span>
-                        <Badge variant="secondary" className="rounded-md text-[10px]">
-                          {rec.supply.sourceType === "DEPOT_RESERVE" ? "Depot Standby" : "Donor Route"}
+                        <Badge
+                          variant="secondary"
+                          className="rounded-md text-[10px]"
+                        >
+                          {rec.supply.sourceType === "DEPOT_RESERVE"
+                            ? "Depot Standby"
+                            : "Donor Route"}
                         </Badge>
                       </div>
 
@@ -871,7 +994,8 @@ function DynamicFleetAllocationPage() {
                         </span>
                         <span className="flex items-center gap-1">
                           <UserCheck className="h-3 w-3 text-muted-foreground" />
-                          Driver: {rec.supply.driverName} ({rec.supply.remainingShiftHours}h left)
+                          Driver: {rec.supply.driverName} (
+                          {rec.supply.remainingShiftHours}h left)
                         </span>
                       </div>
                     </div>
@@ -879,19 +1003,25 @@ function DynamicFleetAllocationPage() {
                     {/* Operational Impact Comparison */}
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div className="p-2 bg-muted/30 rounded-md border border-border/50">
-                        <span className="text-[10px] text-muted-foreground block">Headway</span>
+                        <span className="text-[10px] text-muted-foreground block">
+                          Headway
+                        </span>
                         <span className="font-mono font-semibold text-foreground text-xs">
                           {rec.headwayBeforeMin}m → {rec.headwayAfterMin}m
                         </span>
                       </div>
                       <div className="p-2 bg-muted/30 rounded-md border border-border/50">
-                        <span className="text-[10px] text-muted-foreground block">Avg Wait</span>
+                        <span className="text-[10px] text-muted-foreground block">
+                          Avg Wait
+                        </span>
                         <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 text-xs">
                           {rec.waitTimeBeforeMin}m → {rec.waitTimeAfterMin}m
                         </span>
                       </div>
                       <div className="p-2 bg-muted/30 rounded-md border border-border/50">
-                        <span className="text-[10px] text-muted-foreground block">Deadhead</span>
+                        <span className="text-[10px] text-muted-foreground block">
+                          Deadhead
+                        </span>
                         <span className="font-mono font-semibold text-foreground text-xs">
                           {rec.deadheadMinutes}m ({rec.deadheadKm}km)
                         </span>
@@ -949,7 +1079,10 @@ function DynamicFleetAllocationPage() {
                 <tbody className="divide-y divide-border/60">
                   {((historyQuery.data as any[]) || []).length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground text-xs">
+                      <td
+                        colSpan={6}
+                        className="px-4 py-6 text-center text-muted-foreground text-xs"
+                      >
                         No recent allocation dispatches recorded yet today.
                       </td>
                     </tr>
@@ -986,7 +1119,10 @@ function DynamicFleetAllocationPage() {
         </Card>
 
         {/* Dispatch Confirmation Dialog */}
-        <Dialog open={!!confirmingRec} onOpenChange={(open) => !open && setConfirmingRec(null)}>
+        <Dialog
+          open={!!confirmingRec}
+          onOpenChange={(open) => !open && setConfirmingRec(null)}
+        >
           <DialogContent className="rounded-lg max-w-md">
             <DialogHeader>
               <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
@@ -994,7 +1130,8 @@ function DynamicFleetAllocationPage() {
                 Confirm Dynamic Bus Dispatch
               </DialogTitle>
               <DialogDescription className="text-xs">
-                Position vehicle to reinforce Route {confirmingRec?.targetRouteCode}.
+                Position vehicle to reinforce Route{" "}
+                {confirmingRec?.targetRouteCode}.
               </DialogDescription>
             </DialogHeader>
 
@@ -1014,27 +1151,37 @@ function DynamicFleetAllocationPage() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Assigned Driver:</span>
+                    <span className="text-muted-foreground">
+                      Assigned Driver:
+                    </span>
                     <span className="font-semibold text-foreground">
                       {confirmingRec.supply.driverName}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Estimated Deadhead:</span>
+                    <span className="text-muted-foreground">
+                      Estimated Deadhead:
+                    </span>
                     <span className="font-mono text-foreground font-semibold">
-                      {confirmingRec.deadheadMinutes} min ({confirmingRec.deadheadKm} km)
+                      {confirmingRec.deadheadMinutes} min (
+                      {confirmingRec.deadheadKm} km)
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Projected Headway:</span>
+                    <span className="text-muted-foreground">
+                      Projected Headway:
+                    </span>
                     <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-                      {confirmingRec.headwayBeforeMin} min → {confirmingRec.headwayAfterMin} min
+                      {confirmingRec.headwayBeforeMin} min →{" "}
+                      {confirmingRec.headwayAfterMin} min
                     </span>
                   </div>
                 </div>
 
                 <p className="text-muted-foreground text-[11px] leading-relaxed">
-                  Upon dispatch, this vehicle will be marked active on Route {confirmingRec.targetRouteCode}, notifying the depot master and transit operations control center.
+                  Upon dispatch, this vehicle will be marked active on Route{" "}
+                  {confirmingRec.targetRouteCode}, notifying the depot master
+                  and transit operations control center.
                 </p>
               </div>
             )}
@@ -1050,11 +1197,15 @@ function DynamicFleetAllocationPage() {
               </Button>
               <Button
                 size="sm"
-                onClick={() => confirmingRec && dispatchMutation.mutate(confirmingRec)}
+                onClick={() =>
+                  confirmingRec && dispatchMutation.mutate(confirmingRec)
+                }
                 disabled={dispatchMutation.isPending}
                 className="rounded-md gap-1.5"
               >
-                {dispatchMutation.isPending ? "Dispatching..." : "Confirm & Dispatch"}
+                {dispatchMutation.isPending
+                  ? "Dispatching..."
+                  : "Confirm & Dispatch"}
               </Button>
             </DialogFooter>
           </DialogContent>

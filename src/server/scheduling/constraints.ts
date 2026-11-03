@@ -10,7 +10,10 @@ export function checkCrewStatus(crewMember: Crew): boolean {
   return !inactiveStatuses.includes(crewMember.status.toLowerCase());
 }
 
-export function checkDriverLicense(driver: Crew, serviceDateStr: string): boolean {
+export function checkDriverLicense(
+  driver: Crew,
+  serviceDateStr: string,
+): boolean {
   if (!driver.licenseExpiry) return false;
 
   const serviceDate = new Date(serviceDateStr);
@@ -23,7 +26,10 @@ export function checkDriverLicense(driver: Crew, serviceDateStr: string): boolea
   return expiryDate.getTime() >= serviceDate.getTime();
 }
 
-export function checkLicenseCategory(driver: Crew, busType: string | null): boolean {
+export function checkLicenseCategory(
+  driver: Crew,
+  busType: string | null,
+): boolean {
   // Configurable license compatibility layer
   // Standard compatibility rules:
   // - Double-Decker Express requires "Heavy Passenger Vehicle (HPV)"
@@ -34,10 +40,13 @@ export function checkLicenseCategory(driver: Crew, busType: string | null): bool
   const category = driver.licenseCategory || "";
   const isDoubleDecker = busType.toLowerCase().includes("double-decker");
   const isLeyland =
-    busType.toLowerCase().includes("leyland") || busType.toLowerCase().includes("standard");
+    busType.toLowerCase().includes("leyland") ||
+    busType.toLowerCase().includes("standard");
 
   if (isDoubleDecker) {
-    return category.includes("Heavy Passenger Vehicle") || category.includes("HPV");
+    return (
+      category.includes("Heavy Passenger Vehicle") || category.includes("HPV")
+    );
   }
 
   if (isLeyland) {

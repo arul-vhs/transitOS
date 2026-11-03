@@ -25,8 +25,12 @@ import {
   ExternalLink,
   ShieldCheck,
   PlayCircle,
+  Building2,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { useActiveTenant } from "@/lib/tenant-context";
 
 import {
   Sheet,
@@ -52,98 +56,48 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { logoutFn } from "@/lib/auth";
 import { toast } from "sonner";
 
-type NavItem = { label: string; to: string; icon: typeof Bus; badge?: string; badgeColor?: string };
+type NavItem = { label: string; to: string; icon: typeof Bus };
 type NavGroup = { title: string; items: NavItem[] };
 
 const NAV: NavGroup[] = [
   {
-    title: "Command Center",
+    title: "Operations",
     items: [
-      { label: "Executive Dashboard", to: "/", icon: Gauge },
+      { label: "Dashboard", to: "/", icon: Gauge },
       {
-        label: "Live Simulation Deck",
-        to: "/simulation",
-        icon: PlayCircle,
-        badge: "Sim",
-        badgeColor: "bg-indigo-500/20 text-indigo-500 border-indigo-500/30",
-      },
-      {
-        label: "Product Overview",
-        to: "/landing",
-        icon: Compass,
-        badge: "Tour",
-        badgeColor: "bg-cyan-500/15 text-cyan-500 border-cyan-500/30",
-      },
-    ],
-  },
-  {
-    title: "Daily Operations",
-    items: [
-      {
-        label: "Live Fleet Tracking",
-        to: "/operations/today",
+        label: "Schedules & Trips",
+        to: "/operations/trips",
         icon: CalendarClock,
-        badge: "Live",
-        badgeColor: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30",
       },
-      { label: "Timetable & Departures", to: "/operations/trips", icon: RouteIcon },
-      { label: "Driver Shifts (Duties)", to: "/operations/duties", icon: CalendarClock },
+      { label: "Driver Shifts", to: "/operations/duties", icon: CalendarClock },
+      { label: "Live Tracking", to: "/operations/today", icon: RouteIcon },
       {
-        label: "AI Auto-Scheduler",
-        to: "/scheduling/optimizer",
-        icon: Sparkles,
-        badge: "AI",
-        badgeColor: "bg-primary/20 text-primary border-primary/30",
-      },
-      {
-        label: "Disruption Radar",
-        to: "/operations/incidents",
-        icon: AlertTriangle,
-        badge: "Radar",
-        badgeColor: "bg-destructive/15 text-destructive border-destructive/30",
-      },
-      {
-        label: "Dynamic Fleet Allocation",
-        to: "/operations/allocation",
-        icon: Workflow,
-        badge: "Demand",
-        badgeColor: "bg-blue-500/15 text-blue-500 border-blue-500/30",
+        label: "Reports & Analytics",
+        to: "/analytics",
+        icon: BarChart3,
       },
     ],
   },
   {
-    title: "Buses & Vehicles",
+    title: "Fleet & Routes",
     items: [
-      { label: "Bus Fleet & Health", to: "/fleet/buses", icon: Bus },
-      { label: "Maintenance Bays", to: "/fleet/maintenance", icon: Wrench },
+      { label: "Buses", to: "/fleet/buses", icon: Bus },
+      { label: "Drivers & Crew", to: "/crew/drivers", icon: Users },
+      { label: "Routes & Stops", to: "/network/routes", icon: Map },
     ],
   },
   {
-    title: "Drivers & Crew",
+    title: "Tools & Settings",
     items: [
-      { label: "Drivers & Licenses", to: "/crew/drivers", icon: UserCog },
-      { label: "Conductors", to: "/crew/conductors", icon: Users },
-      { label: "Crew Availability", to: "/crew/availability", icon: CalendarClock },
-    ],
-  },
-  {
-    title: "Routes & Stops",
-    items: [
-      { label: "Routes & Stops Map", to: "/network/routes", icon: Map },
-      { label: "Route Builder", to: "/network/planner", icon: RouteIcon },
-    ],
-  },
-  {
-    title: "System Insights",
-    items: [
-      { label: "Analytics & Telemetry", to: "/analytics", icon: BarChart3 },
-      { label: "Settings & Access", to: "/settings", icon: Settings },
+      { label: "Simulation Deck", to: "/simulation", icon: PlayCircle },
+      { label: "Settings", to: "/settings", icon: Settings },
     ],
   },
 ];
 
 function isNavVisible(role: string, to: string): boolean {
-  if (!role || role === "PLATFORM_ADMIN" || role === "ORGANIZATION_ADMIN") return true;
+  if (!role || role === "PLATFORM_ADMIN" || role === "ORGANIZATION_ADMIN")
+    return true;
 
   switch (to) {
     case "/":
@@ -152,23 +106,34 @@ function isNavVisible(role: string, to: string): boolean {
     case "/operations/today":
     case "/operations/trips":
     case "/operations/duties":
-    case "/scheduling/optimizer":
-    case "/operations/incidents":
-      return ["SCHEDULER", "DEPOT_MANAGER", "ROUTE_PLANNER", "MANAGEMENT"].includes(role);
-    case "/fleet/buses":
-      return ["SCHEDULER", "DEPOT_MANAGER", "ROUTE_PLANNER", "MANAGEMENT"].includes(role);
-    case "/fleet/maintenance":
-      return ["DEPOT_MANAGER", "SCHEDULER"].includes(role);
-    case "/crew/drivers":
-    case "/crew/conductors":
-    case "/crew/availability":
-      return ["SCHEDULER", "DEPOT_MANAGER", "ROUTE_PLANNER", "MANAGEMENT"].includes(role);
-    case "/network/routes":
-      return ["SCHEDULER", "ROUTE_PLANNER", "DEPOT_MANAGER", "MANAGEMENT"].includes(role);
-    case "/network/planner":
-      return ["ROUTE_PLANNER", "SCHEDULER", "DEPOT_MANAGER"].includes(role);
     case "/analytics":
-      return ["SCHEDULER", "ROUTE_PLANNER", "MANAGEMENT", "DEPOT_MANAGER"].includes(role);
+      return [
+        "SCHEDULER",
+        "DEPOT_MANAGER",
+        "ROUTE_PLANNER",
+        "MANAGEMENT",
+      ].includes(role);
+    case "/fleet/buses":
+      return [
+        "SCHEDULER",
+        "DEPOT_MANAGER",
+        "ROUTE_PLANNER",
+        "MANAGEMENT",
+      ].includes(role);
+    case "/crew/drivers":
+      return [
+        "SCHEDULER",
+        "DEPOT_MANAGER",
+        "ROUTE_PLANNER",
+        "MANAGEMENT",
+      ].includes(role);
+    case "/network/routes":
+      return [
+        "SCHEDULER",
+        "ROUTE_PLANNER",
+        "DEPOT_MANAGER",
+        "MANAGEMENT",
+      ].includes(role);
     case "/settings":
       return ["ORGANIZATION_ADMIN", "PLATFORM_ADMIN"].includes(role);
     default:
@@ -181,6 +146,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const context = Route.useRouteContext();
   const user = context?.user;
   const role = user?.role || "";
+  const { currentTenant } = useActiveTenant();
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground select-none">
@@ -189,7 +155,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <div className="relative flex size-10 items-center justify-center rounded-lg bg-blue-600 text-white shadow-xs">
           <Bus className="size-5.5 text-white" />
           <span className="absolute -bottom-0.5 -right-0.5 flex size-2.5">
-            <span className="relative inline-flex size-2 rounded-full bg-emerald-500"></span>
+            <span className="relative inline-flex size-2 rounded bg-emerald-500"></span>
           </span>
         </div>
         <div className="min-w-0 flex-1">
@@ -203,9 +169,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           </div>
           <p
             className="text-[11px] font-medium text-sidebar-foreground/60 truncate"
-            title={user?.tenantName}
+            title={currentTenant.name}
           >
-            {user?.tenantName || "Salem Transport Corp."}
+            {currentTenant.name}
           </p>
         </div>
       </div>
@@ -213,7 +179,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Nav groups */}
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
         {NAV.map((group, gi) => {
-          const visibleItems = group.items.filter((item) => isNavVisible(role, item.to));
+          const visibleItems = group.items.filter((item) =>
+            isNavVisible(role, item.to),
+          );
           if (visibleItems.length === 0) return null;
 
           return (
@@ -227,7 +195,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 const active =
                   item.to === "/"
                     ? pathname === "/"
-                    : pathname === item.to || pathname.startsWith(item.to + "/");
+                    : pathname === item.to ||
+                      pathname.startsWith(item.to + "/");
                 return (
                   <Link
                     key={item.to}
@@ -241,25 +210,18 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     )}
                   >
                     {active ? (
-                      <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
+                      <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r bg-sidebar-primary" />
                     ) : null}
                     <item.icon
                       className={cn(
                         "size-4 shrink-0 transition-transform duration-150 group-hover:scale-110",
-                        active ? "text-sidebar-primary" : "text-sidebar-foreground/60",
+                        active
+                          ? "text-sidebar-primary"
+                          : "text-sidebar-foreground/60",
                       )}
                     />
                     <span className="truncate">{item.label}</span>
-                    {item.badge ? (
-                      <span
-                        className={cn(
-                          "ml-auto rounded-full border px-1.5 py-0.2 text-[9px] font-bold font-mono tracking-tight",
-                          item.badgeColor || "bg-sidebar-accent text-sidebar-accent-foreground",
-                        )}
-                      >
-                        {item.badge}
-                      </span>
-                    ) : active ? (
+                    {active ? (
                       <ChevronRight className="ml-auto size-3.5 opacity-60" />
                     ) : null}
                   </Link>
@@ -275,16 +237,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <div className="flex items-center justify-between rounded-lg bg-sidebar-accent/40 p-2 text-xs">
           <div className="flex items-center gap-2 min-w-0">
             <span className="relative flex size-2 shrink-0">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex size-2 rounded-full bg-emerald-500"></span>
+              <span className="inline-flex size-2 rounded bg-emerald-500"></span>
             </span>
             <span className="font-mono text-[11px] font-medium text-sidebar-foreground/80 truncate">
-              Telemetry Online
+              System Online
             </span>
           </div>
           <Badge
             variant="outline"
-            className="border-sidebar-border bg-sidebar text-[10px] font-mono text-sidebar-foreground/70"
+            className="border-sidebar-border bg-sidebar text-[10px] font-mono text-sidebar-foreground/70 rounded"
           >
             25 Aug
           </Badge>
@@ -310,6 +271,8 @@ export function AppShell({
   const router = useRouter();
   const context = Route.useRouteContext();
   const user = context?.user;
+  const { allTenants, currentTenant, currentDepot, switchTenant, switchDepot } =
+    useActiveTenant();
 
   const handleLogout = async () => {
     try {
@@ -334,7 +297,11 @@ export function AppShell({
           <div className="flex items-center gap-3 px-4 py-3.5 sm:px-6">
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="lg:hidden shrink-0">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="lg:hidden shrink-0"
+                >
                   <Menu className="size-4" />
                   <span className="sr-only">Open navigation</span>
                 </Button>
@@ -345,55 +312,126 @@ export function AppShell({
             </Sheet>
 
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2.5">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="truncate text-lg font-bold tracking-tight sm:text-xl text-foreground">
                   {title}
                 </h1>
-                <Badge
-                  variant="secondary"
-                  className="hidden sm:inline-flex text-[10px] font-mono font-semibold uppercase tracking-wider bg-primary/10 text-primary border-primary/20"
-                >
-                  Salem Central
-                </Badge>
-                <span className="hidden md:inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  24 Buses Active
-                </span>
+
+                {/* Multi-Tenant Corporation & Depot Switcher */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-primary/25 bg-primary/10 hover:bg-primary/15 px-2.5 py-1 text-xs font-semibold text-primary transition-colors cursor-pointer"
+                      title="Switch Operating Corporation & Depot (Multi-Tenant)"
+                    >
+                      <Building2 className="size-3.5" />
+                      <span className="font-mono text-[10px] truncate max-w-[140px] md:max-w-[200px]">
+                        {currentTenant.name
+                          .replace(" Corporation", "")
+                          .replace(" Transit", "")}{" "}
+                        : {currentDepot}
+                      </span>
+                      <ChevronDown className="size-3 opacity-60" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="start"
+                    className="w-80 shadow-lg border-border"
+                  >
+                    <DropdownMenuLabel className="text-[11px] text-muted-foreground uppercase tracking-wider font-mono">
+                      Switch Corporation (Multi-Tenant)
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {allTenants.map((t) => (
+                      <DropdownMenuItem
+                        key={t.id}
+                        onClick={() => {
+                          switchTenant(t.id);
+                          toast.success(
+                            `Switched to ${t.name} (${t.activeDepot})`,
+                          );
+                        }}
+                        className="flex items-center justify-between cursor-pointer py-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-xs text-foreground truncate">
+                            {t.name}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground font-mono">
+                            {t.region} · {t.fleetCount} Buses · {t.routesCount}{" "}
+                            Routes
+                          </p>
+                        </div>
+                        {t.id === currentTenant.id && (
+                          <Check className="size-4 text-primary ml-2 shrink-0" />
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-[11px] text-muted-foreground uppercase tracking-wider font-mono">
+                      Depot Selection ({currentTenant.name})
+                    </DropdownMenuLabel>
+                    {currentTenant.depots.map(
+                      (
+                        d: string | { id: string; name: string; code?: string },
+                      ) => {
+                        const depotName = typeof d === "string" ? d : d.name;
+                        const depotCode = typeof d === "string" ? "" : d.code;
+                        const depotKey = typeof d === "string" ? d : d.id;
+                        const isSelected = depotName === currentDepot;
+                        return (
+                          <DropdownMenuItem
+                            key={depotKey}
+                            onClick={() => {
+                              switchDepot(depotName);
+                              toast.success(
+                                `Operating depot set to ${depotName}`,
+                              );
+                            }}
+                            className="text-xs flex items-center justify-between cursor-pointer"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <span>{depotName}</span>
+                              {depotCode ? (
+                                <span className="text-[10px] text-muted-foreground font-mono">
+                                  ({depotCode})
+                                </span>
+                              ) : null}
+                            </div>
+                            {isSelected && (
+                              <Check className="size-3.5 text-primary ml-2 shrink-0" />
+                            )}
+                          </DropdownMenuItem>
+                        );
+                      },
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               {subtitle ? (
-                <p className="mt-0.5 text-xs text-muted-foreground truncate">{subtitle}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground truncate">
+                  {subtitle}
+                </p>
               ) : null}
             </div>
 
             {/* Header Right Actions */}
             <div className="flex shrink-0 items-center gap-2.5">
-              {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+              {actions ? (
+                <div className="flex items-center gap-2">{actions}</div>
+              ) : null}
 
-              {/* Live Simulator Quick Launch */}
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/5 hover:bg-indigo-500/15 hover:border-indigo-500/50 text-xs font-semibold cursor-pointer shadow-2xs"
-                title="Launch Live Simulation Deck"
-              >
-                <Link to="/simulation">
-                  <PlayCircle className="size-3.5 text-indigo-500 animate-pulse" />
-                  <span className="hidden sm:inline">Simulator</span>
-                </Link>
-              </Button>
-
-              {/* Global Quick Guide & Help Trigger */}
+              {/* Beginner Guide Sheet Trigger */}
               <Sheet open={helpOpen} onOpenChange={setHelpOpen}>
                 <SheetTrigger asChild>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 gap-1.5 border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-xs font-semibold cursor-pointer shadow-2xs"
-                    title="Open TransitOS Operations Guide & Glossary"
+                    className="h-8 gap-1.5 border-border hover:bg-muted text-xs font-semibold cursor-pointer rounded-md shadow-2xs"
+                    title="Open Beginner Guide & Common Terms"
                   >
-                    <HelpCircle className="size-3.5 text-primary" />
-                    <span className="hidden md:inline">Quick Guide</span>
+                    <BookOpen className="size-3.5 text-primary" />
+                    <span className="hidden md:inline">Help Guide</span>
                   </Button>
                 </SheetTrigger>
                 <SheetContent
@@ -402,106 +440,63 @@ export function AppShell({
                 >
                   <SheetHeader className="text-left space-y-2 border-b border-border/70 pb-4">
                     <div className="flex items-center gap-2">
-                      <div className="grid size-8 place-items-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+                      <div className="grid size-8 place-items-center rounded bg-primary/10 text-primary border border-primary/20">
                         <BookOpen className="size-4" />
                       </div>
                       <div>
                         <SheetTitle className="text-base font-bold text-foreground">
-                          TransitOS Operations Guide
+                          Beginner Guide: Transit Operations
                         </SheetTitle>
                         <SheetDescription className="text-xs text-muted-foreground">
-                          Understand how transit features connect and what every operational term
-                          means.
+                          Everything you need to know to manage routes, buses,
+                          and driver shifts.
                         </SheetDescription>
                       </div>
                     </div>
                   </SheetHeader>
 
-                  {/* Interactive Simulation Callout */}
-                  <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-3.5 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="flex size-2 rounded-full bg-blue-600" />
-                        <span className="text-xs font-bold text-foreground">
-                          Corridor Simulation Deck
-                        </span>
-                      </div>
-                      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-800 text-[10px] rounded">
-                        Live Demo
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Inspect corridor operations in real time. Scrub through 24-hour schedules, test
-                      engine breakdown scenarios, and inspect automated standby bus dispatch.
-                    </p>
-                    <Button
-                      asChild
-                      size="sm"
-                      className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-xs"
-                    >
-                      <Link to="/simulation" onClick={() => setHelpOpen(false)}>
-                        <PlayCircle className="size-3.5 mr-1.5" />
-                        Launch Live Simulation
-                      </Link>
-                    </Button>
-                  </div>
-
-                  {/* Section 1: 5-Step Operational Lifecycle */}
+                  {/* 3-Step Routine */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
                       <Workflow className="size-4" />
-                      <span>The 5-Step Operational Flow</span>
+                      <span>The 3-Step Daily Routine</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Follow this recommended path to take your depot from raw timetable data to
-                      live on-time dispatch:
+                      Follow these 3 simple steps to organize your depot every
+                      day:
                     </p>
 
                     <div className="space-y-2.5">
                       {[
                         {
                           step: "1",
-                          title: "Corridors & Fleet",
-                          desc: "Register routes, stops, bus inventory, and driver rosters with legal rest limits.",
-                          to: "/network/routes",
-                          badge: "Setup",
+                          title: "Set Timetable & Trips",
+                          desc: "Review departure times. Add single trips or use Auto-Fill to generate trips every 15 or 30 minutes.",
+                          to: "/operations/trips",
+                          badge: "Timetable",
                         },
                         {
                           step: "2",
-                          title: "Trip Timetable",
-                          desc: "Define scheduled departures. Use 'Generate Timetable' to create trips at 15/30-min intervals.",
-                          to: "/operations/trips",
-                          badge: "Planning",
+                          title: "Assign Drivers & Buses",
+                          desc: "Pair drivers and buses with scheduled trips. The system checks rest requirements automatically.",
+                          to: "/operations/duties",
+                          badge: "Shifts",
                         },
                         {
                           step: "3",
-                          title: "AI Schedule Optimizer",
-                          desc: "Run Google OR-Tools to mathematically chain trips into optimal shifts (duties) and bus assignments.",
-                          to: "/scheduling/optimizer",
-                          badge: "AI Optimization",
-                        },
-                        {
-                          step: "4",
-                          title: "Duty Dispatch & Today",
-                          desc: "Review crew shifts, fine-tune manual assignments, and monitor live vehicles on duty.",
-                          to: "/operations/duties",
-                          badge: "Dispatch",
-                        },
-                        {
-                          step: "5",
-                          title: "Disruption Radar",
-                          desc: "When a bus breaks down or delays occur, generate instant recovery options with zero guesswork.",
-                          to: "/operations/incidents",
-                          badge: "Recovery",
+                          title: "Live Tracking & Delays",
+                          desc: "Monitor active buses on the road. If a bus is delayed or broken down, deploy a replacement in seconds.",
+                          to: "/operations/today",
+                          badge: "Live Board",
                         },
                       ].map((item) => (
                         <Link
                           key={item.step}
                           to={item.to}
                           onClick={() => setHelpOpen(false)}
-                          className="group flex items-start gap-3 p-3 rounded-xl border border-border/70 bg-card/60 hover:border-primary/50 hover:bg-muted/50 transition-all cursor-pointer"
+                          className="group flex items-start gap-3 p-3 rounded-lg border border-border/70 bg-card hover:border-primary/50 hover:bg-muted/50 transition-all cursor-pointer"
                         >
-                          <div className="size-6 rounded-full bg-primary/10 text-primary font-bold text-xs grid place-items-center shrink-0 font-mono group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                          <div className="size-6 rounded bg-primary/10 text-primary font-bold text-xs grid place-items-center shrink-0 font-mono group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                             {item.step}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -511,7 +506,7 @@ export function AppShell({
                               </p>
                               <Badge
                                 variant="outline"
-                                className="text-[9px] font-mono px-1 py-0 text-muted-foreground border-border/80"
+                                className="text-[9px] font-mono px-1 py-0 text-muted-foreground border-border/80 rounded"
                               >
                                 {item.badge}
                               </Badge>
@@ -525,76 +520,100 @@ export function AppShell({
                     </div>
                   </div>
 
-                  {/* Section 2: Transit Terms Simplified */}
+                  {/* Plain English Glossary */}
                   <div className="space-y-3 pt-2 border-t border-border/70">
                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
                       <Lightbulb className="size-4" />
-                      <span>Transit Terms Simplified</span>
+                      <span>Key Terms Explained in Plain English</span>
                     </div>
 
                     <div className="grid gap-2 text-xs">
-                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/30">
-                        <span className="font-bold text-foreground">Trip: </span>
+                      <div className="p-2.5 rounded-md border border-border/60 bg-muted/30">
+                        <span className="font-bold text-foreground">
+                          Trip:{" "}
+                        </span>
                         <span className="text-muted-foreground">
-                          A single one-way bus journey between an origin and destination at a fixed
-                          time.
+                          A single one-way journey between two terminals (e.g.
+                          Town Bus Stand to Salem Junction).
                         </span>
                       </div>
-                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/30">
-                        <span className="font-bold text-foreground">Duty (Shift): </span>
+                      <div className="p-2.5 rounded-md border border-border/60 bg-muted/30">
+                        <span className="font-bold text-foreground">
+                          Shift (Duty):{" "}
+                        </span>
                         <span className="text-muted-foreground">
-                          A full work shift for a crew member or bus, packaging multiple trips and
-                          required rest pauses.
+                          A driver's day of work. It links several trips
+                          together with required lunch and rest breaks.
                         </span>
                       </div>
-                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/30">
-                        <span className="font-bold text-foreground">Deadhead: </span>
+                      <div className="p-2.5 rounded-md border border-border/60 bg-muted/30">
+                        <span className="font-bold text-foreground">
+                          Standby Bus:{" "}
+                        </span>
                         <span className="text-muted-foreground">
-                          Driving an empty bus from depot to the first stop. The AI optimizer
-                          minimizes this to save fuel.
+                          A reserve bus parked at the depot ready to replace any
+                          broken-down bus immediately.
                         </span>
                       </div>
-                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/30">
-                        <span className="font-bold text-foreground">Continuous Driving: </span>
+                      <div className="p-2.5 rounded-md border border-border/60 bg-muted/30">
+                        <span className="font-bold text-foreground">
+                          Corridor:{" "}
+                        </span>
                         <span className="text-muted-foreground">
-                          Motor Vehicle Act rule limiting a driver to 240 mins (4 hrs) maximum
-                          continuous driving before a break.
+                          A designated transit route connecting major city
+                          centers and bus stops.
                         </span>
                       </div>
-                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/30">
-                        <span className="font-bold text-foreground">Spreadover: </span>
-                        <span className="text-muted-foreground">
-                          Total elapsed time from driver clock-in to clock-out, including
-                          split-shift idle periods.
+                      <div className="p-2.5 rounded-md border border-border/60 bg-muted/30">
+                        <span className="font-bold text-foreground">
+                          Rest Rules:{" "}
                         </span>
-                      </div>
-                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/30">
-                        <span className="font-bold text-foreground">Linked vs Unlinked: </span>
                         <span className="text-muted-foreground">
-                          Linked pairs a driver with one bus all day. Unlinked allows relief drivers
-                          to swap buses at major terminals.
-                        </span>
-                      </div>
-                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/30">
-                        <span className="font-bold text-foreground">Google OR-Tools: </span>
-                        <span className="text-muted-foreground">
-                          An open-source mathematical solver by Google that finds the
-                          highest-quality schedule out of millions of combinations.
+                          Safety regulations requiring drivers to take breaks
+                          after 4 hours of driving to prevent fatigue.
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Section 3: Quick Jump Shortcuts */}
+                  {/* Interactive Simulation Link */}
+                  <div className="rounded-lg border border-border bg-muted/20 p-3.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-foreground">
+                        Want to test before making changes?
+                      </span>
+                      <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] rounded">
+                        Interactive
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Use the Corridor Simulation Deck to see buses driving
+                      along Salem routes in real time.
+                    </p>
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="w-full h-8 text-xs rounded-md shadow-xs"
+                    >
+                      <Link to="/simulation" onClick={() => setHelpOpen(false)}>
+                        <PlayCircle className="size-3.5 mr-1.5 text-primary" />
+                        Open Simulation Deck
+                      </Link>
+                    </Button>
+                  </div>
+
+                  {/* Footer */}
                   <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs text-muted-foreground">
                     <span className="flex items-center gap-1.5 font-medium">
-                      <ShieldCheck className="size-4 text-emerald-500" /> Multi-Tenant ISO Secure
+                      <ShieldCheck className="size-4 text-emerald-500" /> Salem
+                      Transport Corporation
                     </span>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setHelpOpen(false)}
-                      className="text-xs h-7 text-primary hover:text-primary hover:bg-primary/10"
+                      className="text-xs h-7 text-primary hover:text-primary hover:bg-primary/10 rounded-md"
                     >
                       Close Guide
                     </Button>
@@ -637,7 +656,9 @@ export function AppShell({
                         <p className="text-sm font-bold text-foreground leading-none">
                           {user.name}
                         </p>
-                        <p className="text-xs font-mono text-muted-foreground">{user.email}</p>
+                        <p className="text-xs font-mono text-muted-foreground">
+                          {user.email}
+                        </p>
                         <div className="mt-1 flex items-center gap-1.5">
                           <span className="size-1.5 rounded-full bg-emerald-500"></span>
                           <span className="text-[10px] font-semibold text-primary">
@@ -648,7 +669,10 @@ export function AppShell({
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link to="/settings" className="w-full flex items-center cursor-pointer">
+                      <Link
+                        to="/settings"
+                        className="w-full flex items-center cursor-pointer"
+                      >
                         <Settings className="mr-2.5 size-4 text-muted-foreground" />
                         <span>System Settings</span>
                       </Link>
@@ -677,7 +701,13 @@ export function AppShell({
   );
 }
 
-export function ComingSoon({ title, subtitle }: { title: string; subtitle: string }) {
+export function ComingSoon({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}) {
   return (
     <AppShell title={title} subtitle={subtitle}>
       <div className="glass-panel grid min-h-[55vh] place-items-center p-10 text-center animate-fade-in">
@@ -692,7 +722,9 @@ export function ComingSoon({ title, subtitle }: { title: string; subtitle: strin
             >
               Module Roadmap
             </Badge>
-            <h2 className="text-xl font-bold tracking-tight text-foreground">{title}</h2>
+            <h2 className="text-xl font-bold tracking-tight text-foreground">
+              {title}
+            </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {subtitle ||
                 "This advanced transit module is scheduled for the next operational release wave."}
@@ -702,7 +734,11 @@ export function ComingSoon({ title, subtitle }: { title: string; subtitle: strin
             <Button asChild variant="outline" size="sm" className="font-medium">
               <Link to="/scheduling/optimizer">Go to Optimizer</Link>
             </Button>
-            <Button asChild size="sm" className="font-medium bg-primary text-primary-foreground">
+            <Button
+              asChild
+              size="sm"
+              className="font-medium bg-primary text-primary-foreground"
+            >
               <Link to="/operations/today">View Active Duties</Link>
             </Button>
           </div>

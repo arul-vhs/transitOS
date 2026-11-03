@@ -1,8 +1,19 @@
-import { checkTurnaround, checkDutyDuration, checkLicenseCategory } from "./constraints";
+import {
+  checkTurnaround,
+  checkDutyDuration,
+  checkLicenseCategory,
+} from "./constraints";
 import { generateCandidates } from "./candidate-generation";
 import { calculateObjectiveScore, calculateQualityScore } from "./objective";
 import { generateExplanations } from "./explain";
-import { Trip, Bus, Crew, OptimizerInput, OptimizerResult, ProposedDuty } from "./types";
+import {
+  Trip,
+  Bus,
+  Crew,
+  OptimizerInput,
+  OptimizerResult,
+  ProposedDuty,
+} from "./types";
 
 interface SolverState {
   duties: ProposedDuty[];
@@ -17,13 +28,21 @@ interface SolverState {
 }
 
 export function solveSchedule(input: OptimizerInput): OptimizerResult {
-  const sortedTrips = [...input.trips].sort((a, b) => a.startTime - b.startTime);
+  const sortedTrips = [...input.trips].sort(
+    (a, b) => a.startTime - b.startTime,
+  );
   const candidates = generateCandidates(input);
   const candidatesMap = new Map(candidates.map((c) => [c.tripId, c]));
 
   // Track resource schedules to prevent overlapping assignments
-  const busSchedules = new Map<string, { startTime: number; endTime: number }[]>();
-  const crewSchedules = new Map<string, { startTime: number; endTime: number }[]>();
+  const busSchedules = new Map<
+    string,
+    { startTime: number; endTime: number }[]
+  >();
+  const crewSchedules = new Map<
+    string,
+    { startTime: number; endTime: number }[]
+  >();
 
   input.buses.forEach((b) => busSchedules.set(b.id, []));
   input.drivers.forEach((d) => crewSchedules.set(d.id, []));
@@ -80,7 +99,9 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
     // Find duties that are compatible (same serviceDate and same bus type compatibility)
     // Sort duties by endTime to find the closest compatible turnaround gap
     const activeDuties = state.duties.filter((d) => d.trips.length > 0);
-    const sortedDuties = [...activeDuties].sort((a, b) => b.endTime - a.endTime);
+    const sortedDuties = [...activeDuties].sort(
+      (a, b) => b.endTime - a.endTime,
+    );
 
     for (const duty of sortedDuties) {
       const bus = input.buses.find((b) => b.id === duty.busId);
@@ -95,13 +116,16 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
       if (!turnaround.feasible) continue;
 
       // Validate duty duration bounds
-      if (!checkDutyDuration(duty.startTime, trip.endTime, input.configuration)) {
+      if (
+        !checkDutyDuration(duty.startTime, trip.endTime, input.configuration)
+      ) {
         continue;
       }
 
       // Check linked mode vs handovers
       const isLinkedMode =
-        input.mode === "LINKED" || (input.mode === "HYBRID" && duty.dutyType === "LINKED");
+        input.mode === "LINKED" ||
+        (input.mode === "HYBRID" && duty.dutyType === "LINKED");
 
       if (isLinkedMode) {
         // Linked crew: same driver and conductor must remain
@@ -109,17 +133,41 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
         const conductorId = duty.conductorId!;
 
         // Validate driver and conductor compatibility for this trip
-        const isDriverOk = cand.compatibleDrivers.some((d) => d.id === driverId);
-        const isConductorOk = cand.compatibleConductors.some((c) => c.id === conductorId);
+        const isDriverOk = cand.compatibleDrivers.some(
+          (d) => d.id === driverId,
+        );
+        const isConductorOk = cand.compatibleConductors.some(
+          (c) => c.id === conductorId,
+        );
 
         if (isDriverOk && isConductorOk) {
           // Double check overlap (should be clear since duty itself is sequential, but verify rest/timeline)
           if (
-            isResourceAvailable(driverId, lastTrip.endTime, trip.endTime, crewSchedules) &&
-            isResourceAvailable(conductorId, lastTrip.endTime, trip.endTime, crewSchedules)
+            isResourceAvailable(
+              driverId,
+              lastTrip.endTime,
+              trip.endTime,
+              crewSchedules,
+            ) &&
+            isResourceAvailable(
+              conductorId,
+              lastTrip.endTime,
+              trip.endTime,
+              crewSchedules,
+            )
           ) {
-            reserveResource(driverId, lastTrip.endTime, trip.endTime, crewSchedules);
-            reserveResource(conductorId, lastTrip.endTime, trip.endTime, crewSchedules);
+            reserveResource(
+              driverId,
+              lastTrip.endTime,
+              trip.endTime,
+              crewSchedules,
+            );
+            reserveResource(
+              conductorId,
+              lastTrip.endTime,
+              trip.endTime,
+              crewSchedules,
+            );
 
             duty.trips.push({
               tripId: trip.id,
@@ -144,20 +192,46 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
       } else {
         // Unlinked Handover mode (or hybrid choosing unlinked)
         // Find if we can keep same crew OR assign new ones for handover
-        const currentDriverId = duty.crewSegments[duty.crewSegments.length - 1]!.driverId;
-        const currentConductorId = duty.crewSegments[duty.crewSegments.length - 1]!.conductorId;
+        const currentDriverId =
+          duty.crewSegments[duty.crewSegments.length - 1]!.driverId;
+        const currentConductorId =
+          duty.crewSegments[duty.crewSegments.length - 1]!.conductorId;
 
-        const keepDriver = cand.compatibleDrivers.some((d) => d.id === currentDriverId);
-        const keepConductor = cand.compatibleConductors.some((c) => c.id === currentConductorId);
+        const keepDriver = cand.compatibleDrivers.some(
+          (d) => d.id === currentDriverId,
+        );
+        const keepConductor = cand.compatibleConductors.some(
+          (c) => c.id === currentConductorId,
+        );
 
         if (keepDriver && keepConductor) {
           // Keep same crew
           if (
-            isResourceAvailable(currentDriverId, lastTrip.endTime, trip.endTime, crewSchedules) &&
-            isResourceAvailable(currentConductorId, lastTrip.endTime, trip.endTime, crewSchedules)
+            isResourceAvailable(
+              currentDriverId,
+              lastTrip.endTime,
+              trip.endTime,
+              crewSchedules,
+            ) &&
+            isResourceAvailable(
+              currentConductorId,
+              lastTrip.endTime,
+              trip.endTime,
+              crewSchedules,
+            )
           ) {
-            reserveResource(currentDriverId, lastTrip.endTime, trip.endTime, crewSchedules);
-            reserveResource(currentConductorId, lastTrip.endTime, trip.endTime, crewSchedules);
+            reserveResource(
+              currentDriverId,
+              lastTrip.endTime,
+              trip.endTime,
+              crewSchedules,
+            );
+            reserveResource(
+              currentConductorId,
+              lastTrip.endTime,
+              trip.endTime,
+              crewSchedules,
+            );
 
             // Extend last segment
             const lastSeg = duty.crewSegments[duty.crewSegments.length - 1]!;
@@ -192,17 +266,36 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
           // Filter drivers and conductors that are available for this new segment (from trip start to trip end)
           const newDriver = cand.compatibleDrivers.find(
             (d) =>
-              isResourceAvailable(d.id, trip.startTime, trip.endTime, crewSchedules) &&
-              checkLicenseCategory(d, bus.busType),
+              isResourceAvailable(
+                d.id,
+                trip.startTime,
+                trip.endTime,
+                crewSchedules,
+              ) && checkLicenseCategory(d, bus.busType),
           );
 
           const newConductor = cand.compatibleConductors.find((c) =>
-            isResourceAvailable(c.id, trip.startTime, trip.endTime, crewSchedules),
+            isResourceAvailable(
+              c.id,
+              trip.startTime,
+              trip.endTime,
+              crewSchedules,
+            ),
           );
 
           if (newDriver && newConductor) {
-            reserveResource(newDriver.id, trip.startTime, trip.endTime, crewSchedules);
-            reserveResource(newConductor.id, trip.startTime, trip.endTime, crewSchedules);
+            reserveResource(
+              newDriver.id,
+              trip.startTime,
+              trip.endTime,
+              crewSchedules,
+            );
+            reserveResource(
+              newConductor.id,
+              trip.startTime,
+              trip.endTime,
+              crewSchedules,
+            );
 
             // Flag handover required on previous last trip
             duty.trips[duty.trips.length - 1]!.handoverRequired = true;
@@ -255,8 +348,12 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
     if (availableBus) {
       const availableDriver = cand.compatibleDrivers.find(
         (d) =>
-          isResourceAvailable(d.id, trip.startTime, trip.endTime, crewSchedules) &&
-          checkLicenseCategory(d, availableBus.busType),
+          isResourceAvailable(
+            d.id,
+            trip.startTime,
+            trip.endTime,
+            crewSchedules,
+          ) && checkLicenseCategory(d, availableBus.busType),
       );
 
       const availableConductor = cand.compatibleConductors.find((c) =>
@@ -264,11 +361,27 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
       );
 
       if (availableDriver && availableConductor) {
-        reserveResource(availableBus.id, trip.startTime, trip.endTime, busSchedules);
-        reserveResource(availableDriver.id, trip.startTime, trip.endTime, crewSchedules);
-        reserveResource(availableConductor.id, trip.startTime, trip.endTime, crewSchedules);
+        reserveResource(
+          availableBus.id,
+          trip.startTime,
+          trip.endTime,
+          busSchedules,
+        );
+        reserveResource(
+          availableDriver.id,
+          trip.startTime,
+          trip.endTime,
+          crewSchedules,
+        );
+        reserveResource(
+          availableConductor.id,
+          trip.startTime,
+          trip.endTime,
+          crewSchedules,
+        );
 
-        const dutyTypeDecision = input.mode === "UNLINKED" ? "UNLINKED" : "LINKED";
+        const dutyTypeDecision =
+          input.mode === "UNLINKED" ? "UNLINKED" : "LINKED";
         const dutyCode = `${dutyTypeDecision === "LINKED" ? "L" : "U"}-${String(
           101 + state.duties.length,
         )}`;
@@ -278,7 +391,8 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
           dutyType: dutyTypeDecision,
           busId: availableBus.id,
           driverId: dutyTypeDecision === "LINKED" ? availableDriver.id : null,
-          conductorId: dutyTypeDecision === "LINKED" ? availableConductor.id : null,
+          conductorId:
+            dutyTypeDecision === "LINKED" ? availableConductor.id : null,
           startTime: trip.startTime,
           endTime: trip.endTime,
           trips: [
@@ -342,8 +456,12 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
   });
 
   const dutiesCreated = state.duties.length;
-  const linkedDuties = state.duties.filter((d) => d.dutyType === "LINKED").length;
-  const unlinkedDuties = state.duties.filter((d) => d.dutyType === "UNLINKED").length;
+  const linkedDuties = state.duties.filter(
+    (d) => d.dutyType === "LINKED",
+  ).length;
+  const unlinkedDuties = state.duties.filter(
+    (d) => d.dutyType === "UNLINKED",
+  ).length;
 
   let handovers = 0;
   state.duties.forEach((d) => {
@@ -352,9 +470,17 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
     }
   });
 
-  const objectiveScore = calculateObjectiveScore(state.duties, tripsUnassigned, input);
+  const objectiveScore = calculateObjectiveScore(
+    state.duties,
+    tripsUnassigned,
+    input,
+  );
   const solverStatus =
-    tripsUnassigned === 0 ? "FEASIBLE" : tripsCovered > 0 ? "PARTIAL" : "INFEASIBLE";
+    tripsUnassigned === 0
+      ? "FEASIBLE"
+      : tripsCovered > 0
+        ? "PARTIAL"
+        : "INFEASIBLE";
 
   // Generate explainability details for unassigned trips
   const unassignedTripsExplanations = generateExplanations(
@@ -379,6 +505,8 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
     duties: state.duties,
     unassignedTrips: unassignedTripsExplanations,
     violations: [], // Pure TS solver ensures 0 hard violations by construction!
-    explanations: unassignedTripsExplanations.map((u) => `${u.tripCode}: ${u.reason}`),
+    explanations: unassignedTripsExplanations.map(
+      (u) => `${u.tripCode}: ${u.reason}`,
+    ),
   };
 }
