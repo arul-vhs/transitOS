@@ -224,13 +224,13 @@ function IncidentsPage() {
       severity,
       serviceDate: DEFAULT_DATE,
       resourceType: resourceType === "none" ? null : (resourceType as any),
-      resourceId: resourceId || null,
-      tripId: tripId || null,
-      routeId: routeId || null,
+      resourceId: resourceId && resourceId.trim() !== "" ? resourceId.trim() : null,
+      tripId: tripId && tripId.trim() !== "" ? tripId.trim() : null,
+      routeId: routeId && routeId.trim() !== "" ? routeId.trim() : null,
       startTime: Number(startTime),
       expectedEndTime: expectedEndTime ? Number(expectedEndTime) : null,
-      location: locationName || null,
-      description: descriptionText || null,
+      location: locationName && locationName.trim() !== "" ? locationName.trim() : null,
+      description: descriptionText && descriptionText.trim() !== "" ? descriptionText.trim() : null,
     });
   };
 
@@ -809,7 +809,20 @@ function IncidentsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Disruption Category</Label>
-                  <Select value={type} onValueChange={setType}>
+                  <Select
+                    value={type}
+                    onValueChange={(val) => {
+                      setType(val);
+                      if (val === "BUS_BREAKDOWN") {
+                        setResourceType("bus");
+                      } else if (val === "CREW_ABSENCE") {
+                        setResourceType("crew");
+                      } else {
+                        setResourceType("none");
+                        setResourceId("");
+                      }
+                    }}
+                  >
                     <SelectTrigger className="text-xs font-mono">
                       <SelectValue />
                     </SelectTrigger>
@@ -839,6 +852,59 @@ function IncidentsPage() {
                 </div>
               </div>
 
+              <div className="space-y-1.5">
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">
+                    {type === "CREW_ABSENCE"
+                      ? "Affected Crew (Optional)"
+                      : "Affected Bus (Optional)"}
+                  </Label>
+                  <Select
+                    value={resourceId || "none"}
+                    onValueChange={(val) => setResourceId(val === "none" ? "" : val)}
+                  >
+                    <SelectTrigger className="text-xs font-mono">
+                      <SelectValue placeholder="Select Resource" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">General / Unspecified</SelectItem>
+                      {type === "CREW_ABSENCE"
+                        ? driversList.map((d: any) => (
+                            <SelectItem key={d.id} value={d.id}>
+                              {d.name} ({d.employeeId || d.role})
+                            </SelectItem>
+                          ))
+                        : busesList.map((b: any) => (
+                            <SelectItem key={b.id} value={b.id}>
+                              {b.fleetNumber || b.registrationNumber} ({b.depot})
+                            </SelectItem>
+                          ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Corridor / Route (Optional)</Label>
+                  <Select
+                    value={routeId || "none"}
+                    onValueChange={(val) => setRouteId(val === "none" ? "" : val)}
+                  >
+                    <SelectTrigger className="text-xs font-mono">
+                      <SelectValue placeholder="Select Route" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">General / All Corridors</SelectItem>
+                      {routesList.map((r: any) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.routeNumber} ({r.origin} - {r.destination})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Location / Road Milestone</Label>
                 <Input

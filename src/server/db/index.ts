@@ -59,3 +59,31 @@ export { pool };
 export function withTenant<T extends { tenantId: any }>(table: T, tenantId: string) {
   return eq(table.tenantId, tenantId);
 }
+
+/**
+ * Normalizes input to a valid UUID string or null to prevent PostgreSQL invalid syntax errors.
+ */
+export function cleanUuid(val: unknown): string | null {
+  if (!val || typeof val !== "string") return null;
+  const trimmed = val.trim();
+  if (
+    !trimmed ||
+    trimmed === "null" ||
+    trimmed === "undefined" ||
+    trimmed === "none" ||
+    trimmed === ""
+  ) {
+    return null;
+  }
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(trimmed) ? trimmed : null;
+}
+
+/**
+ * Normalizes input to a non-empty string or null.
+ */
+export function cleanString(val: unknown): string | null {
+  if (val === null || val === undefined) return null;
+  const str = String(val).trim();
+  return str.length > 0 ? str : null;
+}
