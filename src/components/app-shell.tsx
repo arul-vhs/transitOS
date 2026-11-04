@@ -298,6 +298,13 @@ export function AppShell({
   const { allTenants, currentTenant, currentDepot, switchTenant, switchDepot } =
     useActiveTenant();
 
+  // Keep tenant synchronized when logged in user changes
+  useEffect(() => {
+    if (user?.tenantId && user.tenantId !== currentTenant.id) {
+      void switchTenant(user.tenantId);
+    }
+  }, [user?.tenantId, currentTenant.id, switchTenant]);
+
   const handleLogout = async () => {
     try {
       await logoutFn();

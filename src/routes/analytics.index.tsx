@@ -48,6 +48,7 @@ import {
 } from "recharts";
 
 import { AppShell } from "@/components/app-shell";
+import { ServiceDatePicker } from "@/components/ui/service-date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -700,14 +701,7 @@ function AnalyticsDashboardPage() {
           </div>
 
           {/* Date Selector */}
-          <Select value={serviceDate} onValueChange={setServiceDate}>
-            <SelectTrigger className="w-34 bg-background/60 h-8.5 text-xs font-mono border-border/80 rounded-lg">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="25 Aug 2026">25 Aug 2026</SelectItem>
-            </SelectContent>
-          </Select>
+          <ServiceDatePicker value={serviceDate} onChange={setServiceDate} className="h-8.5" />
 
           {/* Print Summary Report */}
           <Button

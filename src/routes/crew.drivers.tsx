@@ -7,6 +7,7 @@ import {
   Search,
   Plus,
   Edit2,
+  Trash2,
   CheckCircle2,
   Clock,
   ArrowRight,
@@ -60,6 +61,7 @@ import {
   getCrewRoster,
   createCrewMember,
   updateCrewMember,
+  deleteCrewMember,
   updateCrewStatus,
   bulkImportCrew,
 } from "@/lib/fleet-crew";
@@ -218,6 +220,21 @@ function BusCrewPage() {
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to update crew profile.");
+    },
+  });
+
+  const [memberToDelete, setMemberToDelete] = useState<CrewItem | null>(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteCrewMember(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crew-roster"] });
+      queryClient.invalidateQueries({ queryKey: ["drivers"] });
+      toast.success("Driver removed successfully.");
+      setMemberToDelete(null);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to delete driver.");
     },
   });
 
@@ -823,15 +840,27 @@ function BusCrewPage() {
                         )}
 
                         {canManage && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleOpenEdit(member)}
-                            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md"
-                          >
-                            <Edit2 className="size-3.5 mr-1" />
-                            Edit
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenEdit(member)}
+                              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md"
+                            >
+                              <Edit2 className="size-3.5 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setMemberToDelete(member)}
+                              className="h-7 px-2 text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-500/10 rounded-md"
+                              title="Delete Driver"
+                            >
+                              <Trash2 className="size-3.5 mr-1" />
+                              Delete
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>
@@ -1204,6 +1233,38 @@ function BusCrewPage() {
             </Button>
           </DialogFooter>
         </DialogContent>
+        {/* Delete Driver Confirmation Dialog */}
+        <Dialog open={!!memberToDelete} onOpenChange={(open) => !open && setMemberToDelete(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirm Driver Removal</DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Are you sure you want to remove driver{" "}
+                <span className="font-semibold text-foreground">{memberToDelete?.name} ({memberToDelete?.employeeId})</span> from active depot roster? This will archive their duty record.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMemberToDelete(null)}
+                disabled={deleteMutation.isPending}
+                className="text-xs rounded-md"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => memberToDelete && deleteMutation.mutate(memberToDelete.id)}
+                disabled={deleteMutation.isPending}
+                className="text-xs rounded-md"
+              >
+                {deleteMutation.isPending ? "Removing..." : "Remove Driver"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </Dialog>
     </AppShell>
   );

@@ -135,6 +135,10 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
     try {
       const res = await loginFn({ data: { email, password: "password123" } });
       if (res.success) {
+        if (res.user?.tenantId) {
+          localStorage.setItem("transitos_active_tenant_id", res.user.tenantId);
+          window.dispatchEvent(new Event("transitos_tenant_change"));
+        }
         toast.success(`Signed in as ${res.user.name || "Authorized Operator"}`);
         await router.invalidate();
         await router.navigate({ to: "/" });

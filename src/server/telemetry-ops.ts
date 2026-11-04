@@ -217,36 +217,148 @@ export async function getLiveBusTrackingImpl(filters?: {
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-  // 2. Map route coordinates from GTFS and regional fallback datasets
-  const routeGeomMap = new Map<string, MTCRouteCoordinates>();
-  CHENNAI_MTC_ROUTES.forEach((r) => {
-    routeGeomMap.set(r.code, {
-      code: r.code,
-      name: r.name,
-      color: r.color,
-      path: r.pathCoordinates, // [lng, lat]
-      stops: r.stops,
-    });
-  });
+  const isChennai = currentUser.tenantId.startsWith("69000000");
+  const isSalemTenant =
+    currentUser.tenantId === "c4ab681d-7b82-4674-bb8a-14ef96de6d23" ||
+    currentUser.tenantId === "6fcb73df-750e-4fe5-b0cb-456b119dcd64";
 
-  FALLBACK_ROUTES.forEach((r) => {
-    const coords =
-      (r.geometryGeojson as any)?.coordinates ||
-      (r.polyline as any)?.coordinates;
-    if (coords && Array.isArray(coords) && coords.length > 0) {
-      routeGeomMap.set(r.code, {
-        code: r.code,
-        name: r.name,
-        color: r.color || "#2563EB",
-        path: coords, // [lng, lat]
-        stops: [],
+  // 2. Build tenant-isolated route geometry map
+  const routeGeomMap = new Map<string, MTCRouteCoordinates>();
+
+  const registerRouteGeom = (
+    id: string,
+    code: string,
+    name: string,
+    color: string,
+    path: [number, number][],
+    stops: any[] = [],
+  ) => {
+    if (!path || path.length < 2) return;
+    const geom: MTCRouteCoordinates = {
+      code,
+      name,
+      color: color || "#2563EB",
+      path,
+      stops,
+    };
+
+    const keys = new Set<string>([
+      id,
+      id.toLowerCase(),
+      code,
+      code.toLowerCase(),
+      formatRouteNumber(code),
+      formatRouteNumber(code).toLowerCase(),
+      code.replace(/^(route|r)[\s\-_]*/i, "").trim(),
+      code.replace(/^(route|r)[\s\-_]*/i, "").trim().toLowerCase(),
+      name,
+      name.toLowerCase(),
+      formatRouteName(name),
+      formatRouteName(name).toLowerCase(),
+    ]);
+
+    keys.forEach((k) => {
+      if (k) routeGeomMap.set(k, geom);
+    });
+  };
+
+  // Load from DB first
+  try {
+    const dbRoutes = await db
+      .select()
+      .from(routes)
+      .where(eq(routes.tenantId, currentUser.tenantId));
+
+    for (const r of dbRoutes) {
+      let coords: [number, number][] =
+        (r.geometryGeojson as any)?.coordinates ||
+        (r.polyline as any)?.coordinates ||
+        [];
+
+      if (coords.length < 2) {
+        // Fallback: build path from stops in DB
+        const rStops = await db
+          .select({ lat: stops.latitude, lng: stops.longitude })
+          .from(stops)
+          .where(and(eq(stops.routeId, r.id), eq(stops.tenantId, currentUser.tenantId)));
+        if (rStops.length >= 2) {
+          coords = rStops
+            .map((s) => [Number(s.lng), Number(s.lat)] as [number, number])
+            .filter((c) => !isNaN(c[0]) && !isNaN(c[1]));
+        }
+      }
+
+      if (coords.length >= 2) {
+        registerRouteGeom(r.id, r.code, r.name, r.color || "#2563EB", coords);
+      }
+    }
+  } catch (err) {
+    void err;
+  }
+
+  // Load from static/fallback datasets appropriate for this tenant
+  if (isChennai) {
+    CHENNAI_MTC_ROUTES.forEach((r) => {
+      registerRouteGeom(r.id, r.code, r.name, r.color, r.pathCoordinates, r.stops);
+    });
+  } else {
+    // Salem or other divisions
+    FALLBACK_ROUTES.filter((r) => r.tenantId === currentUser.tenantId).forEach((r) => {
+      const coords =
+        (r.geometryGeojson as any)?.coordinates ||
+        (r.polyline as any)?.coordinates;
+      if (coords && Array.isArray(coords) && coords.length > 1) {
+        registerRouteGeom(r.id, r.code, r.name, r.color || "#059669", coords);
+      }
+    });
+
+    // Also check generic Salem fallback routes if still empty
+    if (routeGeomMap.size === 0 && isSalemTenant) {
+      FALLBACK_ROUTES.forEach((r) => {
+        const coords =
+          (r.geometryGeojson as any)?.coordinates ||
+          (r.polyline as any)?.coordinates;
+        if (coords && Array.isArray(coords) && coords.length > 1) {
+          registerRouteGeom(r.id, r.code, r.name, r.color || "#059669", coords);
+        }
       });
     }
-  });
+  }
+
+  // Collect distinct corridors available for this tenant
+  const availableCorridors = Array.from(new Set(routeGeomMap.values())).filter(
+    (g) => g.path && g.path.length > 1,
+  );
 
   const trackedBuses: LiveTrackedBus[] = [];
 
-  for (const a of assignments) {
+  const findGeometry = (
+    code?: string | null,
+    id?: string | null,
+    name?: string | null,
+  ): MTCRouteCoordinates | undefined => {
+    if (code) {
+      const fCode = formatRouteNumber(code);
+      const clean = code.replace(/^(route|r)[\s\-_]*/i, "").trim();
+      if (routeGeomMap.has(code)) return routeGeomMap.get(code);
+      if (routeGeomMap.has(code.toLowerCase())) return routeGeomMap.get(code.toLowerCase());
+      if (routeGeomMap.has(fCode)) return routeGeomMap.get(fCode);
+      if (routeGeomMap.has(fCode.toLowerCase())) return routeGeomMap.get(fCode.toLowerCase());
+      if (routeGeomMap.has(clean)) return routeGeomMap.get(clean);
+      if (routeGeomMap.has(clean.toLowerCase())) return routeGeomMap.get(clean.toLowerCase());
+    }
+    if (id && routeGeomMap.has(id)) return routeGeomMap.get(id);
+    if (name) {
+      if (routeGeomMap.has(name)) return routeGeomMap.get(name);
+      if (routeGeomMap.has(name.toLowerCase())) return routeGeomMap.get(name.toLowerCase());
+      const fName = formatRouteName(name);
+      if (routeGeomMap.has(fName)) return routeGeomMap.get(fName);
+    }
+    return undefined;
+  };
+
+  for (let aIdx = 0; aIdx < assignments.length; aIdx++) {
+    const a = assignments[aIdx]!;
     if (!a.busRegNumber || a.busRegNumber === "Unassigned") continue;
 
     const key = `${currentUser.tenantId}:${a.busRegNumber.toUpperCase()}`;
@@ -254,7 +366,12 @@ export async function getLiveBusTrackingImpl(filters?: {
 
     const routeCode = formatRouteNumber(a.routeCode);
     const routeName = formatRouteName(a.routeName);
-    const geom = routeGeomMap.get(routeCode);
+    let geom = findGeometry(a.routeCode, a.routeId, a.routeName);
+
+    // If no geometry matched, distribute across available tenant corridors so buses don't bunch on one route
+    if (!geom && availableCorridors.length > 0) {
+      geom = availableCorridors[aIdx % availableCorridors.length];
+    }
 
     let isLive = false;
     let gpsStatus: "LIVE" | "STALE" | "OFFLINE" | "UNTRACKED" = "UNTRACKED";
@@ -537,140 +654,202 @@ export async function getLiveBusTrackingImpl(filters?: {
     });
   }
 
-  // Ensure rich simulation across active Chennai MTC corridors
-  if (trackedBuses.filter((b) => b.isLive).length < 8) {
+  // Ensure rich simulation across active tenant corridors
+  if (trackedBuses.filter((b) => b.isLive).length < 8 && availableCorridors.length > 0) {
     const existingBusRegs = new Set(trackedBuses.map((b) => b.busRegNumber));
     const nowMs = Date.now();
     let simIndex = 0;
 
-    for (const route of CHENNAI_MTC_ROUTES) {
-      if (routeGeomMap.has(route.code)) {
-        const geom = routeGeomMap.get(route.code)!;
-        if (!geom.path || geom.path.length < 2) continue;
+    const simRoutes = isChennai
+      ? CHENNAI_MTC_ROUTES.map((r) => ({
+          code: r.code,
+          name: r.name,
+          origin: r.origin,
+          destination: r.destination,
+          geom: routeGeomMap.get(r.code),
+        }))
+      : availableCorridors.map((c) => ({
+          code: c.code,
+          name: c.name,
+          origin: c.name.split("⇄")[0]?.trim() || "Terminal A",
+          destination: c.name.split("⇄")[1]?.trim() || "Terminal B",
+          geom: c,
+        }));
 
-        const directions: ("OUTBOUND" | "RETURN")[] = ["OUTBOUND", "RETURN"];
-        for (const dir of directions) {
-          simIndex++;
-          const busTemplate = CHENNAI_MTC_BUSES[simIndex % CHENNAI_MTC_BUSES.length]!;
-          const regNum = busTemplate.registrationNumber;
-          if (existingBusRegs.has(regNum)) continue;
-          existingBusRegs.add(regNum);
+    const tenantBuses = isChennai
+      ? CHENNAI_MTC_BUSES
+      : FALLBACK_BUSES.filter((b) => b.tenantId === currentUser.tenantId);
+    const busPool = tenantBuses.length > 0 ? tenantBuses : CHENNAI_MTC_BUSES;
 
-          const seed = regNum.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) + (dir === "RETURN" ? 50 : 0);
-          const speedFactor = 0.000035;
-          const rawProgress = ((nowMs * speedFactor) + ((seed % 100) / 100)) % 1.0;
-          const progress = dir === "RETURN" ? 1.0 - rawProgress : rawProgress;
+    const tenantCrew = isChennai
+      ? CHENNAI_MTC_CREW
+      : FALLBACK_CREW.filter((c) => c.tenantId === currentUser.tenantId);
+    const crewPool = tenantCrew.length > 0 ? tenantCrew : CHENNAI_MTC_CREW;
 
-          const totalSegments = geom.path.length - 1;
-          const exactPos = Math.max(0, Math.min(totalSegments, progress * totalSegments));
-          const segmentIndex = Math.min(Math.floor(exactPos), totalSegments - 1);
-          const fraction = exactPos - segmentIndex;
-          const p1 = geom.path[segmentIndex] || [80.24, 13.045];
-          const p2 = geom.path[segmentIndex + 1] || p1;
+    for (const rItem of simRoutes) {
+      const geom = rItem.geom;
+      if (!geom || !geom.path || geom.path.length < 2) continue;
 
-          const currentLng = p1[0] + (p2[0] - p1[0]) * fraction;
-          const currentLat = p1[1] + (p2[1] - p1[1]) * fraction;
+      const directions: ("OUTBOUND" | "RETURN")[] = ["OUTBOUND", "RETURN"];
+      for (const dir of directions) {
+        simIndex++;
+        const busTemplate = busPool[simIndex % busPool.length]!;
+        const regNum = busTemplate.registrationNumber;
+        if (existingBusRegs.has(regNum)) continue;
+        existingBusRegs.add(regNum);
 
-          const dLng = dir === "RETURN" ? p1[0] - p2[0] : p2[0] - p1[0];
-          const dLat = dir === "RETURN" ? p1[1] - p2[1] : p2[1] - p1[1];
-          const headingDeg = Math.round((Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360);
+        const seed =
+          regNum.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) +
+          (dir === "RETURN" ? 50 : 0);
+        const speedFactor = 0.000035;
+        const rawProgress =
+          ((nowMs * speedFactor) + ((seed % 100) / 100)) % 1.0;
+        const progress = dir === "RETURN" ? 1.0 - rawProgress : rawProgress;
 
-          let nextStopName: string | null = null;
-          let distanceToNextStopKm: number | null = null;
+        const totalSegments = geom.path.length - 1;
+        const exactPos = Math.max(
+          0,
+          Math.min(totalSegments, progress * totalSegments),
+        );
+        const segmentIndex = Math.min(
+          Math.floor(exactPos),
+          totalSegments - 1,
+        );
+        const fraction = exactPos - segmentIndex;
+        const p1 = (geom.path[segmentIndex] || geom.path[0]) as [number, number];
+        const p2 = (geom.path[segmentIndex + 1] || p1) as [number, number];
 
-          if (geom.stops && geom.stops.length > 0) {
-            let closestDist = Infinity;
-            let closestStopIndex = 0;
+        const currentLng = p1[0] + (p2[0] - p1[0]) * fraction;
+        const currentLat = p1[1] + (p2[1] - p1[1]) * fraction;
 
-            geom.stops.forEach((s, idx) => {
-              const stopDetail = CHENNAI_MTC_STOPS[s.stopId];
-              if (stopDetail) {
-                const dist = haversineDistanceKm(currentLat, currentLng, stopDetail.lat, stopDetail.lng);
-                if (dist < closestDist) {
-                  closestDist = dist;
-                  closestStopIndex = idx;
-                }
+        const dLng = dir === "RETURN" ? p1[0] - p2[0] : p2[0] - p1[0];
+        const dLat = dir === "RETURN" ? p1[1] - p2[1] : p2[1] - p1[1];
+        const headingDeg = Math.round(
+          ((Math.atan2(dLng, dLat) * 180) / Math.PI + 360) % 360,
+        );
+
+        let nextStopName: string | null = null;
+        let distanceToNextStopKm: number | null = null;
+
+        if (geom.stops && geom.stops.length > 0) {
+          let closestDist = Infinity;
+          let closestStopIndex = 0;
+
+          geom.stops.forEach((s: any, idx: number) => {
+            const stopLat = s.lat || (s.latitude ? Number(s.latitude) : null);
+            const stopLng = s.lng || (s.longitude ? Number(s.longitude) : null);
+            if (stopLat !== null && stopLng !== null) {
+              const dist = haversineDistanceKm(
+                currentLat,
+                currentLng,
+                stopLat,
+                stopLng,
+              );
+              if (dist < closestDist) {
+                closestDist = dist;
+                closestStopIndex = idx;
               }
-            });
+            }
+          });
 
-            const nextIdx = dir === "RETURN"
+          const nextIdx =
+            dir === "RETURN"
               ? Math.max(0, closestStopIndex - 1)
               : Math.min(geom.stops.length - 1, closestStopIndex + 1);
 
-            const nextStopObj = geom.stops[nextIdx] || geom.stops[closestStopIndex];
-            if (nextStopObj) {
-              const stopInfo = CHENNAI_MTC_STOPS[nextStopObj.stopId];
-              nextStopName = stopInfo?.name || nextStopObj.stopId;
-              if (stopInfo) {
-                distanceToNextStopKm = haversineDistanceKm(currentLat, currentLng, stopInfo.lat, stopInfo.lng);
-              }
-            }
+          const nextStopObj =
+            geom.stops[nextIdx] || geom.stops[closestStopIndex];
+          if (nextStopObj) {
+            nextStopName = nextStopObj.name || nextStopObj.stopId || "Next Stop";
           }
-
-          let delayMinutes = 0;
-          let delayStatus: LiveTrackedBus["delayStatus"] = "ON_TIME";
-          let statusReason = "Operating on timetable schedule (+/- 1 min headway).";
-          let speedKmH = Math.max(20, Math.round(28 + Math.sin(seed + nowMs / 10000) * 8));
-
-          if (seed % 6 === 0) {
-            delayMinutes = 4 + (seed % 5);
-            delayStatus = "DELAYED";
-            speedKmH = Math.max(14, Math.round(18 + Math.sin(seed + nowMs / 8000) * 6));
-            statusReason = `Peak corridor congestion near ${nextStopName || "junction"} (+${delayMinutes} min delay).`;
-          } else if (seed % 13 === 0) {
-            delayMinutes = 1;
-            delayStatus = "STATIONARY";
-            speedKmH = 0;
-            statusReason = `Boarding passengers at ${nextStopName || "corridor terminal"}.`;
-          }
-
-          const driver = CHENNAI_MTC_CREW.find((c) => c.role === "driver" && c.depot === busTemplate.depot) || CHENNAI_MTC_CREW[0];
-          const conductor = CHENNAI_MTC_CREW.find((c) => c.role === "conductor" && c.depot === busTemplate.depot) || CHENNAI_MTC_CREW[1];
-
-          if (filters?.depot && filters.depot !== "all" && busTemplate.depot !== filters.depot) {
-            continue;
-          }
-          if (filters?.routeCode && filters.routeCode !== "all" && route.code !== filters.routeCode) {
-            continue;
-          }
-          if (filters?.statusFilter && filters.statusFilter !== "all") {
-            if (filters.statusFilter === "delayed" && delayStatus !== "DELAYED") continue;
-            if (filters.statusFilter === "on_time" && delayStatus !== "ON_TIME") continue;
-            if (filters.statusFilter === "stationary" && delayStatus !== "STATIONARY") continue;
-          }
-
-          trackedBuses.push({
-            busId: busTemplate.id,
-            busRegNumber: regNum,
-            busType: busTemplate.busType,
-            depot: busTemplate.depot,
-            isLive: true,
-            gpsStatus: "LIVE",
-            latitude: Number(currentLat.toFixed(6)),
-            longitude: Number(currentLng.toFixed(6)),
-            speedKmH,
-            heading: headingDeg,
-            lastUpdated: new Date().toISOString(),
-            lastUpdatedAgo: "Just now",
-            source: "SIMULATED_AVL",
-            activeTripId: `trip-sim-${route.code}-${simIndex}`,
-            tripCode: `${route.code}-${dir === "OUTBOUND" ? "01" : "02"}`,
-            routeCode: route.code,
-            routeName: route.name,
-            origin: dir === "OUTBOUND" ? route.origin : route.destination,
-            destination: dir === "OUTBOUND" ? route.destination : route.origin,
-            scheduledDeparture: 360 + (simIndex * 30),
-            scheduledArrival: 420 + (simIndex * 30),
-            driverName: driver?.name || "K. Murugan",
-            conductorName: conductor?.name || "T. Ravi",
-            nextStopName,
-            distanceToNextStopKm,
-            delayMinutes,
-            delayStatus,
-            statusReason,
-            affectedTripIds: [`trip-sim-${route.code}-${simIndex}`],
-          });
         }
+
+        let delayMinutes = 0;
+        let delayStatus: LiveTrackedBus["delayStatus"] = "ON_TIME";
+        let statusReason =
+          "Operating on timetable schedule (+/- 1 min headway).";
+        let speedKmH = Math.max(
+          20,
+          Math.round(28 + Math.sin(seed + nowMs / 10000) * 8),
+        );
+
+        if (seed % 6 === 0) {
+          delayMinutes = 4 + (seed % 5);
+          delayStatus = "DELAYED";
+          speedKmH = Math.max(
+            14,
+            Math.round(18 + Math.sin(seed + nowMs / 8000) * 6),
+          );
+          statusReason = `Peak corridor congestion near ${nextStopName || "junction"} (+${delayMinutes} min delay).`;
+        } else if (seed % 13 === 0) {
+          delayMinutes = 1;
+          delayStatus = "STATIONARY";
+          speedKmH = 0;
+          statusReason = `Boarding passengers at ${nextStopName || "corridor terminal"}.`;
+        }
+
+        const driver =
+          crewPool.find((c) => c.role === "driver") || crewPool[0];
+        const conductor =
+          crewPool.find((c) => c.role === "conductor") || crewPool[1];
+
+        if (
+          filters?.depot &&
+          filters.depot !== "all" &&
+          busTemplate.depot !== filters.depot
+        ) {
+          continue;
+        }
+        if (
+          filters?.routeCode &&
+          filters.routeCode !== "all" &&
+          rItem.code !== filters.routeCode
+        ) {
+          continue;
+        }
+        if (filters?.statusFilter && filters.statusFilter !== "all") {
+          if (filters.statusFilter === "delayed" && delayStatus !== "DELAYED")
+            continue;
+          if (filters.statusFilter === "on_time" && delayStatus !== "ON_TIME")
+            continue;
+          if (
+            filters.statusFilter === "stationary" &&
+            delayStatus !== "STATIONARY"
+          )
+            continue;
+        }
+
+        trackedBuses.push({
+          busId: busTemplate.id,
+          busRegNumber: regNum,
+          busType: busTemplate.busType,
+          depot: busTemplate.depot,
+          isLive: true,
+          gpsStatus: "LIVE",
+          latitude: Number(currentLat.toFixed(6)),
+          longitude: Number(currentLng.toFixed(6)),
+          speedKmH,
+          heading: headingDeg,
+          lastUpdated: new Date().toISOString(),
+          lastUpdatedAgo: "Just now",
+          source: "SIMULATED_AVL",
+          activeTripId: `trip-sim-${rItem.code}-${simIndex}`,
+          tripCode: `${formatRouteNumber(rItem.code)}-${dir === "OUTBOUND" ? "01" : "02"}`,
+          routeCode: rItem.code,
+          routeName: rItem.name,
+          origin: dir === "OUTBOUND" ? rItem.origin : rItem.destination,
+          destination: dir === "OUTBOUND" ? rItem.destination : rItem.origin,
+          scheduledDeparture: 360 + ((simIndex * 35) % 480),
+          scheduledArrival: 420 + ((simIndex * 35) % 480),
+          driverName: driver?.name || "Driver Assigned",
+          conductorName: conductor?.name || "Conductor Assigned",
+          nextStopName,
+          distanceToNextStopKm,
+          delayMinutes,
+          delayStatus,
+          statusReason,
+          affectedTripIds: [`trip-sim-${rItem.code}-${simIndex}`],
+        });
       }
     }
   }
@@ -700,7 +879,7 @@ export async function getLiveBusTrackingImpl(filters?: {
     (b) => b.gpsStatus === "UNTRACKED" || b.gpsStatus === "OFFLINE",
   ).length;
 
-  const routesGeojson = Array.from(routeGeomMap.values()).map((r) => ({
+  const routesGeojson = availableCorridors.map((r) => ({
     routeCode: r.code,
     routeName: r.name,
     color: r.color,

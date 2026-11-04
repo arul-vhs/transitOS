@@ -325,6 +325,17 @@ export const getCrewAvailability = async () => {
   return await _getCrewAvailability();
 };
 
+const _deleteCrewMember = createServerFn({ method: "POST" })
+  .validator((id: string) => id)
+  .handler(async ({ data }) => {
+    const { deleteCrewMemberImpl } = await import("../server/fleet-crew");
+    return await deleteCrewMemberImpl(data);
+  });
+
+export const deleteCrewMember = async (id: string | { data: string }) => {
+  return await _deleteCrewMember(toServerFnArgs(id)!);
+};
+
 const _getCrewRoster = createServerFn({ method: "GET" })
   .validator(
     (

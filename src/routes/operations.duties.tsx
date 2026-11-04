@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { ServiceDatePicker } from "@/components/ui/service-date-picker";
 import { RouteBadge } from "@/lib/route-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -401,17 +402,8 @@ function DutiesPage() {
         {/* TOP FILTER BAR */}
         <div className="glass-panel p-4 flex flex-wrap gap-4 items-center justify-between rounded-lg border border-border">
           <div className="flex flex-1 flex-wrap gap-3 items-center min-w-[280px]">
-            {/* Service Date Input */}
-            <div className="flex items-center gap-2">
-              <Calendar className="size-4 text-primary shrink-0" />
-              <Input
-                type="text"
-                placeholder="25 Aug 2026"
-                value={serviceDate}
-                onChange={(e) => setServiceDate(e.target.value)}
-                className="w-36 bg-background/60 h-9 text-xs font-mono border-border/80 rounded-md"
-              />
-            </div>
+            {/* Service Date Selector */}
+            <ServiceDatePicker value={serviceDate} onChange={setServiceDate} />
 
             {/* Status Select */}
             <div className="flex items-center gap-2">

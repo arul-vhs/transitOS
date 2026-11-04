@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { ServiceDatePicker } from "@/components/ui/service-date-picker";
 import { TransitTable, ColumnDef } from "@/components/ui/transit-table";
 import { RouteBadge, formatRouteName } from "@/lib/route-utils";
 import { useActiveTenant } from "@/lib/tenant-context";
@@ -101,7 +102,7 @@ export const Route = createFileRoute("/operations/trips")({
   component: TripsPage,
 });
 
-const DEFAULT_DATE = getTodayIndianDate();
+const DEFAULT_DATE = "25 Aug 2026";
 
 function parseTimeToMinutes(timeStr: string): number {
   if (!timeStr) return 360;
@@ -921,16 +922,7 @@ function TripsPage() {
         <div className="rounded-lg border border-border/80 bg-card p-4 flex flex-wrap gap-3 items-center justify-between shadow-xs">
           <div className="flex flex-1 flex-wrap gap-2.5 items-center min-w-[300px]">
             {/* Service Date Selector */}
-            <div className="flex items-center gap-1.5 border border-border rounded-md px-2.5 py-1 bg-muted/30">
-              <Calendar className="size-3.5 text-muted-foreground" />
-              <input
-                type="text"
-                value={serviceDate}
-                onChange={(e) => setServiceDate(e.target.value)}
-                className="bg-transparent text-xs font-semibold focus:outline-none w-24"
-                title="Service Date"
-              />
-            </div>
+            <ServiceDatePicker value={serviceDate} onChange={setServiceDate} />
 
             {/* Search */}
             <div className="relative flex-1 max-w-xs min-w-[180px]">

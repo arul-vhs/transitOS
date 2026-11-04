@@ -4,6 +4,7 @@ import { MapPin, Building, Bus, Landmark, Check, Search, X } from "lucide-react"
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { searchLocations, CanonicalLocation } from "@/lib/location-fns";
+import { useActiveTenant } from "@/lib/tenant-context";
 import { cn } from "@/lib/utils";
 
 interface LocationAutocompleteProps {
@@ -20,11 +21,18 @@ export function LocationAutocomplete({
   value,
   onChange,
   onSelectLocation,
-  placeholder = "Search Chennai stop, terminus or depot...",
+  placeholder,
   disabled = false,
   className,
   autoFocus = false,
 }: LocationAutocompleteProps) {
+  const { currentTenant } = useActiveTenant();
+  const effectivePlaceholder =
+    placeholder ||
+    (currentTenant.id.startsWith("69000000")
+      ? "Search Chennai stop, terminus or depot..."
+      : `Search ${currentTenant.name.split(" ")[0]} stop or landmark...`);
+
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value || "");
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -36,11 +44,12 @@ export function LocationAutocomplete({
   }, [value]);
 
   const { data: suggestions = [], isFetching } = useQuery({
-    queryKey: ["canonical-locations-search", inputValue],
+    queryKey: ["canonical-locations-search", currentTenant.id, inputValue],
     queryFn: async () => {
       const results = await searchLocations({
         query: inputValue,
         limit: 8,
+        tenantId: currentTenant.id,
       });
       return results || [];
     },
@@ -151,7 +160,7 @@ export function LocationAutocomplete({
           value={inputValue}
           disabled={disabled}
           autoFocus={autoFocus}
-          placeholder={placeholder}
+          placeholder={effectivePlaceholder}
           onFocus={() => setIsOpen(true)}
           onChange={(e) => {
             const next = e.target.value;

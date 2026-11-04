@@ -57,6 +57,10 @@ function LoginPage() {
     try {
       const res = await loginFn({ data: { email, password } });
       if (res.success) {
+        if (res.user?.tenantId) {
+          localStorage.setItem("transitos_active_tenant_id", res.user.tenantId);
+          window.dispatchEvent(new Event("transitos_tenant_change"));
+        }
         toast.success(`Welcome back, ${res.user.name || "User"}!`);
         // Invalidate router context to load the user info
         await router.invalidate();

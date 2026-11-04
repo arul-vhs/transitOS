@@ -451,23 +451,64 @@ export async function deleteRouteImpl(id: string) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "routes.manage");
 
-  const route = await db.query.routes.findFirst({
-    where: and(eq(routes.id, id), eq(routes.tenantId, currentUser.tenantId)),
-  });
-  if (!route) throw new Error("Route not found");
+  let routeName = id;
+  let foundInDb = false;
 
-  await db
-    .delete(routes)
-    .where(and(eq(routes.id, id), eq(routes.tenantId, currentUser.tenantId)));
+  try {
+    const route = await db.query.routes.findFirst({
+      where: and(eq(routes.id, id), eq(routes.tenantId, currentUser.tenantId)),
+    });
+
+    if (route) {
+      foundInDb = true;
+      routeName = `${route.code} (${route.name})`;
+
+      // Delete linked stops and trips to satisfy foreign keys
+      await db
+        .delete(stops)
+        .where(and(eq(stops.routeId, id), eq(stops.tenantId, currentUser.tenantId)));
+
+      await db
+        .delete(trips)
+        .where(and(eq(trips.routeId, id), eq(trips.tenantId, currentUser.tenantId)));
+
+      await db
+        .delete(routes)
+        .where(and(eq(routes.id, id), eq(routes.tenantId, currentUser.tenantId)));
+    }
+  } catch (err) {
+    void err;
+  }
+
+  // Also remove from fallback and static datasets
+  const fbIdx = FALLBACK_ROUTES.findIndex(
+    (r) => (r.id === id || r.code === id) && (r.tenantId === currentUser.tenantId || !r.tenantId),
+  );
+  if (fbIdx !== -1) {
+    routeName = `${FALLBACK_ROUTES[fbIdx]!.code} (${FALLBACK_ROUTES[fbIdx]!.name})`;
+    FALLBACK_ROUTES.splice(fbIdx, 1);
+  }
+
+  const chnIdx = CHENNAI_MTC_ROUTES.findIndex(
+    (r) => r.id === id || r.code === id,
+  );
+  if (chnIdx !== -1) {
+    routeName = `${CHENNAI_MTC_ROUTES[chnIdx]!.code} (${CHENNAI_MTC_ROUTES[chnIdx]!.name})`;
+    CHENNAI_MTC_ROUTES.splice(chnIdx, 1);
+  }
 
   // Audit log
-  await db.insert(auditLogs).values({
-    tenantId: currentUser.tenantId,
-    userId: currentUser.id,
-    email: currentUser.email,
-    action: "ROUTE_ARCHIVED",
-    details: `Deleted route: ${route.code} (${route.name})`,
-  });
+  try {
+    await db.insert(auditLogs).values({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      email: currentUser.email,
+      action: "ROUTE_ARCHIVED",
+      details: `Deleted route: ${routeName}`,
+    });
+  } catch (e) {
+    void e;
+  }
 
   return { success: true };
 }

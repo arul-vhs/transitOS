@@ -4,6 +4,8 @@ import { db } from "./db";
 import { stops, routes } from "./db/schema";
 import { requireAuth } from "./auth";
 import { eq } from "drizzle-orm";
+import { FALLBACK_STOPS } from "./db/fallback-data";
+import { CHENNAI_MTC_STOPS } from "./data/chennai-mtc-dataset";
 
 export interface CanonicalLocation {
   id: string;
@@ -210,56 +212,239 @@ const MAJOR_CHENNAI_HUBS: CanonicalLocation[] = [
   },
 ];
 
-let cachedCanonicalLocations: CanonicalLocation[] | null = null;
+// Major hubs and landmarks for Salem
+const MAJOR_SALEM_HUBS: CanonicalLocation[] = [
+  {
+    id: "hub-slm-town",
+    name: "Salem Town Bus Stand (Old Bus Stand)",
+    code: "SLM-OBS",
+    lat: 11.6528,
+    lng: 78.1591,
+    type: "terminal",
+    area: "Central Salem",
+    routesServed: ["1", "4", "13", "74"],
+  },
+  {
+    id: "hub-slm-mgr",
+    name: "MGR Central Bus Stand (New Bus Stand)",
+    code: "SLM-NBS",
+    lat: 11.6673,
+    lng: 78.1424,
+    type: "terminal",
+    area: "Meyyanur",
+    routesServed: ["8", "33", "55"],
+  },
+  {
+    id: "hub-slm-jnc",
+    name: "Salem Junction Railway Station",
+    code: "SLM-JNC",
+    lat: 11.6714,
+    lng: 78.1132,
+    type: "station",
+    area: "Suramangalam",
+    routesServed: ["1", "2A"],
+  },
+  {
+    id: "hub-slm-four-roads",
+    name: "Four Roads Junction",
+    code: "SLM-4RD",
+    lat: 11.658,
+    lng: 78.155,
+    type: "stop",
+    area: "Central Salem",
+    routesServed: ["1", "13", "74"],
+  },
+  {
+    id: "hub-slm-five-roads",
+    name: "Five Roads Junction",
+    code: "SLM-5RD",
+    lat: 11.6668,
+    lng: 78.1565,
+    type: "stop",
+    area: "Meyyanur",
+    routesServed: ["1", "74"],
+  },
+  {
+    id: "hub-slm-hasthampatti",
+    name: "Hasthampatti Roundana",
+    code: "SLM-HST",
+    lat: 11.6705,
+    lng: 78.1437,
+    type: "terminal",
+    area: "North Salem",
+    routesServed: ["8", "13"],
+  },
+  {
+    id: "hub-slm-meyyanur-depot",
+    name: "Meyyanur Central Depot",
+    code: "SLM-MEY-01",
+    lat: 11.6675,
+    lng: 78.143,
+    type: "depot",
+    area: "Meyyanur",
+    routesServed: ["1", "8", "33"],
+  },
+  {
+    id: "hub-slm-kondalampatti",
+    name: "Kondalampatti Roundana",
+    code: "SLM-KND",
+    lat: 11.652,
+    lng: 78.143,
+    type: "terminal",
+    area: "South Salem",
+    routesServed: ["4"],
+  },
+  {
+    id: "hub-slm-ammapet",
+    name: "Ammapet Colony",
+    code: "SLM-AMP",
+    lat: 11.672,
+    lng: 78.148,
+    type: "stop",
+    area: "East Salem",
+    routesServed: ["8"],
+  },
+  {
+    id: "hub-slm-yercaud-foot",
+    name: "Yercaud Foothills",
+    code: "SLM-YRC",
+    lat: 11.685,
+    lng: 78.175,
+    type: "terminal",
+    area: "Foot of Shevaroys",
+    routesServed: ["13"],
+  },
+  {
+    id: "hub-slm-steel-plant",
+    name: "Salem Steel Plant",
+    code: "SLM-STP",
+    lat: 11.678,
+    lng: 78.122,
+    type: "terminal",
+    area: "West Salem",
+    routesServed: ["33"],
+  },
+  {
+    id: "hub-slm-suramangalam-depot",
+    name: "Suramangalam Depot",
+    code: "SLM-SUR-03",
+    lat: 11.6718,
+    lng: 78.117,
+    type: "depot",
+    area: "Suramangalam",
+    routesServed: ["2A"],
+  },
+];
 
-function loadCanonicalLocations(): CanonicalLocation[] {
-  if (cachedCanonicalLocations) return cachedCanonicalLocations;
+const tenantLocationCache = new Map<string, CanonicalLocation[]>();
 
-  const locs: CanonicalLocation[] = [...MAJOR_CHENNAI_HUBS];
-  const seenNames = new Set(MAJOR_CHENNAI_HUBS.map((h) => h.name.toLowerCase()));
-
-  const jsonFile = path.resolve(process.cwd(), "data/chennai-canonical-locations.json");
-  if (fs.existsSync(jsonFile)) {
+async function loadLocationsForTenant(tenantId?: string): Promise<CanonicalLocation[]> {
+  let resolvedTenantId = tenantId;
+  if (!resolvedTenantId) {
     try {
-      const raw = JSON.parse(fs.readFileSync(jsonFile, "utf8"));
-      if (Array.isArray(raw)) {
-        for (const item of raw) {
-          const normName = (item.name || "").trim();
-          if (normName && !seenNames.has(normName.toLowerCase())) {
-            seenNames.add(normName.toLowerCase());
-            locs.push({
-              id: item.id || `loc-${normName.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
-              name: normName,
-              lat: Number(item.lat),
-              lng: Number(item.lng),
-              type: "stop",
-            });
-          }
-        }
-      }
+      const user = await requireAuth();
+      resolvedTenantId = user.tenantId;
     } catch {
-      // Fallback to major hubs
+      resolvedTenantId = "69000000-0000-4000-8000-000000000069";
     }
   }
 
-  cachedCanonicalLocations = locs;
-  return cachedCanonicalLocations;
+  if (tenantLocationCache.has(resolvedTenantId)) {
+    return tenantLocationCache.get(resolvedTenantId)!;
+  }
+
+  const isSalem =
+    resolvedTenantId === "c4ab681d-7b82-4674-bb8a-14ef96de6d23" ||
+    resolvedTenantId === "6fcb73df-750e-4fe5-b0cb-456b119dcd64";
+  const isChennai = resolvedTenantId.startsWith("69000000");
+
+  const baseHubs = isSalem ? MAJOR_SALEM_HUBS : isChennai ? MAJOR_CHENNAI_HUBS : [];
+  const locs: CanonicalLocation[] = [...baseHubs];
+  const seenNames = new Set(baseHubs.map((h) => h.name.toLowerCase()));
+
+  // 1. Load database stops for this tenant
+  try {
+    const dbStops = await db
+      .select({
+        id: stops.id,
+        name: stops.name,
+        code: stops.code,
+        latitude: stops.latitude,
+        longitude: stops.longitude,
+      })
+      .from(stops)
+      .where(eq(stops.tenantId, resolvedTenantId));
+
+    for (const s of dbStops) {
+      const normName = (s.name || "").trim();
+      if (normName && !seenNames.has(normName.toLowerCase())) {
+        seenNames.add(normName.toLowerCase());
+        locs.push({
+          id: s.id,
+          name: normName,
+          code: s.code || undefined,
+          lat: Number(s.latitude) || 0,
+          lng: Number(s.longitude) || 0,
+          type: "stop",
+        });
+      }
+    }
+  } catch {
+    // Continue with fallback data
+  }
+
+  // 2. Load fallback stops if needed
+  if (isSalem) {
+    FALLBACK_STOPS.filter(
+      (s) => s.tenantId === resolvedTenantId || s.tenantId === "c4ab681d-7b82-4674-bb8a-14ef96de6d23",
+    ).forEach((s) => {
+      const normName = (s.name || "").trim();
+      if (normName && !seenNames.has(normName.toLowerCase())) {
+        seenNames.add(normName.toLowerCase());
+        locs.push({
+          id: s.id,
+          name: normName,
+          code: s.code || undefined,
+          lat: Number(s.latitude) || 11.65,
+          lng: Number(s.longitude) || 78.15,
+          type: "stop",
+        });
+      }
+    });
+  } else if (isChennai) {
+    Object.values(CHENNAI_MTC_STOPS).forEach((s) => {
+      const normName = (s.name || "").trim();
+      if (normName && !seenNames.has(normName.toLowerCase())) {
+        seenNames.add(normName.toLowerCase());
+        locs.push({
+          id: s.id,
+          name: normName,
+          code: s.code || undefined,
+          lat: s.lat,
+          lng: s.lng,
+          type: s.isTerminal ? "terminal" : "stop",
+          area: s.zone,
+        });
+      }
+    });
+  }
+
+  tenantLocationCache.set(resolvedTenantId, locs);
+  return locs;
 }
 
-export async function searchLocationsImpl(query: string, limit = 12): Promise<CanonicalLocation[]> {
-  const allLocations = loadCanonicalLocations();
+export async function searchLocationsImpl(
+  query: string,
+  limit = 12,
+  tenantId?: string,
+): Promise<CanonicalLocation[]> {
+  const allLocations = await loadLocationsForTenant(tenantId);
   const trimmed = (query || "").trim().toLowerCase();
 
   if (!trimmed) {
     return allLocations.slice(0, limit);
   }
 
-  // Score matches:
-  // Exact match: 100
-  // Starts with: 80
-  // Word match: 60
-  // Substring match: 40
-  // Code match: 90
   const scored = allLocations.map((loc) => {
     const nameLower = loc.name.toLowerCase();
     const codeLower = (loc.code || "").toLowerCase();
@@ -288,7 +473,7 @@ export async function searchLocationsImpl(query: string, limit = 12): Promise<Ca
     .map((s) => s.loc);
 }
 
-export async function getCanonicalLocationsImpl(): Promise<CanonicalLocation[]> {
-  return loadCanonicalLocations();
+export async function getCanonicalLocationsImpl(tenantId?: string): Promise<CanonicalLocation[]> {
+  return await loadLocationsForTenant(tenantId);
 }
 

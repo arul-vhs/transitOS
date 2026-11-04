@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Download, Calendar, Filter, ArrowLeft, Search } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { ServiceDatePicker } from "@/components/ui/service-date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,14 +106,7 @@ function PlanVsActualPage() {
         <section className="panel p-4 grid gap-4 sm:grid-cols-4 items-end">
           <div className="space-y-1">
             <Label className="text-xs">Service Date</Label>
-            <Select value={serviceDate} onValueChange={setServiceDate}>
-              <SelectTrigger className="bg-background/50 h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="25 Aug 2026">25 Aug 2026</SelectItem>
-              </SelectContent>
-            </Select>
+            <ServiceDatePicker value={serviceDate} onChange={setServiceDate} className="w-full h-9 justify-between" />
           </div>
 
           <div className="space-y-1">

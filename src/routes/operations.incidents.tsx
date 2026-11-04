@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { ServiceDatePicker } from "@/components/ui/service-date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +104,7 @@ function IncidentsPage() {
   const { currentTenant } = useActiveTenant();
 
   // Local state parameters
+  const [serviceDate, setServiceDate] = useState("25 Aug 2026");
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(
     null,
   );
@@ -129,8 +131,8 @@ function IncidentsPage() {
 
   // Queries
   const { data: incidentsList = [], isLoading: listLoading } = useQuery({
-    queryKey: ["incidents-list", currentTenant.id, DEFAULT_DATE],
-    queryFn: () => getIncidents({ serviceDate: DEFAULT_DATE }),
+    queryKey: ["incidents-list", currentTenant.id, serviceDate],
+    queryFn: () => getIncidents({ serviceDate }),
   });
 
   const { data: selectedIncident, isLoading: detailsLoading } = useQuery({
@@ -148,8 +150,8 @@ function IncidentsPage() {
     queryFn: () => getDrivers(),
   });
   const { data: tripsList = [] } = useQuery({
-    queryKey: ["trips-dropdown", currentTenant.id],
-    queryFn: () => getTrips({ serviceDate: DEFAULT_DATE }),
+    queryKey: ["trips-dropdown", currentTenant.id, serviceDate],
+    queryFn: () => getTrips({ serviceDate }),
   });
   const { data: routesList = [] } = useQuery({
     queryKey: ["routes-dropdown", currentTenant.id],
@@ -342,9 +344,7 @@ function IncidentsPage() {
                     Active Disruptions ({incidentsList.length})
                   </h3>
                 </div>
-                <Badge variant="outline" className="text-[10px] font-mono">
-                  {DEFAULT_DATE}
-                </Badge>
+                <ServiceDatePicker value={serviceDate} onChange={setServiceDate} className="h-7 text-[10px] px-2" />
               </div>
 
               {listLoading ? (

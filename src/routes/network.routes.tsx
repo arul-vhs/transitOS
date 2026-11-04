@@ -388,6 +388,25 @@ function RoutesPage() {
     },
   });
 
+  const [routeToDelete, setRouteToDelete] = useState<RouteItem | null>(null);
+
+  const deleteRouteMutation = useMutation({
+    mutationFn: (id: string) => deleteRoute(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["routes"] });
+      queryClient.invalidateQueries({ queryKey: ["all-stops"] });
+      queryClient.invalidateQueries({ queryKey: ["route"] });
+      toast.success("Route deleted successfully.");
+      setRouteToDelete(null);
+      if (selectedRouteId === routeToDelete?.id) {
+        setSelectedRouteId(null);
+      }
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to delete route.");
+    },
+  });
+
   const resetForm = () => {
     setEditingRouteId(null);
     setCode("");
@@ -659,15 +678,27 @@ function RoutesPage() {
             Stops
           </Button>
           {canManage && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleOpenEdit(route)}
-              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md"
-            >
-              <Edit2 className="size-3 mr-1" />
-              Edit
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleOpenEdit(route)}
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md"
+              >
+                <Edit2 className="size-3 mr-1" />
+                Edit
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setRouteToDelete(route)}
+                className="h-7 px-2 text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-500/10 rounded-md"
+                title="Delete Route"
+              >
+                <Trash2 className="size-3 mr-1" />
+                Delete
+              </Button>
+            </>
           )}
         </div>
       ),
@@ -1501,6 +1532,38 @@ function RoutesPage() {
                 className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md"
               >
                 {isRenamingStop ? "Updating..." : "Save New Name"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        {/* Route Deletion Confirmation Dialog */}
+        <Dialog open={!!routeToDelete} onOpenChange={(open) => !open && setRouteToDelete(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirm Corridor Deletion</DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Are you sure you want to delete corridor{" "}
+                <span className="font-semibold text-foreground">{routeToDelete?.code} ({routeToDelete?.name})</span>? This will permanently remove the route line, its intermediate stop assignments, and associated timetable trips.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRouteToDelete(null)}
+                disabled={deleteRouteMutation.isPending}
+                className="text-xs rounded-md"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => routeToDelete && deleteRouteMutation.mutate(routeToDelete.id)}
+                disabled={deleteRouteMutation.isPending}
+                className="text-xs rounded-md"
+              >
+                {deleteRouteMutation.isPending ? "Deleting..." : "Delete Corridor"}
               </Button>
             </DialogFooter>
           </DialogContent>

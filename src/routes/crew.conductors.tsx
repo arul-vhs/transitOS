@@ -7,6 +7,7 @@ import {
   Search,
   Plus,
   Edit2,
+  Trash2,
   CheckCircle2,
   Clock,
   ArrowRight,
@@ -48,6 +49,7 @@ import {
   getConductors,
   createCrewMember,
   updateCrewMember,
+  deleteCrewMember,
   updateCrewStatus,
 } from "@/lib/fleet-crew";
 
@@ -109,6 +111,19 @@ function ConductorsPage() {
   // Dialog state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingConductorId, setEditingConductorId] = useState<string | null>(null);
+  const [conductorToDelete, setConductorToDelete] = useState<ConductorItem | null>(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteCrewMember(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conductors"] });
+      toast.success("Conductor removed successfully.");
+      setConductorToDelete(null);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to remove conductor.");
+    },
+  });
 
   // Form values
   const [name, setName] = useState("");
@@ -446,15 +461,27 @@ function ConductorsPage() {
                     </TableCell>
                     {canManage && (
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenEdit(conductor)}
-                          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md"
-                        >
-                          <Edit2 className="size-3.5 mr-1" />
-                          Edit
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEdit(conductor)}
+                            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md"
+                          >
+                            <Edit2 className="size-3.5 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setConductorToDelete(conductor)}
+                            className="h-7 px-2 text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-500/10 rounded-md"
+                            title="Delete Conductor"
+                          >
+                            <Trash2 className="size-3.5 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>
@@ -549,6 +576,38 @@ function ConductorsPage() {
                 </Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+        {/* 5. Modal: Delete Conductor Confirmation */}
+        <Dialog open={!!conductorToDelete} onOpenChange={(open) => !open && setConductorToDelete(null)}>
+          <DialogContent className="sm:max-w-md rounded-lg">
+            <DialogHeader>
+              <DialogTitle>Confirm Conductor Removal</DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Are you sure you want to remove conductor{" "}
+                <span className="font-semibold text-foreground">{conductorToDelete?.name} ({conductorToDelete?.employeeId || "Staff"})</span> from the depot roster?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConductorToDelete(null)}
+                disabled={deleteMutation.isPending}
+                className="text-xs rounded-md"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => conductorToDelete && deleteMutation.mutate(conductorToDelete.id)}
+                disabled={deleteMutation.isPending}
+                className="text-xs rounded-md"
+              >
+                {deleteMutation.isPending ? "Removing..." : "Remove Conductor"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

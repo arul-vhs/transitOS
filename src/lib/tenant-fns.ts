@@ -56,3 +56,4 @@ export const deleteTenant = async (
 ) => {
   return await _deleteTenant(toServerFnArgs(tenantId)!);
 };
+

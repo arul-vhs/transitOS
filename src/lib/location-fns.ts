@@ -13,25 +13,30 @@ export interface CanonicalLocation {
 }
 
 const _searchLocations = createServerFn({ method: "GET" })
-  .validator((args: { query: string; limit?: number }) => args)
+  .validator((args: { query: string; limit?: number; tenantId?: string }) => args)
   .handler(async ({ data }) => {
     const { searchLocationsImpl } = await import("../server/location-intelligence");
-    return await searchLocationsImpl(data.query, data.limit);
+    return await searchLocationsImpl(data.query, data.limit, data.tenantId);
   });
 
 export const searchLocations = async (
-  args: { query: string; limit?: number } | { data: { query: string; limit?: number } },
+  args:
+    | { query: string; limit?: number; tenantId?: string }
+    | { data: { query: string; limit?: number; tenantId?: string } },
 ): Promise<CanonicalLocation[]> => {
   return await _searchLocations(toServerFnArgs(args));
 };
 
 const _getCanonicalLocations = createServerFn({ method: "GET" })
-  .handler(async () => {
+  .validator((args?: { tenantId?: string }) => args)
+  .handler(async ({ data }) => {
     const { getCanonicalLocationsImpl } = await import("../server/location-intelligence");
-    return await getCanonicalLocationsImpl();
+    return await getCanonicalLocationsImpl(data?.tenantId);
   });
 
-export const getCanonicalLocations = async (): Promise<CanonicalLocation[]> => {
-  return await _getCanonicalLocations();
+export const getCanonicalLocations = async (
+  args?: { tenantId?: string } | { data?: { tenantId?: string } },
+): Promise<CanonicalLocation[]> => {
+  return await _getCanonicalLocations(toServerFnArgs(args));
 };
 

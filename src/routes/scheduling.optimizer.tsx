@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { ServiceDatePicker } from "@/components/ui/service-date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -387,19 +388,11 @@ function OptimizerPage() {
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label
-                  htmlFor="dateSelect"
                   className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5"
                 >
                   <Calendar className="size-3.5 text-primary" /> Service Date
                 </Label>
-                <Input
-                  id="dateSelect"
-                  type="text"
-                  value={serviceDate}
-                  onChange={(e) => setServiceDate(e.target.value)}
-                  className="bg-background/60 font-mono text-xs h-9 border-border/80"
-                  placeholder="25 Aug 2026"
-                />
+                <ServiceDatePicker value={serviceDate} onChange={setServiceDate} className="w-full justify-between h-9" />
               </div>
 
               {/* Mode Selector Radio-style Buttons with Detailed Descriptions */}

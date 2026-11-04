@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowLeft, Compass, Download, TrendingUp } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { ServiceDatePicker } from "@/components/ui/service-date-picker";
 import { Button } from "@/components/ui/button";
 import { useActiveTenant } from "@/lib/tenant-context";
 import {
@@ -73,8 +74,14 @@ function RoutesAnalyticsPage() {
     >
       <div className="space-y-6">
         {/* Filters Panel */}
-        <section className="panel p-4 flex gap-4 items-end max-w-md">
-          <div className="space-y-1 flex-1">
+        <section className="panel p-4 flex flex-wrap gap-4 items-end">
+          <div className="space-y-1">
+            <span className="text-xs font-semibold text-muted-foreground">
+              Service Date
+            </span>
+            <ServiceDatePicker value={serviceDate} onChange={setServiceDate} className="h-9" />
+          </div>
+          <div className="space-y-1 flex-1 min-w-[200px]">
             <span className="text-xs font-semibold text-muted-foreground">
               Rank By Performance
             </span>

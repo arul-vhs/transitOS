@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { ServiceDatePicker } from "@/components/ui/service-date-picker";
 import { TransitTable, ColumnDef } from "@/components/ui/transit-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -168,7 +169,7 @@ function OperationsTodayPage() {
   const { currentTenant } = useActiveTenant();
   const { resolvedTheme } = useTheme();
 
-  const [serviceDate] = useState(DEFAULT_SERVICE_DATE);
+  const [serviceDate, setServiceDate] = useState("25 Aug 2026");
   const [assignmentStatusFilter, setAssignmentStatusFilter] = useState<string>("all");
   const [mapRouteFilter, setMapRouteFilter] = useState<string>("all");
   const [mapDepotFilter, setMapDepotFilter] = useState<string>("all");
@@ -1115,13 +1116,7 @@ function OperationsTodayPage() {
       subtitle="Operational monitoring of live bus tracking, assignments, conductor staffing, and automated issue resolution."
       actions={
         <div className="flex items-center gap-2">
-          <Badge
-            variant="outline"
-            className="h-8 px-2.5 text-xs font-mono font-medium rounded-md border-border bg-card text-foreground flex items-center gap-1.5"
-          >
-            <Calendar className="size-3.5 text-muted-foreground" />
-            <span>{serviceDate}</span>
-          </Badge>
+          <ServiceDatePicker value={serviceDate} onChange={setServiceDate} />
           <Button
             size="sm"
             variant="outline"
