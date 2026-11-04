@@ -16,7 +16,8 @@ export function generateExplanations(
     const trip = input.trips.find((t) => t.id === tripId)!;
     const cand = candidatesMap.get(tripId);
 
-    let reason = "Insufficient resources due to timeline overlap with active duties.";
+    let reason =
+      "Insufficient resources due to timeline overlap with active duties.";
 
     if (!cand) {
       return {
@@ -32,7 +33,8 @@ export function generateExplanations(
     if (compatibleBuses.length === 0) {
       reason = "No active buses available in the fleet registry.";
     } else if (compatibleDrivers.length === 0) {
-      reason = "No active drivers available. Check for expired licenses or status locks.";
+      reason =
+        "No active drivers available. Check for expired licenses or status locks.";
     } else if (compatibleConductors.length === 0) {
       reason = "No active conductors available in the crew registry.";
     } else {
@@ -45,11 +47,14 @@ export function generateExplanations(
         (d) => d.status === "available" && d.restUntil > trip.startTime,
       );
 
-      const allDriversResting = driversUnderRest.length === input.drivers.length;
+      const allDriversResting =
+        driversUnderRest.length === input.drivers.length;
       const licenseCategoryMismatches = compatibleDrivers.filter((d) => {
         // Find if category is incompat
         const hpvDrivers = input.drivers.filter(
-          (drv) => drv.licenseCategory?.includes("Heavy") || drv.licenseCategory?.includes("HPV"),
+          (drv) =>
+            drv.licenseCategory?.includes("Heavy") ||
+            drv.licenseCategory?.includes("HPV"),
         );
         return hpvDrivers.length === 0;
       });
@@ -58,7 +63,9 @@ export function generateExplanations(
         driversUnderRest.length > 0 &&
         compatibleDrivers.every((d) => d.restUntil > trip.startTime)
       ) {
-        const nextAvailableRest = Math.min(...compatibleDrivers.map((d) => d.restUntil));
+        const nextAvailableRest = Math.min(
+          ...compatibleDrivers.map((d) => d.restUntil),
+        );
         reason = `No driver available. Drivers exist, but they are under mandatory rest until ${formatMinutesToTime(
           nextAvailableRest,
         )}.`;
@@ -68,7 +75,8 @@ export function generateExplanations(
           (t) =>
             t.id !== trip.id &&
             t.serviceDate === trip.serviceDate &&
-            t.endTime > trip.startTime - input.configuration.MIN_TURNAROUND_MINUTES,
+            t.endTime >
+              trip.startTime - input.configuration.MIN_TURNAROUND_MINUTES,
         );
 
         if (potentialDuties.length > 0) {

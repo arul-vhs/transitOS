@@ -22,7 +22,10 @@ export async function getServiceMetricsImpl(filters: {
 
   const dateFilter = filters.serviceDate || "25 Aug 2026";
 
-  const conditions = [eq(trips.tenantId, tenantId), eq(trips.serviceDate, dateFilter)];
+  const conditions = [
+    eq(trips.tenantId, tenantId),
+    eq(trips.serviceDate, dateFilter),
+  ];
   if (filters.routeId) conditions.push(eq(trips.routeId, filters.routeId));
 
   const allTrips = await db.query.trips.findMany({
@@ -31,22 +34,38 @@ export async function getServiceMetricsImpl(filters: {
 
   const scheduledCount = allTrips.length;
   const completedCount = allTrips.filter(
-    (t) => t.status.toLowerCase() === "completed" || t.status.toLowerCase() === "recovered",
+    (t) =>
+      t.status.toLowerCase() === "completed" ||
+      t.status.toLowerCase() === "recovered",
   ).length;
-  const cancelledCount = allTrips.filter((t) => t.status.toLowerCase() === "cancelled").length;
-  const delayedCount = allTrips.filter((t) => (t.departureVariance || 0) > 5).length;
+  const cancelledCount = allTrips.filter(
+    (t) => t.status.toLowerCase() === "cancelled",
+  ).length;
+  const delayedCount = allTrips.filter(
+    (t) => (t.departureVariance || 0) > 5,
+  ).length;
 
-  const completionRate = scheduledCount > 0 ? (completedCount / scheduledCount) * 100 : 0;
-  const cancellationRate = scheduledCount > 0 ? (cancelledCount / scheduledCount) * 100 : 0;
+  const completionRate =
+    scheduledCount > 0 ? (completedCount / scheduledCount) * 100 : 0;
+  const cancellationRate =
+    scheduledCount > 0 ? (cancelledCount / scheduledCount) * 100 : 0;
 
   const completedTrips = allTrips.filter(
-    (t) => t.status.toLowerCase() === "completed" || t.status.toLowerCase() === "recovered",
+    (t) =>
+      t.status.toLowerCase() === "completed" ||
+      t.status.toLowerCase() === "recovered",
   );
-  const onTimeCount = completedTrips.filter((t) => Math.abs(t.departureVariance || 0) <= 5).length;
-  const onTimeRate = completedCount > 0 ? (onTimeCount / completedCount) * 100 : 0;
+  const onTimeCount = completedTrips.filter(
+    (t) => Math.abs(t.departureVariance || 0) <= 5,
+  ).length;
+  const onTimeRate =
+    completedCount > 0 ? (onTimeCount / completedCount) * 100 : 0;
 
-  const delays = completedTrips.map((t) => t.departureVariance || 0).filter((v) => v > 0);
-  const averageDelay = delays.length > 0 ? delays.reduce((a, b) => a + b, 0) / delays.length : 0;
+  const delays = completedTrips
+    .map((t) => t.departureVariance || 0)
+    .filter((v) => v > 0);
+  const averageDelay =
+    delays.length > 0 ? delays.reduce((a, b) => a + b, 0) / delays.length : 0;
   const maxDelay = delays.length > 0 ? Math.max(...delays) : 0;
 
   return {
@@ -72,7 +91,10 @@ export async function getPlanVsActualImpl(filters: {
   const tenantId = currentUser.tenantId;
   const dateFilter = filters.serviceDate || "25 Aug 2026";
 
-  const conditions = [eq(trips.tenantId, tenantId), eq(trips.serviceDate, dateFilter)];
+  const conditions = [
+    eq(trips.tenantId, tenantId),
+    eq(trips.serviceDate, dateFilter),
+  ];
   if (filters.routeId) conditions.push(eq(trips.routeId, filters.routeId));
   if (filters.status) conditions.push(eq(trips.status, filters.status));
 
@@ -90,13 +112,17 @@ export async function getPlanVsActualImpl(filters: {
     routeCode: t.route?.code || "N/A",
     direction: t.direction,
     plannedStart: formatMinutesToTime(t.startTime),
-    actualStart: t.actualStart !== null ? formatMinutesToTime(t.actualStart) : "N/A",
+    actualStart:
+      t.actualStart !== null ? formatMinutesToTime(t.actualStart) : "N/A",
     plannedEnd: formatMinutesToTime(t.endTime),
     actualEnd: t.actualEnd !== null ? formatMinutesToTime(t.actualEnd) : "N/A",
-    departureVariance: t.departureVariance !== null ? `${t.departureVariance} min` : "N/A",
-    arrivalVariance: t.arrivalVariance !== null ? `${t.arrivalVariance} min` : "N/A",
+    departureVariance:
+      t.departureVariance !== null ? `${t.departureVariance} min` : "N/A",
+    arrivalVariance:
+      t.arrivalVariance !== null ? `${t.arrivalVariance} min` : "N/A",
     plannedDuration: `${t.durationMin} min`,
-    actualDuration: t.actualDuration !== null ? `${t.actualDuration} min` : "N/A",
+    actualDuration:
+      t.actualDuration !== null ? `${t.actualDuration} min` : "N/A",
     status: t.status.toUpperCase(),
     cancellationReason: t.cancellationReason || "N/A",
   }));
@@ -132,8 +158,11 @@ export async function getRouteAnalyticsImpl(filters: { serviceDate?: string }) {
     ).length;
     const onTimeRate = completed > 0 ? (onTimeCount / completed) * 100 : 0;
 
-    const delays = completedTrips.map((t) => t.departureVariance || 0).filter((v) => v > 0);
-    const avgDelay = delays.length > 0 ? delays.reduce((a, b) => a + b, 0) / delays.length : 0;
+    const delays = completedTrips
+      .map((t) => t.departureVariance || 0)
+      .filter((v) => v > 0);
+    const avgDelay =
+      delays.length > 0 ? delays.reduce((a, b) => a + b, 0) / delays.length : 0;
 
     return {
       routeId: r.id,
@@ -159,11 +188,17 @@ export async function getFleetAnalyticsImpl(filters: { depot?: string }) {
 
   // Calculate simulated fleet metrics based on duty hours
   const todayDuties = await db.query.duties.findMany({
-    where: and(eq(duties.tenantId, tenantId), eq(duties.serviceDate, "25 Aug 2026")),
+    where: and(
+      eq(duties.tenantId, tenantId),
+      eq(duties.serviceDate, "25 Aug 2026"),
+    ),
   });
 
   const incidentList = await db.query.incidents.findMany({
-    where: and(eq(incidents.tenantId, tenantId), eq(incidents.serviceDate, "25 Aug 2026")),
+    where: and(
+      eq(incidents.tenantId, tenantId),
+      eq(incidents.serviceDate, "25 Aug 2026"),
+    ),
   });
 
   return fleetList.map((bus) => {
@@ -178,7 +213,9 @@ export async function getFleetAnalyticsImpl(filters: { depot?: string }) {
 
     const totalAvailableMinutes = 480; // 8 hours duty cycle
     const utilization =
-      totalAvailableMinutes > 0 ? (operatedMinutes / totalAvailableMinutes) * 100 : 0;
+      totalAvailableMinutes > 0
+        ? (operatedMinutes / totalAvailableMinutes) * 100
+        : 0;
 
     const breakdowns = incidentList.filter(
       (inc) => inc.resourceId === bus.id && inc.type === "BUS_BREAKDOWN",
@@ -209,7 +246,10 @@ export async function getCrewAnalyticsImpl() {
   });
 
   const todayDuties = await db.query.duties.findMany({
-    where: and(eq(duties.tenantId, tenantId), eq(duties.serviceDate, "25 Aug 2026")),
+    where: and(
+      eq(duties.tenantId, tenantId),
+      eq(duties.serviceDate, "25 Aug 2026"),
+    ),
     with: {
       crewSegments: true,
     },
@@ -227,7 +267,9 @@ export async function getCrewAnalyticsImpl() {
     });
 
     const handovers = todayDuties.filter((d) =>
-      d.crewSegments?.some((s) => s.driverId === cMember.id || s.conductorId === cMember.id),
+      d.crewSegments?.some(
+        (s) => s.driverId === cMember.id || s.conductorId === cMember.id,
+      ),
     ).length;
 
     const totalAvailableMinutes = 480;
@@ -259,7 +301,8 @@ export async function getIncidentAnalyticsImpl() {
     (i) => i.status === "RESOLVED" || i.status === "APPLIED",
   ).length;
 
-  const recoverySuccessRate = totalIncidents > 0 ? (resolved / totalIncidents) * 100 : 100;
+  const recoverySuccessRate =
+    totalIncidents > 0 ? (resolved / totalIncidents) * 100 : 100;
 
   // Group by type
   const typeGroups: Record<string, number> = {};
@@ -337,10 +380,17 @@ export async function getDepotAnalyticsImpl() {
 
   const depotsList = ["Central Depot", "North Depot", "West Depot"];
 
-  const busesList = await db.query.buses.findMany({ where: eq(buses.tenantId, tenantId) });
-  const crewList = await db.query.crew.findMany({ where: eq(crew.tenantId, tenantId) });
+  const busesList = await db.query.buses.findMany({
+    where: eq(buses.tenantId, tenantId),
+  });
+  const crewList = await db.query.crew.findMany({
+    where: eq(crew.tenantId, tenantId),
+  });
   const incidentList = await db.query.incidents.findMany({
-    where: and(eq(incidents.tenantId, tenantId), eq(incidents.serviceDate, "25 Aug 2026")),
+    where: and(
+      eq(incidents.tenantId, tenantId),
+      eq(incidents.serviceDate, "25 Aug 2026"),
+    ),
   });
 
   return depotsList.map((depot) => {

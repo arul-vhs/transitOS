@@ -85,7 +85,8 @@ export const Route = createFileRoute("/operations/duties")({
       { title: "Duty Builder & Editor: TransitOS" },
       {
         name: "description",
-        content: "Assemble, validate, and dispatch vehicle duties and crew shifts.",
+        content:
+          "Assemble, validate, and dispatch vehicle duties and crew shifts.",
       },
     ],
   }),
@@ -120,7 +121,9 @@ function DutiesPage() {
 
   // Form states (Duty)
   const [formDutyCode, setFormDutyCode] = useState("");
-  const [formDutyType, setFormDutyType] = useState<"LINKED" | "UNLINKED">("LINKED");
+  const [formDutyType, setFormDutyType] = useState<"LINKED" | "UNLINKED">(
+    "LINKED",
+  );
 
   // Form states (Crew Handover Segment)
   const [handoverDriverId, setHandoverDriverId] = useState("");
@@ -179,7 +182,7 @@ function DutiesPage() {
   const assignedTripIds = new Set<string>();
   dutiesList.forEach((d) => {
     if (d.trips) {
-      d.trips.forEach((t: any) => assignedTripIds.add(t.id));
+      d.trips.forEach((t: { id: string }) => assignedTripIds.add(t.id));
     }
   });
   const unassignedTrips = allTripsList.filter(
@@ -188,16 +191,24 @@ function DutiesPage() {
 
   const filteredUnassignedTrips = unassignedTrips.filter((t) => {
     if (!unassignedSearch) return true;
-    const matchRoute = (t.routeCode || "").toLowerCase().includes(unassignedSearch.toLowerCase());
-    const matchTime = formatMinutesToTime(t.startTime).includes(unassignedSearch);
+    const matchRoute = (t.routeCode || "")
+      .toLowerCase()
+      .includes(unassignedSearch.toLowerCase());
+    const matchTime = formatMinutesToTime(t.startTime).includes(
+      unassignedSearch,
+    );
     return matchRoute || matchTime;
   });
 
   // Filtered duties
   const filteredDuties = dutiesList.filter((d) => {
     if (!dutySearch) return true;
-    const matchCode = (d.dutyCode || "").toLowerCase().includes(dutySearch.toLowerCase());
-    const matchBus = (d.busRegNumber || "").toLowerCase().includes(dutySearch.toLowerCase());
+    const matchCode = (d.dutyCode || "")
+      .toLowerCase()
+      .includes(dutySearch.toLowerCase());
+    const matchBus = (d.busRegNumber || "")
+      .toLowerCase()
+      .includes(dutySearch.toLowerCase());
     return matchCode || matchBus;
   });
 
@@ -209,7 +220,7 @@ function DutiesPage() {
     if (conductorsList.length > 0 && !handoverConductorId) {
       setHandoverConductorId(conductorsList[0].id);
     }
-  }, [driversList, conductorsList]);
+  }, [driversList, conductorsList, handoverDriverId, handoverConductorId]);
 
   // Mutations
   const createDutyMutation = useMutation({
@@ -221,7 +232,7 @@ function DutiesPage() {
       setSelectedDutyId(newD.id);
       setFormDutyCode("");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to create duty");
     },
   });
@@ -230,10 +241,12 @@ function DutiesPage() {
     mutationFn: updateDuty,
     onSuccess: (updatedD) => {
       queryClient.invalidateQueries({ queryKey: ["duties"] });
-      queryClient.invalidateQueries({ queryKey: ["duty-details", updatedD.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["duty-details", updatedD.id],
+      });
       toast.success(`Duty ${updatedD.dutyCode} updated successfully.`);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to update duty");
     },
   });
@@ -245,7 +258,7 @@ function DutiesPage() {
       toast.success("Duty deleted successfully.");
       setSelectedDutyId(null);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to delete duty");
     },
   });
@@ -254,10 +267,12 @@ function DutiesPage() {
     mutationFn: addTripToDuty,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["duties"] });
-      queryClient.invalidateQueries({ queryKey: ["duty-details", selectedDutyId] });
+      queryClient.invalidateQueries({
+        queryKey: ["duty-details", selectedDutyId],
+      });
       toast.success("Trip added to duty.");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to add trip");
     },
   });
@@ -266,10 +281,12 @@ function DutiesPage() {
     mutationFn: removeTripFromDuty,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["duties"] });
-      queryClient.invalidateQueries({ queryKey: ["duty-details", selectedDutyId] });
+      queryClient.invalidateQueries({
+        queryKey: ["duty-details", selectedDutyId],
+      });
       toast.success("Trip removed from duty.");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to remove trip");
     },
   });
@@ -278,11 +295,13 @@ function DutiesPage() {
     mutationFn: createCrewHandover,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["duties"] });
-      queryClient.invalidateQueries({ queryKey: ["duty-details", selectedDutyId] });
+      queryClient.invalidateQueries({
+        queryKey: ["duty-details", selectedDutyId],
+      });
       toast.success("Crew handover segment added.");
       setIsHandoverOpen(false);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to add handover");
     },
   });
@@ -291,10 +310,12 @@ function DutiesPage() {
     mutationFn: clearHandoverSegments,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["duties"] });
-      queryClient.invalidateQueries({ queryKey: ["duty-details", selectedDutyId] });
+      queryClient.invalidateQueries({
+        queryKey: ["duty-details", selectedDutyId],
+      });
       toast.success("Handover segments cleared.");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to clear handovers");
     },
   });
@@ -345,30 +366,29 @@ function DutiesPage() {
 
   return (
     <AppShell
-      title="Duty Builder & Editor"
-      subtitle="Interactive duty composition studio, crew handover timelines, and Motor Vehicle Act compliance analyzer."
+      title="Driver Shifts & Assignments"
+      subtitle="Assign drivers, conductors, and buses to scheduled trips with automatic rest break checks."
       actions={
         <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="hidden sm:inline-flex text-xs rounded-md border-border hover:bg-muted"
+          >
             <Link to="/scheduling/optimizer">
               <Sparkles className="mr-1.5 size-3.5 text-primary" />
-              Schedule Optimizer
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
-            <Link to="/network/routes">
-              <Map className="mr-1.5 size-3.5 text-primary" />
-              Route Network
+              Auto-Assign All
             </Link>
           </Button>
           {canModify && (
             <Button
               size="sm"
               onClick={() => setIsCreateOpen(true)}
-              className="bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20 text-xs hover:scale-[1.02] transition-all"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md shadow-xs cursor-pointer"
             >
               <Plus className="mr-1.5 size-4" />
-              Create Duty Block
+              Create Shift
             </Button>
           )}
         </div>
@@ -376,7 +396,7 @@ function DutiesPage() {
     >
       <div className="space-y-6">
         {/* TOP FILTER BAR */}
-        <div className="glass-panel p-4 flex flex-wrap gap-4 items-center justify-between">
+        <div className="glass-panel p-4 flex flex-wrap gap-4 items-center justify-between rounded-lg border border-border">
           <div className="flex flex-1 flex-wrap gap-3 items-center min-w-[280px]">
             {/* Service Date Input */}
             <div className="flex items-center gap-2">
@@ -386,7 +406,7 @@ function DutiesPage() {
                 placeholder="25 Aug 2026"
                 value={serviceDate}
                 onChange={(e) => setServiceDate(e.target.value)}
-                className="w-36 bg-background/60 h-9 text-xs font-mono border-border/80"
+                className="w-36 bg-background/60 h-9 text-xs font-mono border-border/80 rounded-md"
               />
             </div>
 
@@ -394,7 +414,7 @@ function DutiesPage() {
             <div className="flex items-center gap-2">
               <Filter className="size-4 text-muted-foreground shrink-0" />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40 bg-background/60 h-9 text-xs border-border/80">
+                <SelectTrigger className="w-40 bg-background/60 h-9 text-xs border-border/80 rounded-md">
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
@@ -412,10 +432,10 @@ function DutiesPage() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search duties or buses..."
+                placeholder="Search shifts or buses..."
                 value={dutySearch}
                 onChange={(e) => setDutySearch(e.target.value)}
-                className="pl-8 bg-background/60 h-9 text-xs border-border/80"
+                className="pl-8 bg-background/60 h-9 text-xs border-border/80 rounded-md"
               />
             </div>
           </div>
@@ -423,13 +443,13 @@ function DutiesPage() {
           <div className="flex items-center gap-2">
             <Badge
               variant="outline"
-              className="font-mono text-xs border-primary/30 text-primary bg-primary/5"
+              className="font-mono text-xs border-primary/30 text-primary bg-primary/5 rounded"
             >
-              {dutiesList.length} Duties Total
+              {dutiesList.length} Shifts Total
             </Badge>
             <Badge
               variant="outline"
-              className="font-mono text-xs border-warning/30 text-warning bg-warning/5"
+              className="font-mono text-xs border-warning/30 text-warning bg-warning/5 rounded"
             >
               {unassignedTrips.length} Unassigned Trips
             </Badge>
@@ -437,23 +457,27 @@ function DutiesPage() {
         </div>
 
         {/* 3-STEP VISUAL WORKFLOW BANNER */}
-        <div className="rounded-xl border border-primary/20 bg-gradient-to-r from-primary/10 via-background to-primary/5 p-3.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs shadow-2xs">
+        <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs shadow-xs">
           <div className="flex items-center gap-2.5">
-            <div className="grid size-7 place-items-center rounded-lg bg-primary/15 text-primary">
+            <div className="grid size-7 place-items-center rounded bg-primary/10 text-primary">
               <Workflow className="size-4" />
             </div>
             <div>
-              <span className="font-bold text-foreground">How Duty Builder Works: </span>
+              <span className="font-bold text-foreground">
+                How Shifts Work:{" "}
+              </span>
               <span className="text-muted-foreground">
-                Follow the 3 numbered columns below to assemble driver shifts and attach trips.
+                Follow the 3 columns below to pick a shift, assign a driver and
+                bus, and attach trips.
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-[11px] font-medium bg-card/60 px-3 py-1.5 rounded-lg border border-border/60">
-            <span className="font-bold text-primary">Step 1:</span> Choose Duty
+          <div className="flex items-center gap-2 text-[11px] font-medium bg-card px-3 py-1.5 rounded-md border border-border/60">
+            <span className="font-bold text-primary">Step 1:</span> Pick Shift
             <ArrowRight className="size-3 text-muted-foreground" />
-            <span className="font-bold text-primary">Step 2:</span> Assign Resources
+            <span className="font-bold text-primary">Step 2:</span> Assign
+            Driver & Bus
             <ArrowRight className="size-3 text-muted-foreground" />
             <span className="font-bold text-primary">Step 3:</span> Add Trips
           </div>
@@ -475,7 +499,10 @@ function DutiesPage() {
                   Select Duty ({filteredDuties.length})
                 </h3>
               </div>
-              <Badge variant="outline" className="text-[10px] font-mono border-border/80">
+              <Badge
+                variant="outline"
+                className="text-[10px] font-mono border-border/80"
+              >
                 {serviceDate}
               </Badge>
             </div>
@@ -541,7 +568,8 @@ function DutiesPage() {
                         <div className="flex items-center justify-between">
                           <span className="flex items-center gap-1 font-mono text-[10px]">
                             <Clock className="size-3 text-muted-foreground" />
-                            {formatMinutesToTime(d.startTime)} – {formatMinutesToTime(d.endTime)}
+                            {formatMinutesToTime(d.startTime)} –{" "}
+                            {formatMinutesToTime(d.endTime)}
                           </span>
                           <Badge
                             variant="secondary"
@@ -619,7 +647,9 @@ function DutiesPage() {
                     <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
                       <span>
                         Date:{" "}
-                        <strong className="text-foreground">{selectedDuty.serviceDate}</strong>
+                        <strong className="text-foreground">
+                          {selectedDuty.serviceDate}
+                        </strong>
                       </span>
                       <span>·</span>
                       <span>
@@ -638,7 +668,11 @@ function DutiesPage() {
                       size="icon"
                       className="text-destructive hover:bg-destructive/10 h-8 w-8 rounded-lg"
                       onClick={() => {
-                        if (confirm(`Permanently delete duty ${selectedDuty.dutyCode}?`)) {
+                        if (
+                          confirm(
+                            `Permanently delete duty ${selectedDuty.dutyCode}?`,
+                          )
+                        ) {
                           deleteDutyMutation.mutate(selectedDuty.id);
                         }
                       }}
@@ -676,7 +710,8 @@ function DutiesPage() {
                       </ul>
                     ) : (
                       <p className="text-[11px] text-muted-foreground mt-0.5">
-                        No continuous driving violations or turnaround buffer overlaps detected.
+                        No continuous driving violations or turnaround buffer
+                        overlaps detected.
                       </p>
                     )}
                   </div>
@@ -687,7 +722,8 @@ function DutiesPage() {
                   {/* Bus Select */}
                   <div className="space-y-1.5">
                     <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
-                      <BusIcon className="size-3 text-primary" /> Assigned Vehicle
+                      <BusIcon className="size-3 text-primary" /> Assigned
+                      Vehicle
                     </Label>
                     <Select
                       value={selectedDuty.busId || "none"}
@@ -703,7 +739,8 @@ function DutiesPage() {
                         <SelectItem value="none">-- Unassigned --</SelectItem>
                         {busesList.map((b) => (
                           <SelectItem key={b.id} value={b.id}>
-                            {b.registrationNumber} ({b.fleetNumber || b.busType})
+                            {b.registrationNumber} ({b.fleetNumber || b.busType}
+                            )
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -718,7 +755,10 @@ function DutiesPage() {
                     <Select
                       value={selectedDuty.driverId || "none"}
                       onValueChange={(val) =>
-                        handleFieldChange("driverId", val === "none" ? null : val)
+                        handleFieldChange(
+                          "driverId",
+                          val === "none" ? null : val,
+                        )
                       }
                       disabled={!canModify}
                     >
@@ -739,12 +779,16 @@ function DutiesPage() {
                   {/* Conductor Select */}
                   <div className="space-y-1.5">
                     <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
-                      <Users className="size-3 text-warning" /> Primary Conductor
+                      <Users className="size-3 text-warning" /> Primary
+                      Conductor
                     </Label>
                     <Select
                       value={selectedDuty.conductorId || "none"}
                       onValueChange={(val) =>
-                        handleFieldChange("conductorId", val === "none" ? null : val)
+                        handleFieldChange(
+                          "conductorId",
+                          val === "none" ? null : val,
+                        )
                       }
                       disabled={!canModify}
                     >
@@ -767,66 +811,89 @@ function DutiesPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                      <RouteIcon className="size-3.5 text-primary" /> Trip Sequence (
-                      {selectedDuty.trips?.length || 0})
+                      <RouteIcon className="size-3.5 text-primary" /> Trip
+                      Sequence ({selectedDuty.trips?.length || 0})
                     </h3>
                     <span className="text-[11px] text-muted-foreground font-mono">
                       Total Driving:{" "}
                       <strong>
-                        {formatMinutesToTime(selectedDuty.endTime - selectedDuty.startTime)}
+                        {formatMinutesToTime(
+                          selectedDuty.endTime - selectedDuty.startTime,
+                        )}
                       </strong>
                     </span>
                   </div>
 
                   <div className="space-y-2 border border-border/70 rounded-xl p-3 bg-card/40">
                     {selectedDuty.trips && selectedDuty.trips.length > 0 ? (
-                      selectedDuty.trips.map((t: any, idx: number) => (
-                        <div
-                          key={t.id}
-                          className="flex items-center justify-between p-2.5 rounded-lg border border-border/60 bg-background/70 hover:border-primary/40 transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="size-6 rounded-full bg-primary/10 text-primary font-bold text-xs grid place-items-center font-mono">
-                              {idx + 1}
-                            </span>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-xs font-mono">
-                                  {formatMinutesToTime(t.startTime)}
-                                </span>
-                                <ArrowRight className="size-3 text-muted-foreground" />
-                                <span className="font-bold text-xs font-mono">
-                                  {formatMinutesToTime(t.endTime || t.startTime + 45)}
-                                </span>
-                                <Badge variant="secondary" className="text-[10px] font-mono">
-                                  {t.routeCode || "Corridor"}
-                                </Badge>
+                      selectedDuty.trips.map(
+                        (
+                          t: {
+                            id: string;
+                            startTime: number;
+                            endTime?: number;
+                            routeCode?: string;
+                            origin?: string;
+                            destination?: string;
+                          },
+                          idx: number,
+                        ) => (
+                          <div
+                            key={t.id}
+                            className="flex items-center justify-between p-2.5 rounded-lg border border-border/60 bg-background/70 hover:border-primary/40 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="size-6 rounded-full bg-primary/10 text-primary font-bold text-xs grid place-items-center font-mono">
+                                {idx + 1}
+                              </span>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-xs font-mono">
+                                    {formatMinutesToTime(t.startTime)}
+                                  </span>
+                                  <ArrowRight className="size-3 text-muted-foreground" />
+                                  <span className="font-bold text-xs font-mono">
+                                    {formatMinutesToTime(
+                                      t.endTime || t.startTime + 45,
+                                    )}
+                                  </span>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px] font-mono"
+                                  >
+                                    {t.routeCode || "Corridor"}
+                                  </Badge>
+                                </div>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                  {t.origin || "Terminal A"} ➔{" "}
+                                  {t.destination || "Terminal B"}
+                                </p>
                               </div>
-                              <p className="text-[11px] text-muted-foreground mt-0.5">
-                                {t.origin || "Terminal A"} ➔ {t.destination || "Terminal B"}
-                              </p>
                             </div>
-                          </div>
 
-                          {canModify && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                removeTripMutation.mutate({ dutyId: selectedDuty.id, tripId: t.id })
-                              }
-                              className="size-7 text-destructive hover:bg-destructive/10 rounded-md"
-                            >
-                              <X className="size-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      ))
+                            {canModify && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  removeTripMutation.mutate({
+                                    dutyId: selectedDuty.id,
+                                    tripId: t.id,
+                                  })
+                                }
+                                className="size-7 text-destructive hover:bg-destructive/10 rounded-md"
+                              >
+                                <X className="size-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        ),
+                      )
                     ) : (
                       <div className="py-12 text-center text-xs text-muted-foreground">
                         <RouteIcon className="size-6 mx-auto mb-1.5 text-muted-foreground/50" />
-                        No trips attached yet. Click <strong>+ Add</strong> on any trip from the
-                        unassigned pool on the right.
+                        No trips attached yet. Click <strong>+ Add</strong> on
+                        any trip from the unassigned pool on the right.
                       </div>
                     )}
                   </div>
@@ -836,7 +903,8 @@ function DutiesPage() {
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                      <Users className="size-3.5 text-warning" /> Relief & Handover Segments (
+                      <Users className="size-3.5 text-warning" /> Relief &
+                      Handover Segments (
                       {selectedDuty.crewSegments?.length || 0})
                     </h3>
                     {canModify && (
@@ -851,34 +919,46 @@ function DutiesPage() {
                     )}
                   </div>
 
-                  {selectedDuty.crewSegments && selectedDuty.crewSegments.length > 0 ? (
+                  {selectedDuty.crewSegments &&
+                  selectedDuty.crewSegments.length > 0 ? (
                     <div className="grid gap-2 sm:grid-cols-2">
-                      {selectedDuty.crewSegments.map((seg: any) => (
-                        <div
-                          key={seg.id}
-                          className="p-3 rounded-lg border border-border/70 bg-card/60 text-xs space-y-1"
-                        >
-                          <div className="flex justify-between font-mono text-[11px] text-primary font-bold">
-                            <span>
-                              {formatMinutesToTime(seg.startTime)} –{" "}
-                              {formatMinutesToTime(seg.endTime)}
-                            </span>
-                            <Badge variant="outline" className="text-[9px]">
-                              Relief
-                            </Badge>
+                      {selectedDuty.crewSegments.map(
+                        (seg: {
+                          id: string;
+                          startTime: number;
+                          endTime: number;
+                          driverName?: string;
+                          conductorName?: string;
+                        }) => (
+                          <div
+                            key={seg.id}
+                            className="p-3 rounded-lg border border-border/70 bg-card/60 text-xs space-y-1"
+                          >
+                            <div className="flex justify-between font-mono text-[11px] text-primary font-bold">
+                              <span>
+                                {formatMinutesToTime(seg.startTime)} -{" "}
+                                {formatMinutesToTime(seg.endTime)}
+                              </span>
+                              <Badge variant="outline" className="text-[9px]">
+                                Relief
+                              </Badge>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">
+                              Driver:{" "}
+                              <strong>{seg.driverName || "Assigned"}</strong>
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Conductor:{" "}
+                              <strong>{seg.conductorName || "Assigned"}</strong>
+                            </p>
                           </div>
-                          <p className="text-[11px] text-muted-foreground">
-                            Driver: <strong>{seg.driverName || "Assigned"}</strong>
-                          </p>
-                          <p className="text-[11px] text-muted-foreground">
-                            Conductor: <strong>{seg.conductorName || "Assigned"}</strong>
-                          </p>
-                        </div>
-                      ))}
+                        ),
+                      )}
                     </div>
                   ) : (
                     <div className="p-3 rounded-lg border border-dashed border-border/70 text-center text-[11px] text-muted-foreground bg-background/30">
-                      Standard linked shift - single driver throughout the block.
+                      Standard linked shift - single driver throughout the
+                      block.
                     </div>
                   )}
                 </div>
@@ -888,10 +968,13 @@ function DutiesPage() {
                 <div className="size-14 rounded-2xl bg-primary/10 text-primary grid place-items-center mb-1 border border-primary/20">
                   <CalendarClock className="size-7" />
                 </div>
-                <h4 className="text-base font-bold text-foreground">Step 2: Select a Duty Block</h4>
+                <h4 className="text-base font-bold text-foreground">
+                  Step 2: Select a Duty Block
+                </h4>
                 <p className="text-xs text-muted-foreground max-w-sm leading-relaxed">
-                  Click any duty from <strong>Step 1</strong> on the left, or create a new shift to
-                  assign buses, drivers, and attach departures.
+                  Click any duty from <strong>Step 1</strong> on the left, or
+                  create a new shift to assign buses, drivers, and attach
+                  departures.
                 </p>
                 {canModify && (
                   <Button
@@ -920,7 +1003,10 @@ function DutiesPage() {
                   Add Trips ({filteredUnassignedTrips.length})
                 </h3>
               </div>
-              <Badge variant="outline" className="text-[10px] font-mono border-border/80">
+              <Badge
+                variant="outline"
+                className="text-[10px] font-mono border-border/80"
+              >
                 {allTripsList.length} Total
               </Badge>
             </div>
@@ -940,7 +1026,9 @@ function DutiesPage() {
             {filteredUnassignedTrips.length === 0 ? (
               <div className="py-24 text-center text-xs text-muted-foreground flex-1 flex flex-col items-center justify-center p-4">
                 <CheckCircle2 className="size-8 text-emerald-500/60 mb-2" />
-                <p className="font-semibold text-foreground">All Trips Assigned</p>
+                <p className="font-semibold text-foreground">
+                  All Trips Assigned
+                </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
                   Zero unassigned departures in this service wave.
                 </p>
@@ -957,7 +1045,10 @@ function DutiesPage() {
                         <span className="font-bold text-xs font-mono text-foreground">
                           {formatMinutesToTime(t.startTime)}
                         </span>
-                        <Badge variant="secondary" className="text-[9px] font-mono px-1 py-0">
+                        <Badge
+                          variant="secondary"
+                          className="text-[9px] font-mono px-1 py-0"
+                        >
                           {t.routeCode || "Route"}
                         </Badge>
                       </div>
@@ -971,7 +1062,10 @@ function DutiesPage() {
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          addTripMutation.mutate({ dutyId: selectedDuty.id, tripId: t.id })
+                          addTripMutation.mutate({
+                            dutyId: selectedDuty.id,
+                            tripId: t.id,
+                          })
                         }
                         className="h-7 px-2 text-[11px] shrink-0 font-medium hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all"
                       >
@@ -1018,13 +1112,22 @@ function DutiesPage() {
 
               <div className="space-y-1.5">
                 <Label className="text-xs">Duty Strategy</Label>
-                <Select value={formDutyType} onValueChange={(val: any) => setFormDutyType(val)}>
+                <Select
+                  value={formDutyType}
+                  onValueChange={(val: "LINKED" | "UNLINKED") =>
+                    setFormDutyType(val)
+                  }
+                >
                   <SelectTrigger className="text-xs font-mono">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="LINKED">LINKED (Single dedicated crew)</SelectItem>
-                    <SelectItem value="UNLINKED">UNLINKED (Relief handovers permitted)</SelectItem>
+                    <SelectItem value="LINKED">
+                      LINKED (Single dedicated crew)
+                    </SelectItem>
+                    <SelectItem value="UNLINKED">
+                      UNLINKED (Relief handovers permitted)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1061,7 +1164,8 @@ function DutiesPage() {
                 Add Crew Relief Handover
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Specify time segment and relief crew for duty {selectedDuty?.dutyCode}.
+                Specify time segment and relief crew for duty{" "}
+                {selectedDuty?.dutyCode}.
               </DialogDescription>
             </DialogHeader>
 
@@ -1069,7 +1173,10 @@ function DutiesPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Relief Driver</Label>
-                  <Select value={handoverDriverId} onValueChange={setHandoverDriverId}>
+                  <Select
+                    value={handoverDriverId}
+                    onValueChange={setHandoverDriverId}
+                  >
                     <SelectTrigger className="text-xs font-mono">
                       <SelectValue />
                     </SelectTrigger>
@@ -1085,7 +1192,10 @@ function DutiesPage() {
 
                 <div className="space-y-1.5">
                   <Label className="text-xs">Relief Conductor</Label>
-                  <Select value={handoverConductorId} onValueChange={setHandoverConductorId}>
+                  <Select
+                    value={handoverConductorId}
+                    onValueChange={setHandoverConductorId}
+                  >
                     <SelectTrigger className="text-xs font-mono">
                       <SelectValue />
                     </SelectTrigger>

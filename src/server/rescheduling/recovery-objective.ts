@@ -13,7 +13,10 @@ export const RECOVERY_CONFIG = {
 export function calculateRecoveryObjectiveScore(
   proposedDuties: ProposedDuty[],
   unassignedTripsCount: number,
-  originalAssignmentsMap: Map<string, { busId: string; driverId: string; conductorId: string }>,
+  originalAssignmentsMap: Map<
+    string,
+    { busId: string; driverId: string; conductorId: string }
+  >,
   originalBusesUsedSet: Set<string>,
 ): {
   score: number;
@@ -101,7 +104,11 @@ export function calculateRecoveryObjectiveScore(
   const delayPenalty = delayMinutes * cfg.DELAY_WEIGHT;
 
   const totalScore =
-    cancellationPenalty + newBusPenalty + disruptionPenalty + handoverPenalty + delayPenalty;
+    cancellationPenalty +
+    newBusPenalty +
+    disruptionPenalty +
+    handoverPenalty +
+    delayPenalty;
 
   return {
     score: Math.round(totalScore),

@@ -9,7 +9,11 @@ import { FALLBACK_BUSES, FALLBACK_CREW } from "./db/fallback-data";
 // Fleet Management Implementations
 // ----------------------------------------------------
 
-export async function getBusesImpl(filters?: { status?: string; depot?: string; search?: string }) {
+export async function getBusesImpl(filters?: {
+  status?: string;
+  depot?: string;
+  search?: string;
+}) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "fleet.view");
 
@@ -27,7 +31,10 @@ export async function getBusesImpl(filters?: { status?: string; depot?: string; 
     if (filters?.search) {
       const searchPattern = `%${filters.search}%`;
       conditions.push(
-        or(like(buses.registrationNumber, searchPattern), like(buses.fleetNumber, searchPattern))!,
+        or(
+          like(buses.registrationNumber, searchPattern),
+          like(buses.fleetNumber, searchPattern),
+        )!,
       );
     }
 
@@ -48,7 +55,8 @@ export async function getBusesImpl(filters?: { status?: string; depot?: string; 
       const q = filters.search.toLowerCase();
       result = result.filter(
         (b) =>
-          b.registrationNumber.toLowerCase().includes(q) || b.fleetNumber.toLowerCase().includes(q),
+          b.registrationNumber.toLowerCase().includes(q) ||
+          b.fleetNumber.toLowerCase().includes(q),
       );
     }
     return result as any;
@@ -89,9 +97,11 @@ export async function createBusImpl(data: {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "fleet.manage");
 
-  if (!data.registrationNumber) throw new Error("Registration number is required");
+  if (!data.registrationNumber)
+    throw new Error("Registration number is required");
   if (!data.fleetNumber) throw new Error("Fleet number is required");
-  if (!data.capacity || data.capacity <= 0) throw new Error("Capacity must be positive");
+  if (!data.capacity || data.capacity <= 0)
+    throw new Error("Capacity must be positive");
   if (!data.depot) throw new Error("Depot is required");
 
   // Validate unique registration number within tenant
@@ -109,10 +119,15 @@ export async function createBusImpl(data: {
 
   // Validate unique fleet number within tenant
   const existingFleet = await db.query.buses.findFirst({
-    where: and(eq(buses.fleetNumber, data.fleetNumber), eq(buses.tenantId, currentUser.tenantId)),
+    where: and(
+      eq(buses.fleetNumber, data.fleetNumber),
+      eq(buses.tenantId, currentUser.tenantId),
+    ),
   });
   if (existingFleet) {
-    throw new Error(`Fleet number ${data.fleetNumber} already exists in this tenant.`);
+    throw new Error(
+      `Fleet number ${data.fleetNumber} already exists in this tenant.`,
+    );
   }
 
   const [newBus] = await db
@@ -161,9 +176,11 @@ export async function updateBusImpl(
   });
   if (!bus) throw new Error("Bus not found");
 
-  if (!data.registrationNumber) throw new Error("Registration number is required");
+  if (!data.registrationNumber)
+    throw new Error("Registration number is required");
   if (!data.fleetNumber) throw new Error("Fleet number is required");
-  if (!data.capacity || data.capacity <= 0) throw new Error("Capacity must be positive");
+  if (!data.capacity || data.capacity <= 0)
+    throw new Error("Capacity must be positive");
   if (!data.depot) throw new Error("Depot is required");
 
   // Validate uniqueness if changing registration
@@ -175,14 +192,19 @@ export async function updateBusImpl(
       ),
     });
     if (existingReg) {
-      throw new Error(`Registration number ${data.registrationNumber} already exists.`);
+      throw new Error(
+        `Registration number ${data.registrationNumber} already exists.`,
+      );
     }
   }
 
   // Validate uniqueness if changing fleet number
   if (data.fleetNumber !== bus.fleetNumber) {
     const existingFleet = await db.query.buses.findFirst({
-      where: and(eq(buses.fleetNumber, data.fleetNumber), eq(buses.tenantId, currentUser.tenantId)),
+      where: and(
+        eq(buses.fleetNumber, data.fleetNumber),
+        eq(buses.tenantId, currentUser.tenantId),
+      ),
     });
     if (existingFleet) {
       throw new Error(`Fleet number ${data.fleetNumber} already exists.`);
@@ -255,7 +277,10 @@ async function getCrewByRole(
   await requirePermission(currentUser.role, "crew.view");
 
   try {
-    let conditions = [eq(crew.tenantId, currentUser.tenantId), eq(crew.role, role)];
+    let conditions = [
+      eq(crew.tenantId, currentUser.tenantId),
+      eq(crew.role, role),
+    ];
 
     if (filters?.status && filters.status !== "all") {
       conditions.push(eq(crew.status, filters.status));
@@ -267,7 +292,12 @@ async function getCrewByRole(
 
     if (filters?.search) {
       const searchPattern = `%${filters.search}%`;
-      conditions.push(or(like(crew.name, searchPattern), like(crew.employeeId, searchPattern))!);
+      conditions.push(
+        or(
+          like(crew.name, searchPattern),
+          like(crew.employeeId, searchPattern),
+        )!,
+      );
     }
 
     return await db
@@ -343,7 +373,9 @@ export async function createCrewMemberImpl(data: {
   if (!data.depot) throw new Error("Depot is required");
 
   // Validate license category/expiry for drivers
-  const parsedLicenseExpiry = data.licenseExpiry ? new Date(data.licenseExpiry) : null;
+  const parsedLicenseExpiry = data.licenseExpiry
+    ? new Date(data.licenseExpiry)
+    : null;
   if (data.role === "driver" && parsedLicenseExpiry) {
     if (isNaN(parsedLicenseExpiry.getTime())) {
       throw new Error("License expiry must be a valid date");
@@ -352,10 +384,15 @@ export async function createCrewMemberImpl(data: {
 
   // Validate employeeId uniqueness within tenant
   const existing = await db.query.crew.findFirst({
-    where: and(eq(crew.employeeId, data.employeeId), eq(crew.tenantId, currentUser.tenantId)),
+    where: and(
+      eq(crew.employeeId, data.employeeId),
+      eq(crew.tenantId, currentUser.tenantId),
+    ),
   });
   if (existing) {
-    throw new Error(`Employee ID ${data.employeeId} already exists in this tenant.`);
+    throw new Error(
+      `Employee ID ${data.employeeId} already exists in this tenant.`,
+    );
   }
 
   const [newMember] = await db
@@ -370,13 +407,16 @@ export async function createCrewMemberImpl(data: {
       availableFrom: data.availableFrom ?? 330,
       restUntil: data.restUntil ?? 330,
       licenseCategory:
-        data.role === "driver" ? data.licenseCategory || "Commercial Bus Licence" : null,
+        data.role === "driver"
+          ? data.licenseCategory || "Commercial Bus Licence"
+          : null,
       licenseExpiry: data.role === "driver" ? parsedLicenseExpiry : null,
     })
     .returning();
 
   // Audit Log
-  const actionType = data.role === "driver" ? "DRIVER_CREATED" : "CONDUCTOR_CREATED";
+  const actionType =
+    data.role === "driver" ? "DRIVER_CREATED" : "CONDUCTOR_CREATED";
   await db.insert(auditLogs).values({
     tenantId: currentUser.tenantId,
     userId: currentUser.id,
@@ -414,7 +454,9 @@ export async function updateCrewMemberImpl(
   if (!data.depot) throw new Error("Depot is required");
 
   // Validate license category/expiry for drivers
-  const parsedEditLicenseExpiry = data.licenseExpiry ? new Date(data.licenseExpiry) : null;
+  const parsedEditLicenseExpiry = data.licenseExpiry
+    ? new Date(data.licenseExpiry)
+    : null;
   if (member.role === "driver" && parsedEditLicenseExpiry) {
     if (isNaN(parsedEditLicenseExpiry.getTime())) {
       throw new Error("License expiry must be a valid date");
@@ -424,7 +466,10 @@ export async function updateCrewMemberImpl(
   // Validate uniqueness if changing employeeId
   if (data.employeeId !== member.employeeId) {
     const existing = await db.query.crew.findFirst({
-      where: and(eq(crew.employeeId, data.employeeId), eq(crew.tenantId, currentUser.tenantId)),
+      where: and(
+        eq(crew.employeeId, data.employeeId),
+        eq(crew.tenantId, currentUser.tenantId),
+      ),
     });
     if (existing) {
       throw new Error(`Employee ID ${data.employeeId} already exists.`);
@@ -448,7 +493,8 @@ export async function updateCrewMemberImpl(
     .returning();
 
   // Audit Log
-  const actionType = member.role === "driver" ? "DRIVER_UPDATED" : "CONDUCTOR_UPDATED";
+  const actionType =
+    member.role === "driver" ? "DRIVER_UPDATED" : "CONDUCTOR_UPDATED";
   await db.insert(auditLogs).values({
     tenantId: currentUser.tenantId,
     userId: currentUser.id,
@@ -477,7 +523,9 @@ export async function updateCrewStatusImpl(id: string, status: string) {
 
   // Audit Log
   const actionType =
-    member.role === "driver" ? "DRIVER_STATUS_CHANGED" : "CONDUCTOR_STATUS_CHANGED";
+    member.role === "driver"
+      ? "DRIVER_STATUS_CHANGED"
+      : "CONDUCTOR_STATUS_CHANGED";
   await db.insert(auditLogs).values({
     tenantId: currentUser.tenantId,
     userId: currentUser.id,
@@ -509,7 +557,10 @@ export async function getCrewAvailabilityImpl() {
       return list;
     }
   } catch (err) {
-    console.warn("DB query error in getCrewAvailabilityImpl, using fallback crew dataset:", err);
+    console.warn(
+      "DB query error in getCrewAvailabilityImpl, using fallback crew dataset:",
+      err,
+    );
   }
 
   return FALLBACK_CREW as any;

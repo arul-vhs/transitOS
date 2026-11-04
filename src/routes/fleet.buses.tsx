@@ -44,10 +44,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
-import { getBuses, getBus, createBus, updateBus, updateBusStatus } from "@/lib/fleet-crew";
+import {
+  getBuses,
+  getBus,
+  createBus,
+  updateBus,
+  updateBusStatus,
+} from "@/lib/fleet-crew";
 
 export const Route = createFileRoute("/fleet/buses")({
   beforeLoad: ({ context }) => {
@@ -58,7 +69,10 @@ export const Route = createFileRoute("/fleet/buses")({
   head: () => ({
     meta: [
       { title: "Fleet Management: TransitOS" },
-      { name: "description", content: "Fleet register, availability and depot allocation." },
+      {
+        name: "description",
+        content: "Fleet register, availability and depot allocation.",
+      },
     ],
   }),
   component: BusesPage,
@@ -98,6 +112,17 @@ function getStatusBadgeClass(status: string) {
   }
 }
 
+interface BusItem {
+  id: string;
+  registrationNumber: string;
+  fleetNumber?: string;
+  busType?: string;
+  capacity?: number;
+  depot: string;
+  status: string;
+  availableFrom?: number;
+}
+
 function BusesPage() {
   const queryClient = useQueryClient();
   const context = RootRoute.useRouteContext();
@@ -134,20 +159,26 @@ function BusesPage() {
   const [formAvailableFrom, setFormAvailableFrom] = useState("05:30");
 
   // 1. Fetch Buses
-  const { data: busesList = [], isLoading } = useQuery({
+  const { data: busesList = [], isLoading } = useQuery<BusItem[]>({
     queryKey: ["buses", statusFilter, depotFilter, search],
-    queryFn: () =>
-      getBuses({
+    queryFn: async () => {
+      const data = await getBuses({
         status: statusFilter,
         depot: depotFilter,
         search,
-      }),
+      });
+      return (data || []) as unknown as BusItem[];
+    },
   });
 
   // 2. Fetch Selected Bus Details
-  const { data: selectedBusDetails } = useQuery({
+  const { data: selectedBusDetails } = useQuery<BusItem | null>({
     queryKey: ["bus", selectedBusId],
-    queryFn: () => getBus(selectedBusId!),
+    queryFn: async () => {
+      if (!selectedBusId) return null;
+      const data = await getBus(selectedBusId);
+      return data as unknown as BusItem;
+    },
     enabled: !!selectedBusId,
   });
 
@@ -160,7 +191,7 @@ function BusesPage() {
       setIsCreateOpen(false);
       resetForm();
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to create bus");
     },
   });
@@ -176,7 +207,7 @@ function BusesPage() {
       setIsEditOpen(false);
       resetForm();
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to update bus");
     },
   });
@@ -192,7 +223,7 @@ function BusesPage() {
       setIsConfirmStatusOpen(false);
       setPendingStatusChange(null);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to update status");
     },
   });
@@ -209,7 +240,7 @@ function BusesPage() {
   };
 
   // Open Edit Dialog
-  const handleOpenEdit = (bus: any) => {
+  const handleOpenEdit = (bus: BusItem) => {
     setSelectedBusId(bus.id);
     setFormRegNum(bus.registrationNumber);
     setFormFleetNum(bus.fleetNumber || "");
@@ -217,7 +248,7 @@ function BusesPage() {
     setFormCapacity(String(bus.capacity || 40));
     setFormDepot(bus.depot);
     setFormStatus(bus.status);
-    setFormAvailableFrom(formatMinutesToTime(bus.availableFrom));
+    setFormAvailableFrom(formatMinutesToTime(bus.availableFrom || 330));
     setIsEditOpen(true);
   };
 
@@ -267,7 +298,12 @@ function BusesPage() {
     newStatus: string,
   ) => {
     if (newStatus === "breakdown" || newStatus === "out-of-service") {
-      setPendingStatusChange({ id, regNum: currentReg, fleetNum: currentFleet, status: newStatus });
+      setPendingStatusChange({
+        id,
+        regNum: currentReg,
+        fleetNum: currentFleet,
+        status: newStatus,
+      });
       setIsConfirmStatusOpen(true);
     } else {
       statusMutation.mutate({ id, status: newStatus });
@@ -276,17 +312,27 @@ function BusesPage() {
 
   // Metrics Calculation
   const totalBuses = busesList.length;
-  const availableBuses = busesList.filter((b) => b.status === "available").length;
+  const availableBuses = busesList.filter(
+    (b) => b.status === "available",
+  ).length;
   const assignedBuses = busesList.filter((b) => b.status === "assigned").length;
-  const inServiceBuses = busesList.filter((b) => b.status === "in-service").length;
-  const maintenanceBuses = busesList.filter((b) => b.status === "maintenance").length;
-  const breakdownBuses = busesList.filter((b) => b.status === "breakdown").length;
-  const outOfServiceBuses = busesList.filter((b) => b.status === "out-of-service").length;
+  const inServiceBuses = busesList.filter(
+    (b) => b.status === "in-service",
+  ).length;
+  const maintenanceBuses = busesList.filter(
+    (b) => b.status === "maintenance",
+  ).length;
+  const breakdownBuses = busesList.filter(
+    (b) => b.status === "breakdown",
+  ).length;
+  const outOfServiceBuses = busesList.filter(
+    (b) => b.status === "out-of-service",
+  ).length;
 
   return (
     <AppShell
-      title="Fleet Management"
-      subtitle="Manage your depot fleet registers and live bus status contexts."
+      title="Buses & Fleet Register"
+      subtitle="Vehicle inventory, availability status, and depot assignments."
       actions={
         canManage ? (
           <Button
@@ -295,17 +341,18 @@ function BusesPage() {
               resetForm();
               setIsCreateOpen(true);
             }}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md shadow-xs cursor-pointer"
           >
-            <Plus className="mr-2 size-4" />
-            Create Bus
+            <Plus className="mr-1.5 size-3.5" />
+            Add Bus
           </Button>
         ) : undefined
       }
     >
       <div className="space-y-6">
-        {/* 1. Metrics Grid (Apple-Style Glass Cards with Semrush Accents) */}
+        {/* 1. Metrics Grid */}
         <div className="grid gap-3.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
-          <div className="rounded-2xl border border-border/80 bg-card p-4 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+          <div className="rounded-lg border border-border/80 bg-card p-4 flex flex-col justify-between shadow-xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                 Total Fleet
@@ -315,36 +362,42 @@ function BusesPage() {
             <p className="text-3xl font-extrabold tracking-tight mt-2 text-foreground">
               {totalBuses}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1">Salem City Fleet</p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Salem City Fleet
+            </p>
           </div>
 
-          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col justify-between shadow-xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
                 Available
               </span>
-              <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="size-2 rounded bg-emerald-500"></span>
             </div>
             <p className="text-3xl font-extrabold tracking-tight mt-2 text-emerald-600 dark:text-emerald-400">
               {availableBuses}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1">Ready to dispatch</p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Ready to dispatch
+            </p>
           </div>
 
-          <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+          <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-4 flex flex-col justify-between shadow-xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">
                 In Service
               </span>
-              <span className="size-2 rounded-full bg-cyan-500"></span>
+              <span className="size-2 rounded bg-cyan-500"></span>
             </div>
             <p className="text-3xl font-extrabold tracking-tight mt-2 text-cyan-600 dark:text-cyan-400">
               {inServiceBuses + assignedBuses}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1">On road or assigned</p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              On road or assigned
+            </p>
           </div>
 
-          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 flex flex-col justify-between shadow-xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
                 Maintenance
@@ -354,10 +407,12 @@ function BusesPage() {
             <p className="text-3xl font-extrabold tracking-tight mt-2 text-amber-600 dark:text-amber-400">
               {maintenanceBuses}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1">In workshop bays</p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              In workshop bays
+            </p>
           </div>
 
-          <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all">
+          <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 p-4 flex flex-col justify-between shadow-xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
                 Breakdown
@@ -367,20 +422,24 @@ function BusesPage() {
             <p className="text-3xl font-extrabold tracking-tight mt-2 text-rose-600 dark:text-rose-400">
               {breakdownBuses}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1">Needs recovery</p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Needs recovery
+            </p>
           </div>
 
-          <div className="rounded-2xl border border-border/70 bg-muted/30 p-4 flex flex-col justify-between shadow-2xs">
+          <div className="rounded-lg border border-border/70 bg-muted/30 p-4 flex flex-col justify-between shadow-xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                 Standby
               </span>
-              <span className="size-2 rounded-full bg-muted-foreground"></span>
+              <span className="size-2 rounded bg-muted-foreground"></span>
             </div>
             <p className="text-3xl font-extrabold tracking-tight mt-2 text-muted-foreground">
               {outOfServiceBuses}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1">Depot reserve</p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Depot reserve
+            </p>
           </div>
         </div>
 
@@ -421,9 +480,15 @@ function BusesPage() {
                 <SelectContent>
                   <SelectItem value="all">All Depots</SelectItem>
                   <SelectItem value="Meyyanur Depot">Meyyanur Depot</SelectItem>
-                  <SelectItem value="Johnsonpet Depot">Johnsonpet Depot</SelectItem>
-                  <SelectItem value="Hasthampatti Depot">Hasthampatti Depot</SelectItem>
-                  <SelectItem value="Steel Plant Depot">Steel Plant Depot</SelectItem>
+                  <SelectItem value="Johnsonpet Depot">
+                    Johnsonpet Depot
+                  </SelectItem>
+                  <SelectItem value="Hasthampatti Depot">
+                    Hasthampatti Depot
+                  </SelectItem>
+                  <SelectItem value="Steel Plant Depot">
+                    Steel Plant Depot
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -433,7 +498,9 @@ function BusesPage() {
         {/* 3. Bus Table panel */}
         <div className="panel overflow-hidden">
           {isLoading ? (
-            <div className="py-10 text-center text-muted-foreground">Loading fleet records...</div>
+            <div className="py-10 text-center text-muted-foreground">
+              Loading fleet records...
+            </div>
           ) : busesList.length === 0 ? (
             <div className="py-10 text-center text-muted-foreground">
               No buses found. Add a bus to populate your fleet database.
@@ -449,7 +516,9 @@ function BusesPage() {
                   <TableHead>Depot</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Available From</TableHead>
-                  <TableHead className="w-[200px] text-right">Actions</TableHead>
+                  <TableHead className="w-[200px] text-right">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -458,10 +527,18 @@ function BusesPage() {
                     <TableCell className="font-semibold text-primary">
                       {bus.fleetNumber || "-"}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">{bus.registrationNumber}</TableCell>
-                    <TableCell className="text-sm">{bus.busType || "Standard"}</TableCell>
-                    <TableCell className="text-right text-sm">{bus.capacity || 40}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{bus.depot}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {bus.registrationNumber}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {bus.busType || "Standard"}
+                    </TableCell>
+                    <TableCell className="text-right text-sm">
+                      {bus.capacity || 40}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {bus.depot}
+                    </TableCell>
                     <TableCell>
                       {canManage ? (
                         <Select
@@ -572,8 +649,8 @@ function BusesPage() {
             <DialogHeader>
               <DialogTitle>Create New Bus</DialogTitle>
               <DialogDescription>
-                Add a new verified passenger bus vehicle to this organization's database fleet
-                registry.
+                Add a new verified passenger bus vehicle to this organization's
+                database fleet registry.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -612,9 +689,13 @@ function BusesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Standard Single Decker">Standard Single Decker</SelectItem>
+                    <SelectItem value="Standard Single Decker">
+                      Standard Single Decker
+                    </SelectItem>
                     <SelectItem value="Minibus">Minibus</SelectItem>
-                    <SelectItem value="Electric Single Decker">Electric Single Decker</SelectItem>
+                    <SelectItem value="Electric Single Decker">
+                      Electric Single Decker
+                    </SelectItem>
                     <SelectItem value="Double Decker">Double Decker</SelectItem>
                   </SelectContent>
                 </Select>
@@ -642,10 +723,18 @@ function BusesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Meyyanur Depot">Meyyanur Depot</SelectItem>
-                    <SelectItem value="Johnsonpet Depot">Johnsonpet Depot</SelectItem>
-                    <SelectItem value="Hasthampatti Depot">Hasthampatti Depot</SelectItem>
-                    <SelectItem value="Steel Plant Depot">Steel Plant Depot</SelectItem>
+                    <SelectItem value="Meyyanur Depot">
+                      Meyyanur Depot
+                    </SelectItem>
+                    <SelectItem value="Johnsonpet Depot">
+                      Johnsonpet Depot
+                    </SelectItem>
+                    <SelectItem value="Hasthampatti Depot">
+                      Hasthampatti Depot
+                    </SelectItem>
+                    <SelectItem value="Steel Plant Depot">
+                      Steel Plant Depot
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -680,7 +769,11 @@ function BusesPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateOpen(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={createMutation.isPending}>
@@ -735,9 +828,13 @@ function BusesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Standard Single Decker">Standard Single Decker</SelectItem>
+                    <SelectItem value="Standard Single Decker">
+                      Standard Single Decker
+                    </SelectItem>
                     <SelectItem value="Minibus">Minibus</SelectItem>
-                    <SelectItem value="Electric Single Decker">Electric Single Decker</SelectItem>
+                    <SelectItem value="Electric Single Decker">
+                      Electric Single Decker
+                    </SelectItem>
                     <SelectItem value="Double Decker">Double Decker</SelectItem>
                   </SelectContent>
                 </Select>
@@ -765,10 +862,18 @@ function BusesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Meyyanur Depot">Meyyanur Depot</SelectItem>
-                    <SelectItem value="Johnsonpet Depot">Johnsonpet Depot</SelectItem>
-                    <SelectItem value="Hasthampatti Depot">Hasthampatti Depot</SelectItem>
-                    <SelectItem value="Steel Plant Depot">Steel Plant Depot</SelectItem>
+                    <SelectItem value="Meyyanur Depot">
+                      Meyyanur Depot
+                    </SelectItem>
+                    <SelectItem value="Johnsonpet Depot">
+                      Johnsonpet Depot
+                    </SelectItem>
+                    <SelectItem value="Hasthampatti Depot">
+                      Hasthampatti Depot
+                    </SelectItem>
+                    <SelectItem value="Steel Plant Depot">
+                      Steel Plant Depot
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -786,7 +891,9 @@ function BusesPage() {
                     <SelectItem value="in-service">In Service</SelectItem>
                     <SelectItem value="maintenance">Maintenance</SelectItem>
                     <SelectItem value="breakdown">Breakdown</SelectItem>
-                    <SelectItem value="out-of-service">Out of Service</SelectItem>
+                    <SelectItem value="out-of-service">
+                      Out of Service
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -805,7 +912,11 @@ function BusesPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditOpen(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={updateMutation.isPending}>
@@ -825,7 +936,8 @@ function BusesPage() {
               Confirm Status Change
             </DialogTitle>
             <DialogDescription className="pt-2 text-foreground font-semibold">
-              Mark {pendingStatusChange?.fleetNum || "bus"} ({pendingStatusChange?.regNum}) as{" "}
+              Mark {pendingStatusChange?.fleetNum || "bus"} (
+              {pendingStatusChange?.regNum}) as{" "}
               <span className="capitalize text-destructive font-bold">
                 {pendingStatusChange?.status.replace("-", " ")}
               </span>
@@ -833,7 +945,8 @@ function BusesPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-2 text-sm text-muted-foreground">
-            This action will mark the vehicle as unavailable in the fleet schedule.
+            This action will mark the vehicle as unavailable in the fleet
+            schedule.
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button
@@ -877,13 +990,17 @@ function BusesPage() {
               {/* Properties block */}
               <div className="panel p-4 space-y-3 bg-secondary/20">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Fleet Number</span>
+                  <span className="text-xs text-muted-foreground">
+                    Fleet Number
+                  </span>
                   <span className="font-bold text-primary">
                     {selectedBusDetails.fleetNumber || "-"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Registration</span>
+                  <span className="text-xs text-muted-foreground">
+                    Registration
+                  </span>
                   <span className="font-mono text-sm font-semibold">
                     {selectedBusDetails.registrationNumber}
                   </span>
@@ -898,15 +1015,23 @@ function BusesPage() {
                   </Badge>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Capacity</span>
-                  <span className="text-sm font-semibold">{selectedBusDetails.capacity} seats</span>
+                  <span className="text-xs text-muted-foreground">
+                    Capacity
+                  </span>
+                  <span className="text-sm font-semibold">
+                    {selectedBusDetails.capacity} seats
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-muted-foreground">Depot</span>
-                  <span className="text-sm font-medium">{selectedBusDetails.depot}</span>
+                  <span className="text-sm font-medium">
+                    {selectedBusDetails.depot}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Available From</span>
+                  <span className="text-xs text-muted-foreground">
+                    Available From
+                  </span>
                   <span className="text-sm font-mono">
                     {formatMinutesToTime(selectedBusDetails.availableFrom)}
                   </span>

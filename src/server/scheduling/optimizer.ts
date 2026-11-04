@@ -28,17 +28,32 @@ import {
 // Helper: load snapshot state of resources to detect concurrent edits
 async function captureResourceSnapshot(tenantId: string, serviceDate: string) {
   try {
-    const currentBuses = await db.query.buses.findMany({ where: eq(buses.tenantId, tenantId) });
-    const currentCrew = await db.query.crew.findMany({ where: eq(crew.tenantId, tenantId) });
+    const currentBuses = await db.query.buses.findMany({
+      where: eq(buses.tenantId, tenantId),
+    });
+    const currentCrew = await db.query.crew.findMany({
+      where: eq(crew.tenantId, tenantId),
+    });
     const currentTrips = await db.query.trips.findMany({
-      where: and(eq(trips.tenantId, tenantId), eq(trips.serviceDate, serviceDate)),
+      where: and(
+        eq(trips.tenantId, tenantId),
+        eq(trips.serviceDate, serviceDate),
+      ),
     });
 
     if (currentBuses.length > 0) {
       return {
         buses: currentBuses.map((b) => ({ id: b.id, status: b.status })),
-        crew: currentCrew.map((c) => ({ id: c.id, status: c.status, restUntil: c.restUntil })),
-        trips: currentTrips.map((t) => ({ id: t.id, startTime: t.startTime, status: t.status })),
+        crew: currentCrew.map((c) => ({
+          id: c.id,
+          status: c.status,
+          restUntil: c.restUntil,
+        })),
+        trips: currentTrips.map((t) => ({
+          id: t.id,
+          startTime: t.startTime,
+          status: t.status,
+        })),
       };
     }
   } catch (err) {
@@ -47,8 +62,16 @@ async function captureResourceSnapshot(tenantId: string, serviceDate: string) {
 
   return {
     buses: FALLBACK_BUSES.map((b) => ({ id: b.id, status: b.status })),
-    crew: FALLBACK_CREW.map((c) => ({ id: c.id, status: c.status, restUntil: 330 })),
-    trips: FALLBACK_TRIPS.map((t) => ({ id: t.id, startTime: t.startTime, status: t.status })),
+    crew: FALLBACK_CREW.map((c) => ({
+      id: c.id,
+      status: c.status,
+      restUntil: 330,
+    })),
+    trips: FALLBACK_TRIPS.map((t) => ({
+      id: t.id,
+      startTime: t.startTime,
+      status: t.status,
+    })),
   };
 }
 
@@ -97,7 +120,10 @@ export async function generateOptimizedScheduleImpl(data: {
 
     try {
       loadedTrips = await db.query.trips.findMany({
-        where: and(eq(trips.tenantId, tenantId), eq(trips.serviceDate, data.serviceDate)),
+        where: and(
+          eq(trips.tenantId, tenantId),
+          eq(trips.serviceDate, data.serviceDate),
+        ),
         orderBy: asc(trips.startTime),
       });
 
@@ -180,12 +206,17 @@ export async function generateOptimizedScheduleImpl(data: {
         depot: c.depot,
         availableFrom: 330,
         restUntil: 330,
-        licenseCategory: c.licenseNumber ? "Heavy Passenger Vehicle (HPV) / PSV Badge" : null,
+        licenseCategory: c.licenseNumber
+          ? "Heavy Passenger Vehicle (HPV) / PSV Badge"
+          : null,
         licenseExpiry: null,
       }));
     }
 
-    const inputSnapshot = await captureResourceSnapshot(tenantId, data.serviceDate);
+    const inputSnapshot = await captureResourceSnapshot(
+      tenantId,
+      data.serviceDate,
+    );
 
     // Build solver inputs
     const input: OptimizerInput = {
@@ -372,7 +403,10 @@ export async function getOptimizationRunImpl(runId: string) {
   };
 }
 
-export async function publishScheduleImpl(data: { runId: string; proposal: OptimizerResult }) {
+export async function publishScheduleImpl(data: {
+  runId: string;
+  proposal: OptimizerResult;
+}) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "schedule.publish");
 
@@ -383,7 +417,10 @@ export async function publishScheduleImpl(data: { runId: string; proposal: Optim
     let run: any = null;
     try {
       run = await db.query.optimizationRuns.findFirst({
-        where: and(eq(optimizationRuns.id, data.runId), eq(optimizationRuns.tenantId, tenantId)),
+        where: and(
+          eq(optimizationRuns.id, data.runId),
+          eq(optimizationRuns.tenantId, tenantId),
+        ),
       });
     } catch {}
 
@@ -396,7 +433,10 @@ export async function publishScheduleImpl(data: { runId: string; proposal: Optim
     // 2. Concurrency checks: Compare snapshot to current resources state if DB active
     if (run?.inputSnapshot) {
       try {
-        const currentSnapshot = await captureResourceSnapshot(tenantId, run.serviceDate);
+        const currentSnapshot = await captureResourceSnapshot(
+          tenantId,
+          run.serviceDate,
+        );
         const snap = run.inputSnapshot as any;
 
         if (snap) {
@@ -407,12 +447,20 @@ export async function publishScheduleImpl(data: { runId: string; proposal: Optim
 
           const crewChanged = currentSnapshot.crew.some((cc) => {
             const match = snap.crew?.find((sc: any) => sc.id === cc.id);
-            return !match || match.status !== cc.status || match.restUntil !== cc.restUntil;
+            return (
+              !match ||
+              match.status !== cc.status ||
+              match.restUntil !== cc.restUntil
+            );
           });
 
           const tripsChanged = currentSnapshot.trips.some((ct) => {
             const match = snap.trips?.find((st: any) => st.id === ct.id);
-            return !match || match.startTime !== ct.startTime || match.status !== ct.status;
+            return (
+              !match ||
+              match.startTime !== ct.startTime ||
+              match.status !== ct.status
+            );
           });
 
           if (busChanged || crewChanged || tripsChanged) {
@@ -425,11 +473,14 @@ export async function publishScheduleImpl(data: { runId: string; proposal: Optim
                 details: `Publish rejected: Concurrency resource mismatch since solver started.`,
               });
             } catch {}
-            throw new Error("Schedule changed since optimization. Please regenerate.");
+            throw new Error(
+              "Schedule changed since optimization. Please regenerate.",
+            );
           }
         }
       } catch (concurrencyErr: any) {
-        if (concurrencyErr.message?.includes("Schedule changed")) throw concurrencyErr;
+        if (concurrencyErr.message?.includes("Schedule changed"))
+          throw concurrencyErr;
       }
     }
 
@@ -438,7 +489,10 @@ export async function publishScheduleImpl(data: { runId: string; proposal: Optim
       await db.transaction(async (tx) => {
         // Clean out existing schedules/duties for the date to overwrite cleanly
         const todayDuties = await tx.query.duties.findMany({
-          where: and(eq(duties.tenantId, tenantId), eq(duties.serviceDate, serviceDate)),
+          where: and(
+            eq(duties.tenantId, tenantId),
+            eq(duties.serviceDate, serviceDate),
+          ),
         });
 
         for (const d of todayDuties) {
@@ -514,12 +568,18 @@ export async function publishScheduleImpl(data: { runId: string; proposal: Optim
         });
       });
     } catch (txErr: any) {
-      console.warn("DB transaction for publish could not complete, returning edge success:", txErr);
+      console.warn(
+        "DB transaction for publish could not complete, returning edge success:",
+        txErr,
+      );
     }
 
     return { success: true };
   } catch (err: any) {
-    if (err.message?.includes("already published") || err.message?.includes("Schedule changed")) {
+    if (
+      err.message?.includes("already published") ||
+      err.message?.includes("Schedule changed")
+    ) {
       throw err;
     }
     return { success: true, edgePersisted: true };

@@ -2,6 +2,14 @@ import pg from "pg";
 import fs from "fs";
 import path from "path";
 
+if (typeof process.loadEnvFile === "function") {
+  try {
+    process.loadEnvFile();
+  } catch {
+    // Ignore error if .env does not exist
+  }
+}
+
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL || "postgres://postgres:1234@localhost:5432/transitos",
   connectionTimeoutMillis: 5000,

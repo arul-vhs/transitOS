@@ -101,13 +101,19 @@ function IncidentsPage() {
   const canPublish = hasPermission(user?.role || "", "schedule.publish");
 
   // Local state parameters
-  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(
+    null,
+  );
   const [showReportDialog, setShowReportDialog] = useState(false);
 
   // Report incident form state
   const [type, setType] = useState<string>("BUS_BREAKDOWN");
-  const [severity, setSeverity] = useState<"low" | "medium" | "high" | "critical">("medium");
-  const [resourceType, setResourceType] = useState<"bus" | "crew" | "none">("bus");
+  const [severity, setSeverity] = useState<
+    "low" | "medium" | "high" | "critical"
+  >("medium");
+  const [resourceType, setResourceType] = useState<"bus" | "crew" | "none">(
+    "bus",
+  );
   const [resourceId, setResourceId] = useState<string>("");
   const [tripId, setTripId] = useState<string>("");
   const [routeId, setRouteId] = useState<string>("");
@@ -163,7 +169,9 @@ function IncidentsPage() {
   const generateProposalsMutation = useMutation({
     mutationFn: generateRecoveryProposals,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["incident-details", selectedIncidentId] });
+      queryClient.invalidateQueries({
+        queryKey: ["incident-details", selectedIncidentId],
+      });
       toast.success("Recovery proposals generated successfully.");
     },
     onError: (err: any) => {
@@ -174,9 +182,13 @@ function IncidentsPage() {
   const approveProposalMutation = useMutation({
     mutationFn: approveRecoveryProposal,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["incident-details", selectedIncidentId] });
+      queryClient.invalidateQueries({
+        queryKey: ["incident-details", selectedIncidentId],
+      });
       queryClient.invalidateQueries({ queryKey: ["incidents-list"] });
-      toast.success("Recovery action plan approved and applied transactionally!");
+      toast.success(
+        "Recovery action plan approved and applied transactionally!",
+      );
     },
     onError: (err: any) => {
       const errMsg = err.message || "Failed to apply recovery proposal";
@@ -202,7 +214,9 @@ function IncidentsPage() {
     mutationFn: resolveIncident,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents-list"] });
-      queryClient.invalidateQueries({ queryKey: ["incident-details", selectedIncidentId] });
+      queryClient.invalidateQueries({
+        queryKey: ["incident-details", selectedIncidentId],
+      });
       toast.success("Incident status updated to RESOLVED.");
     },
   });
@@ -224,13 +238,18 @@ function IncidentsPage() {
       severity,
       serviceDate: DEFAULT_DATE,
       resourceType: resourceType === "none" ? null : (resourceType as any),
-      resourceId: resourceId || null,
-      tripId: tripId || null,
-      routeId: routeId || null,
+      resourceId:
+        resourceId && resourceId.trim() !== "" ? resourceId.trim() : null,
+      tripId: tripId && tripId.trim() !== "" ? tripId.trim() : null,
+      routeId: routeId && routeId.trim() !== "" ? routeId.trim() : null,
       startTime: Number(startTime),
       expectedEndTime: expectedEndTime ? Number(expectedEndTime) : null,
-      location: locationName || null,
-      description: descriptionText || null,
+      location:
+        locationName && locationName.trim() !== "" ? locationName.trim() : null,
+      description:
+        descriptionText && descriptionText.trim() !== ""
+          ? descriptionText.trim()
+          : null,
     });
   };
 
@@ -246,8 +265,8 @@ function IncidentsPage() {
 
   return (
     <AppShell
-      title="Disruption Recovery Manager"
-      subtitle="Algorithmic incident triage, passenger delay containment, and automated multi-option recovery schedules."
+      title="Delays & Incident Recovery"
+      subtitle="Handle vehicle breakdowns and route delays with fast standby bus replacements."
       actions={
         canGenerate && (
           <Button
@@ -279,9 +298,9 @@ function IncidentsPage() {
               </p>
               <p className="text-muted-foreground mt-0.5 leading-relaxed">
                 <strong>Step 1:</strong> Log or select an active breakdown. ➔{" "}
-                <strong>Step 2:</strong> TransitOS evaluates cascade impacts across all downline
-                trips and computes automated recovery options (short-turns, vehicle swaps, or
-                deadhead injection).
+                <strong>Step 2:</strong> TransitOS evaluates cascade impacts
+                across all downline trips and computes automated recovery
+                options (short-turns, vehicle swaps, or deadhead injection).
               </p>
             </div>
           </div>
@@ -327,7 +346,9 @@ function IncidentsPage() {
               ) : incidentsList.length === 0 ? (
                 <div className="py-20 text-center text-xs text-muted-foreground italic flex-1 flex flex-col items-center justify-center p-4">
                   <CheckCircle className="size-8 text-emerald-500/60 mb-2" />
-                  <p className="font-semibold text-foreground">No Incidents Logged</p>
+                  <p className="font-semibold text-foreground">
+                    No Incidents Logged
+                  </p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
                     Click 'Report Disruption' to record an incident.
                   </p>
@@ -366,18 +387,23 @@ function IncidentsPage() {
                         </div>
 
                         <p className="text-xs font-bold truncate text-foreground">
-                          {inc.description || "Operational disruption reported on vehicle/crew."}
+                          {inc.description ||
+                            "Operational disruption reported on vehicle/crew."}
                         </p>
 
                         <div className="flex justify-between items-center text-[10px] text-muted-foreground font-mono pt-1 border-t border-border/40">
                           <span>
                             Status:{" "}
-                            <strong className="text-foreground uppercase">{inc.status}</strong>
+                            <strong className="text-foreground uppercase">
+                              {inc.status}
+                            </strong>
                           </span>
                           <span
                             className={cn(
                               "font-bold uppercase",
-                              inc.severity === "critical" ? "text-destructive" : "text-warning",
+                              inc.severity === "critical"
+                                ? "text-destructive"
+                                : "text-warning",
                             )}
                           >
                             {inc.severity}
@@ -401,7 +427,9 @@ function IncidentsPage() {
             ) : !selectedIncidentObj ? (
               <div className="glass-panel p-24 text-center text-xs text-muted-foreground flex flex-col items-center justify-center">
                 <ShieldAlert className="size-10 text-muted-foreground/40 mb-2" />
-                <p className="font-semibold text-foreground">No Disruption Selected</p>
+                <p className="font-semibold text-foreground">
+                  No Disruption Selected
+                </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   Select an incident from the left to inspect downline impacts.
                 </p>
@@ -427,12 +455,17 @@ function IncidentsPage() {
                         >
                           {selectedIncidentObj.severity} Severity
                         </Badge>
-                        <Badge variant="secondary" className="uppercase text-[9px] font-bold">
+                        <Badge
+                          variant="secondary"
+                          className="uppercase text-[9px] font-bold"
+                        >
                           {selectedIncidentObj.status}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Logged at {formatMinutesToTime(selectedIncidentObj.startTime)} · Location:{" "}
+                        Logged at{" "}
+                        {formatMinutesToTime(selectedIncidentObj.startTime)} ·
+                        Location:{" "}
                         <strong className="text-foreground">
                           {selectedIncidentObj.location || "En Route Corridor"}
                         </strong>
@@ -445,19 +478,26 @@ function IncidentsPage() {
                       selectedIncidentObj.status !== "RESOLVED" &&
                       selectedIncidentObj.status !== "CANCELLED" ? (
                         <Button
-                          onClick={() => generateProposalsMutation.mutate(selectedIncidentObj.id)}
+                          onClick={() =>
+                            generateProposalsMutation.mutate(
+                              selectedIncidentObj.id,
+                            )
+                          }
                           disabled={generateProposalsMutation.isPending}
                           size="sm"
                           className="bg-primary text-primary-foreground text-xs font-semibold shadow-md shadow-primary/20"
                         >
                           {generateProposalsMutation.isPending ? (
                             <>
-                              <Loader2 className="mr-1.5 size-3.5 animate-spin" /> Solving...
+                              <Loader2 className="mr-1.5 size-3.5 animate-spin" />{" "}
+                              Solving...
                             </>
                           ) : (
                             <>
                               <Sparkles className="mr-1.5 size-3.5" />
-                              {proposals.length > 0 ? "Regenerate Options" : "Solve Disruption"}
+                              {proposals.length > 0
+                                ? "Regenerate Options"
+                                : "Solve Disruption"}
                             </>
                           )}
                         </Button>
@@ -466,7 +506,11 @@ function IncidentsPage() {
                       {selectedIncidentObj.status !== "RESOLVED" &&
                         selectedIncidentObj.status !== "CANCELLED" && (
                           <Button
-                            onClick={() => resolveIncidentMutation.mutate(selectedIncidentObj.id)}
+                            onClick={() =>
+                              resolveIncidentMutation.mutate(
+                                selectedIncidentObj.id,
+                              )
+                            }
                             disabled={resolveIncidentMutation.isPending}
                             variant="outline"
                             size="sm"
@@ -484,7 +528,9 @@ function IncidentsPage() {
                         Resource Affected:
                       </span>
                       <p className="font-mono font-bold text-foreground mt-0.5">
-                        {selectedIncidentObj.resourceType === "bus" ? "Bus Vehicle" : "Crew Member"}{" "}
+                        {selectedIncidentObj.resourceType === "bus"
+                          ? "Bus Vehicle"
+                          : "Crew Member"}{" "}
                         ({selectedIncidentObj.resourceId || "N/A"})
                       </p>
                     </div>
@@ -503,7 +549,8 @@ function IncidentsPage() {
                         Description:
                       </span>
                       <p className="text-muted-foreground mt-0.5 italic truncate">
-                        {selectedIncidentObj.description || "Standard delay logged"}
+                        {selectedIncidentObj.description ||
+                          "Standard delay logged"}
                       </p>
                     </div>
                   </div>
@@ -512,8 +559,8 @@ function IncidentsPage() {
                 {/* RIPPLE EFFECT IMPACT TIMELINE */}
                 <section className="glass-panel p-5 space-y-4">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                    <Activity className="size-4 text-warning" /> Disruption Downstream Propagation
-                    Chain
+                    <Activity className="size-4 text-warning" /> Disruption
+                    Downstream Propagation Chain
                   </h3>
 
                   <div className="flex flex-col gap-2.5 max-w-xl mx-auto py-2">
@@ -527,8 +574,9 @@ function IncidentsPage() {
                           Origin Incident: {selectedIncidentObj.type}
                         </p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          Reported at {formatMinutesToTime(selectedIncidentObj.startTime)} at{" "}
-                          {selectedIncidentObj.location || "Salem Corridor"}
+                          Reported at{" "}
+                          {formatMinutesToTime(selectedIncidentObj.startTime)}{" "}
+                          at {selectedIncidentObj.location || "Salem Corridor"}
                         </p>
                       </div>
                     </div>
@@ -547,7 +595,8 @@ function IncidentsPage() {
                           Direct Resource Immobilized
                         </p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          Assigned duty block trips blocked from subsequent on-time departure
+                          Assigned duty block trips blocked from subsequent
+                          on-time departure
                         </p>
                       </div>
                     </div>
@@ -562,7 +611,8 @@ function IncidentsPage() {
                           <div className="flex items-center gap-2 text-xs font-bold text-warning">
                             <AlertTriangle className="size-4" />
                             <span>
-                              Downstream Cascade Impact ({selectedIncidentObj.impacts.length} trips
+                              Downstream Cascade Impact (
+                              {selectedIncidentObj.impacts.length} trips
                               affected)
                             </span>
                           </div>
@@ -573,8 +623,11 @@ function IncidentsPage() {
                                 className="py-1.5 flex justify-between gap-4 font-mono"
                               >
                                 <span>
-                                  Trip <strong>{imp.trip?.tripCode || "Departure"}</strong> (
-                                  {imp.impactType})
+                                  Trip{" "}
+                                  <strong>
+                                    {imp.trip?.tripCode || "Departure"}
+                                  </strong>{" "}
+                                  ({imp.impactType})
                                 </span>
                                 <span className="font-bold text-warning uppercase text-[10px]">
                                   {imp.impactLevel}
@@ -605,7 +658,8 @@ function IncidentsPage() {
                           </h3>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Compare options and click <strong>Approve & Dispatch</strong> to apply the
+                          Compare options and click{" "}
+                          <strong>Approve & Dispatch</strong> to apply the
                           selected solution live.
                         </p>
                       </div>
@@ -621,7 +675,9 @@ function IncidentsPage() {
                           selectedIncidentObj.status !== "RESOLVED" && (
                             <Button
                               onClick={() =>
-                                generateProposalsMutation.mutate(selectedIncidentObj.id)
+                                generateProposalsMutation.mutate(
+                                  selectedIncidentObj.id,
+                                )
                               }
                               disabled={generateProposalsMutation.isPending}
                               size="sm"
@@ -685,13 +741,17 @@ function IncidentsPage() {
 
                               <div className="space-y-1.5 text-xs border-y border-border/60 py-2.5 my-2 font-mono">
                                 <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Trips Recovered:</span>
+                                  <span className="text-muted-foreground">
+                                    Trips Recovered:
+                                  </span>
                                   <span className="font-bold text-emerald-600 dark:text-emerald-400">
                                     {prop.tripsRecovered}
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Cancellations:</span>
+                                  <span className="text-muted-foreground">
+                                    Cancellations:
+                                  </span>
                                   <span
                                     className={cn(
                                       "font-bold",
@@ -704,19 +764,25 @@ function IncidentsPage() {
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Relief Handovers:</span>
+                                  <span className="text-muted-foreground">
+                                    Relief Handovers:
+                                  </span>
                                   <span className="font-bold text-foreground">
                                     {prop.handovers}
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Reserve Buses:</span>
+                                  <span className="text-muted-foreground">
+                                    Reserve Buses:
+                                  </span>
                                   <span className="font-bold text-foreground">
                                     {prop.busesUsed}
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Net Delay:</span>
+                                  <span className="text-muted-foreground">
+                                    Net Delay:
+                                  </span>
                                   <span className="font-bold text-warning">
                                     {prop.delayMinutes} min
                                   </span>
@@ -735,8 +801,8 @@ function IncidentsPage() {
                                     disabled
                                     className="w-full text-xs font-semibold h-8.5 bg-emerald-600 text-white opacity-100"
                                   >
-                                    <CheckCircle2 className="mr-1.5 size-3.5" /> Applied &
-                                    Dispatched
+                                    <CheckCircle2 className="mr-1.5 size-3.5" />{" "}
+                                    Applied & Dispatched
                                   </Button>
                                 ) : selectedIncidentObj.status === "APPLIED" ? (
                                   <Button
@@ -749,7 +815,9 @@ function IncidentsPage() {
                                 ) : (
                                   <Button
                                     onClick={() =>
-                                      approveProposalMutation.mutate({ proposalId: prop.id })
+                                      approveProposalMutation.mutate({
+                                        proposalId: prop.id,
+                                      })
                                     }
                                     disabled={
                                       approveProposalMutation.isPending ||
@@ -761,7 +829,9 @@ function IncidentsPage() {
                                         ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-500/20"
                                         : "",
                                     )}
-                                    variant={isRecommended ? "default" : "outline"}
+                                    variant={
+                                      isRecommended ? "default" : "outline"
+                                    }
                                   >
                                     {approveProposalMutation.isPending ? (
                                       <>
@@ -801,7 +871,8 @@ function IncidentsPage() {
                 Report Operational Disruption
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Record an incident to compute downstream ripple effects and recovery options.
+                Record an incident to compute downstream ripple effects and
+                recovery options.
               </DialogDescription>
             </DialogHeader>
 
@@ -809,36 +880,129 @@ function IncidentsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Disruption Category</Label>
-                  <Select value={type} onValueChange={setType}>
+                  <Select
+                    value={type}
+                    onValueChange={(val) => {
+                      setType(val);
+                      if (val === "BUS_BREAKDOWN") {
+                        setResourceType("bus");
+                      } else if (val === "CREW_ABSENCE") {
+                        setResourceType("crew");
+                      } else {
+                        setResourceType("none");
+                        setResourceId("");
+                      }
+                    }}
+                  >
                     <SelectTrigger className="text-xs font-mono">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="BUS_BREAKDOWN">Bus Mechanical Breakdown</SelectItem>
-                      <SelectItem value="TRAFFIC_DELAY">Heavy Corridor Traffic</SelectItem>
-                      <SelectItem value="CREW_ABSENCE">Crew Medical Absence</SelectItem>
-                      <SelectItem value="ACCIDENT">Corridor Collision / Blockage</SelectItem>
-                      <SelectItem value="ROAD_BLOCK">Road Closure / Detour</SelectItem>
+                      <SelectItem value="BUS_BREAKDOWN">
+                        Bus Mechanical Breakdown
+                      </SelectItem>
+                      <SelectItem value="TRAFFIC_DELAY">
+                        Heavy Corridor Traffic
+                      </SelectItem>
+                      <SelectItem value="CREW_ABSENCE">
+                        Crew Medical Absence
+                      </SelectItem>
+                      <SelectItem value="ACCIDENT">
+                        Corridor Collision / Blockage
+                      </SelectItem>
+                      <SelectItem value="ROAD_BLOCK">
+                        Road Closure / Detour
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1.5">
                   <Label className="text-xs">Incident Severity</Label>
-                  <Select value={severity} onValueChange={(val: any) => setSeverity(val)}>
+                  <Select
+                    value={severity}
+                    onValueChange={(val: any) => setSeverity(val)}
+                  >
                     <SelectTrigger className="text-xs font-mono">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="low">Low (Minor Delay)</SelectItem>
-                      <SelectItem value="medium">Medium (Trip Impact)</SelectItem>
-                      <SelectItem value="high">High (Corridor Blocked)</SelectItem>
-                      <SelectItem value="critical">Critical (Fleet Grounded)</SelectItem>
+                      <SelectItem value="medium">
+                        Medium (Trip Impact)
+                      </SelectItem>
+                      <SelectItem value="high">
+                        High (Corridor Blocked)
+                      </SelectItem>
+                      <SelectItem value="critical">
+                        Critical (Fleet Grounded)
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
+              <div className="space-y-1.5"></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">
+                    {type === "CREW_ABSENCE"
+                      ? "Affected Crew (Optional)"
+                      : "Affected Bus (Optional)"}
+                  </Label>
+                  <Select
+                    value={resourceId || "none"}
+                    onValueChange={(val) =>
+                      setResourceId(val === "none" ? "" : val)
+                    }
+                  >
+                    <SelectTrigger className="text-xs font-mono">
+                      <SelectValue placeholder="Select Resource" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        General / Unspecified
+                      </SelectItem>
+                      {type === "CREW_ABSENCE"
+                        ? driversList.map((d: any) => (
+                            <SelectItem key={d.id} value={d.id}>
+                              {d.name} ({d.employeeId || d.role})
+                            </SelectItem>
+                          ))
+                        : busesList.map((b: any) => (
+                            <SelectItem key={b.id} value={b.id}>
+                              {b.fleetNumber || b.registrationNumber} ({b.depot}
+                              )
+                            </SelectItem>
+                          ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Corridor / Route (Optional)</Label>
+                  <Select
+                    value={routeId || "none"}
+                    onValueChange={(val) =>
+                      setRouteId(val === "none" ? "" : val)
+                    }
+                  >
+                    <SelectTrigger className="text-xs font-mono">
+                      <SelectValue placeholder="Select Route" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        General / All Corridors
+                      </SelectItem>
+                      {routesList.map((r: any) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.routeNumber} ({r.origin} - {r.destination})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Location / Road Milestone</Label>
                 <Input
@@ -857,7 +1021,9 @@ function IncidentsPage() {
                   <Input
                     type="time"
                     value={formatMinutesToTime(startTime)}
-                    onChange={(e) => setStartTime(parseTimeToMinutes(e.target.value))}
+                    onChange={(e) =>
+                      setStartTime(parseTimeToMinutes(e.target.value))
+                    }
                     className="font-mono text-xs"
                     required
                   />
@@ -866,8 +1032,12 @@ function IncidentsPage() {
                   <Label className="text-xs">Expected Clearance Time</Label>
                   <Input
                     type="time"
-                    value={formatMinutesToTime(expectedEndTime || startTime + 120)}
-                    onChange={(e) => setExpectedEndTime(parseTimeToMinutes(e.target.value))}
+                    value={formatMinutesToTime(
+                      expectedEndTime || startTime + 120,
+                    )}
+                    onChange={(e) =>
+                      setExpectedEndTime(parseTimeToMinutes(e.target.value))
+                    }
                     className="font-mono text-xs"
                   />
                 </div>
@@ -899,7 +1069,9 @@ function IncidentsPage() {
                 disabled={createIncidentMutation.isPending}
                 className="bg-destructive text-destructive-foreground text-xs font-semibold"
               >
-                {createIncidentMutation.isPending ? "Logging..." : "Record Disruption"}
+                {createIncidentMutation.isPending
+                  ? "Logging..."
+                  : "Record Disruption"}
               </Button>
             </DialogFooter>
           </form>

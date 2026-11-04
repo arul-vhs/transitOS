@@ -36,7 +36,10 @@ export async function analyzeIncidentImpactImpl(incident: {
 
   // Load all duties and trips for the day
   const dayDuties = await db.query.duties.findMany({
-    where: and(eq(duties.tenantId, tenantId), eq(duties.serviceDate, serviceDate)),
+    where: and(
+      eq(duties.tenantId, tenantId),
+      eq(duties.serviceDate, serviceDate),
+    ),
     with: {
       trips: {
         with: {
@@ -48,7 +51,10 @@ export async function analyzeIncidentImpactImpl(incident: {
   });
 
   const dayTrips = await db.query.trips.findMany({
-    where: and(eq(trips.tenantId, tenantId), eq(trips.serviceDate, serviceDate)),
+    where: and(
+      eq(trips.tenantId, tenantId),
+      eq(trips.serviceDate, serviceDate),
+    ),
   });
 
   const impacts: ImpactSummary[] = [];
@@ -67,7 +73,10 @@ export async function analyzeIncidentImpactImpl(incident: {
   };
 
   // 1. BUS_BREAKDOWN or BUS_UNAVAILABLE
-  if (incident.type === "BUS_BREAKDOWN" || incident.type === "BUS_UNAVAILABLE") {
+  if (
+    incident.type === "BUS_BREAKDOWN" ||
+    incident.type === "BUS_UNAVAILABLE"
+  ) {
     const targetBusId = incident.resourceId;
     if (targetBusId) {
       // Find all duties assigned to this bus
@@ -132,13 +141,20 @@ export async function analyzeIncidentImpactImpl(incident: {
     if (targetCrewId) {
       // Find all duties/segments where this crew member is assigned
       const affectedDuties = dayDuties.filter((d) => {
-        if (incident.type === "DRIVER_ABSENT" && d.driverId === targetCrewId) return true;
-        if (incident.type === "CONDUCTOR_ABSENT" && d.conductorId === targetCrewId) return true;
+        if (incident.type === "DRIVER_ABSENT" && d.driverId === targetCrewId)
+          return true;
+        if (
+          incident.type === "CONDUCTOR_ABSENT" &&
+          d.conductorId === targetCrewId
+        )
+          return true;
         // Check segments
         return d.crewSegments?.some(
           (seg) =>
-            (incident.type === "DRIVER_ABSENT" && seg.driverId === targetCrewId) ||
-            (incident.type === "CONDUCTOR_ABSENT" && seg.conductorId === targetCrewId),
+            (incident.type === "DRIVER_ABSENT" &&
+              seg.driverId === targetCrewId) ||
+            (incident.type === "CONDUCTOR_ABSENT" &&
+              seg.conductorId === targetCrewId),
         );
       });
 
@@ -153,7 +169,8 @@ export async function analyzeIncidentImpactImpl(incident: {
             dutyId: d.id,
             busId: d.busId,
             driverId: incident.type === "DRIVER_ABSENT" ? targetCrewId : null,
-            conductorId: incident.type === "CONDUCTOR_ABSENT" ? targetCrewId : null,
+            conductorId:
+              incident.type === "CONDUCTOR_ABSENT" ? targetCrewId : null,
             impactType: "CREW_LOST",
             impactLevel: "DIRECT",
             reason: `Assigned crew member absent/unavailable starting at ${startTime} minutes.`,
@@ -170,7 +187,9 @@ export async function analyzeIncidentImpactImpl(incident: {
 
     if (directTrip) {
       // Find duty of this trip
-      const dutyObj = dayDuties.find((d) => d.trips?.some((dt) => dt.tripId === directTrip.id));
+      const dutyObj = dayDuties.find((d) =>
+        d.trips?.some((dt) => dt.tripId === directTrip.id),
+      );
       const dutyId = dutyObj ? dutyObj.id : null;
 
       addImpact({
@@ -191,7 +210,9 @@ export async function analyzeIncidentImpactImpl(incident: {
           .filter((t) => t)
           .sort((a, b) => a.startTime - b.startTime);
 
-        const startIndex = sortedTripsInDuty.findIndex((t) => t.id === directTrip.id);
+        const startIndex = sortedTripsInDuty.findIndex(
+          (t) => t.id === directTrip.id,
+        );
         let accumulatedDelay = delayMin;
 
         for (let i = startIndex + 1; i < sortedTripsInDuty.length; i++) {
@@ -241,7 +262,9 @@ export async function analyzeIncidentImpactImpl(incident: {
   if (incident.type === "TRIP_CANCELLED" && incident.tripId) {
     const targetTrip = dayTrips.find((t) => t.id === incident.tripId);
     if (targetTrip) {
-      const dutyObj = dayDuties.find((d) => d.trips?.some((dt) => dt.tripId === targetTrip.id));
+      const dutyObj = dayDuties.find((d) =>
+        d.trips?.some((dt) => dt.tripId === targetTrip.id),
+      );
       addImpact({
         tripId: targetTrip.id,
         dutyId: dutyObj ? dutyObj.id : null,
@@ -260,11 +283,15 @@ export async function analyzeIncidentImpactImpl(incident: {
     const endBlockTime = incident.expectedEndTime || 1440; // Default to end of day if null
     const routeTrips = dayTrips.filter(
       (t) =>
-        t.routeId === incident.routeId && t.startTime >= startTime && t.startTime <= endBlockTime,
+        t.routeId === incident.routeId &&
+        t.startTime >= startTime &&
+        t.startTime <= endBlockTime,
     );
 
     routeTrips.forEach((t) => {
-      const dutyObj = dayDuties.find((d) => d.trips?.some((dt) => dt.tripId === t.id));
+      const dutyObj = dayDuties.find((d) =>
+        d.trips?.some((dt) => dt.tripId === t.id),
+      );
       addImpact({
         tripId: t.id,
         dutyId: dutyObj ? dutyObj.id : null,

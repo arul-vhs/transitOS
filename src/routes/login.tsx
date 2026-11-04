@@ -1,4 +1,9 @@
-import { createFileRoute, redirect, useRouter, Link } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  redirect,
+  useRouter,
+  Link,
+} from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Bus, Loader2, Lock, Mail, ArrowLeft } from "lucide-react";
@@ -16,7 +21,11 @@ export const Route = createFileRoute("/login")({
       }
     } catch (err: any) {
       // Re-throw redirect exceptions to let router navigate
-      if (err?.message === "Redirect" || err?.status === 302 || err?.status === 307) {
+      if (
+        err?.message === "Redirect" ||
+        err?.status === 302 ||
+        err?.status === 307
+      ) {
         throw err;
       }
     }
@@ -76,7 +85,9 @@ function LoginPage() {
           <div className="flex size-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Bus className="size-6 animate-pulse" />
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold tracking-tight text-foreground">TransitOS</h2>
+          <h2 className="mt-6 text-3xl font-extrabold tracking-tight text-foreground">
+            TransitOS
+          </h2>
           <p className="mt-1.5 text-sm text-muted-foreground">
             Intelligent Transport Operations Platform
           </p>
@@ -109,7 +120,11 @@ function LoginPage() {
                   <Label htmlFor="password">Password</Label>
                   <button
                     type="button"
-                    onClick={() => toast.info("Contact system administrator to reset password.")}
+                    onClick={() =>
+                      toast.info(
+                        "Contact system administrator to reset password.",
+                      )
+                    }
                     className="text-xs font-semibold text-primary hover:underline"
                   >
                     Forgot password?
@@ -175,7 +190,10 @@ function LoginPage() {
                 { label: "System Admin", email: "admin@salemtransport.demo" },
                 { label: "Scheduler", email: "scheduler@salemtransport.demo" },
                 { label: "Depot Manager", email: "depot@salemtransport.demo" },
-                { label: "Route Planner", email: "planner@salemtransport.demo" },
+                {
+                  label: "Route Planner",
+                  email: "planner@salemtransport.demo",
+                },
               ].map((account) => (
                 <button
                   key={account.email}
@@ -187,7 +205,9 @@ function LoginPage() {
                   }}
                   className="rounded-lg border border-border/80 bg-background/50 hover:bg-muted/70 hover:border-primary/40 px-2.5 py-1.5 text-left text-xs transition-colors flex flex-col cursor-pointer"
                 >
-                  <span className="font-semibold text-foreground text-[11px]">{account.label}</span>
+                  <span className="font-semibold text-foreground text-[11px]">
+                    {account.label}
+                  </span>
                   <span className="font-mono text-[9px] text-muted-foreground truncate">
                     {account.email}
                   </span>

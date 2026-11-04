@@ -52,20 +52,25 @@ export const Route = createFileRoute("/crew/availability")({
   head: () => ({
     meta: [
       { title: "Crew Availability Matrix: TransitOS" },
-      { name: "description", content: "Visual crew availability, shift waves and rest timelines." },
+      {
+        name: "description",
+        content: "Visual crew availability, shift waves and rest timelines.",
+      },
     ],
   }),
   component: CrewAvailabilityPage,
 });
 
 interface HourStatus {
-  status: "available" | "resting" | "on-duty" | "leave" | "unavailable" | "off-duty";
+  status:
+    "available" | "resting" | "on-duty" | "leave" | "unavailable" | "off-duty";
   label: string;
   shortCode: string;
 }
 
 interface ShiftSegment {
-  status: "available" | "resting" | "on-duty" | "leave" | "unavailable" | "off-duty";
+  status:
+    "available" | "resting" | "on-duty" | "leave" | "unavailable" | "off-duty";
   label: string;
   shortCode: string;
   startHour: number;
@@ -95,7 +100,9 @@ interface CrewMember {
   weeklyHours?: number;
 }
 
-const TIMELINE_HOURS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
+const TIMELINE_HOURS = [
+  5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+];
 
 const DEPOTS = [
   "All Depots",
@@ -115,33 +122,60 @@ function getHourStatus(member: CrewMember, hour: number): HourStatus {
     return { status: "leave", label: "Approved Leave", shortCode: "L" };
   }
   if (status === "unavailable") {
-    return { status: "unavailable", label: "Unavailable / Suspended", shortCode: "U" };
+    return {
+      status: "unavailable",
+      label: "Unavailable / Suspended",
+      shortCode: "U",
+    };
   }
 
   // Mandatory post-duty recovery / rest
   if (status === "resting") {
     if (currentMinutes < restUntil) {
-      return { status: "resting", label: "Mandatory Rest (MVA 8-Hour Rule)", shortCode: "R" };
+      return {
+        status: "resting",
+        label: "Mandatory Rest (MVA 8-Hour Rule)",
+        shortCode: "R",
+      };
     }
   }
 
   // Active route shift assignment
   if (status === "on-duty" || status === "assigned") {
     // Active scheduled duty shift typically spans 8 hours from shift start
-    if (currentMinutes >= availableFrom && currentMinutes < availableFrom + 480) {
-      return { status: "on-duty", label: "On Duty (Route Shift Assigned)", shortCode: "D" };
+    if (
+      currentMinutes >= availableFrom &&
+      currentMinutes < availableFrom + 480
+    ) {
+      return {
+        status: "on-duty",
+        label: "On Duty (Route Shift Assigned)",
+        shortCode: "D",
+      };
     }
     if (currentMinutes >= availableFrom + 480) {
-      return { status: "resting", label: "Mandatory Post-Shift Rest", shortCode: "R" };
+      return {
+        status: "resting",
+        label: "Mandatory Post-Shift Rest",
+        shortCode: "R",
+      };
     }
   }
 
   // Pre-shift off duty hours (e.g. before 05:30 AM)
   if (currentMinutes < availableFrom) {
-    return { status: "off-duty", label: "Off Duty (Before Shift Call)", shortCode: "OFF" };
+    return {
+      status: "off-duty",
+      label: "Off Duty (Before Shift Call)",
+      shortCode: "OFF",
+    };
   }
 
-  return { status: "available", label: "Available for Dispatch", shortCode: "A" };
+  return {
+    status: "available",
+    label: "Available for Dispatch",
+    shortCode: "A",
+  };
 }
 
 function getCrewSegments(member: CrewMember): ShiftSegment[] {
@@ -234,12 +268,16 @@ function formatHour(h: number) {
 }
 
 function CrewAvailabilityPage() {
-  const [roleFilter, setRoleFilter] = useState<"all" | "driver" | "conductor">("all");
+  const [roleFilter, setRoleFilter] = useState<"all" | "driver" | "conductor">(
+    "all",
+  );
   const [depotFilter, setDepotFilter] = useState<string>("All Depots");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [viewMode, setViewMode] = useState<"gantt" | "hourly">("gantt");
-  const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
+  const [density, setDensity] = useState<"comfortable" | "compact">(
+    "comfortable",
+  );
   const [selectedMember, setSelectedMember] = useState<CrewMember | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(20);
@@ -263,7 +301,10 @@ function CrewAvailabilityPage() {
     if (!isTimeInTimeline) return null;
     const elapsedMinutes = (currentHour - 5) * 60 + currentMinute;
     const totalTimelineMinutes = 19 * 60; // 05:00 to 24:00 is 19 hours
-    return Math.min(100, Math.max(0, (elapsedMinutes / totalTimelineMinutes) * 100));
+    return Math.min(
+      100,
+      Math.max(0, (elapsedMinutes / totalTimelineMinutes) * 100),
+    );
   }, [currentHour, currentMinute, isTimeInTimeline]);
 
   // Aggregate metrics
@@ -295,10 +336,12 @@ function CrewAvailabilityPage() {
       // Status filter
       if (statusFilter !== "all") {
         const s = (c.status || "available").toLowerCase();
-        if (statusFilter === "on-duty" && s !== "on-duty" && s !== "assigned") return false;
+        if (statusFilter === "on-duty" && s !== "on-duty" && s !== "assigned")
+          return false;
         if (statusFilter === "available" && s !== "available") return false;
         if (statusFilter === "resting" && s !== "resting") return false;
-        if (statusFilter === "leave" && s !== "leave" && s !== "unavailable") return false;
+        if (statusFilter === "leave" && s !== "leave" && s !== "unavailable")
+          return false;
       }
 
       // Search query
@@ -306,7 +349,8 @@ function CrewAvailabilityPage() {
         const q = searchQuery.toLowerCase().trim();
         const matchesName = c.name?.toLowerCase().includes(q);
         const matchesEmpId =
-          c.employeeId?.toLowerCase().includes(q) || c.employee_id?.toLowerCase().includes(q);
+          c.employeeId?.toLowerCase().includes(q) ||
+          c.employee_id?.toLowerCase().includes(q);
         const matchesDepot = c.depot?.toLowerCase().includes(q);
         if (!matchesName && !matchesEmpId && !matchesDepot) return false;
       }
@@ -354,7 +398,12 @@ function CrewAvailabilityPage() {
             disabled={isFetching}
             className="text-xs h-8 gap-1.5 cursor-pointer font-medium"
           >
-            <RefreshCw className={cn("size-3.5", isFetching && "animate-spin text-primary")} />
+            <RefreshCw
+              className={cn(
+                "size-3.5",
+                isFetching && "animate-spin text-primary",
+              )}
+            />
             Sync Roster
           </Button>
         </div>
@@ -368,7 +417,7 @@ function CrewAvailabilityPage() {
             type="button"
             onClick={() => setStatusFilter("all")}
             className={cn(
-              "glass-panel p-3.5 rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer group",
+              "glass-panel p-3.5 rounded-lg flex items-center justify-between text-left transition-all cursor-pointer group",
               statusFilter === "all"
                 ? "ring-2 ring-primary/60 bg-primary/5 shadow-sm"
                 : "hover:bg-muted/30",
@@ -379,8 +428,12 @@ function CrewAvailabilityPage() {
                 Total Crew
               </p>
               <div className="flex items-baseline gap-1.5 mt-0.5">
-                <p className="text-xl font-extrabold text-foreground">{totalCount}</p>
-                <span className="text-[10px] text-muted-foreground font-mono">100%</span>
+                <p className="text-xl font-extrabold text-foreground">
+                  {totalCount}
+                </p>
+                <span className="text-[10px] text-muted-foreground font-mono">
+                  100%
+                </span>
               </div>
             </div>
             <div
@@ -398,9 +451,13 @@ function CrewAvailabilityPage() {
           {/* Available */}
           <button
             type="button"
-            onClick={() => setStatusFilter(statusFilter === "available" ? "all" : "available")}
+            onClick={() =>
+              setStatusFilter(
+                statusFilter === "available" ? "all" : "available",
+              )
+            }
             className={cn(
-              "glass-panel p-3.5 rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer group border-emerald-500/20 bg-emerald-500/5",
+              "glass-panel p-3.5 rounded-lg flex items-center justify-between text-left transition-all cursor-pointer group border-emerald-500/20 bg-emerald-500/5",
               statusFilter === "available"
                 ? "ring-2 ring-emerald-500 bg-emerald-500/15 shadow-sm"
                 : "hover:bg-emerald-500/10",
@@ -415,7 +472,10 @@ function CrewAvailabilityPage() {
                   {availableCount}
                 </p>
                 <span className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 font-mono">
-                  {totalCount ? Math.round((availableCount / totalCount) * 100) : 0}%
+                  {totalCount
+                    ? Math.round((availableCount / totalCount) * 100)
+                    : 0}
+                  %
                 </span>
               </div>
             </div>
@@ -434,9 +494,11 @@ function CrewAvailabilityPage() {
           {/* On Duty */}
           <button
             type="button"
-            onClick={() => setStatusFilter(statusFilter === "on-duty" ? "all" : "on-duty")}
+            onClick={() =>
+              setStatusFilter(statusFilter === "on-duty" ? "all" : "on-duty")
+            }
             className={cn(
-              "glass-panel p-3.5 rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer group border-indigo-500/20 bg-indigo-500/5",
+              "glass-panel p-3.5 rounded-lg flex items-center justify-between text-left transition-all cursor-pointer group border-indigo-500/20 bg-indigo-500/5",
               statusFilter === "on-duty"
                 ? "ring-2 ring-indigo-500 bg-indigo-500/15 shadow-sm"
                 : "hover:bg-indigo-500/10",
@@ -451,7 +513,10 @@ function CrewAvailabilityPage() {
                   {onDutyCount}
                 </p>
                 <span className="text-[10px] text-indigo-600/70 dark:text-indigo-400/70 font-mono">
-                  {totalCount ? Math.round((onDutyCount / totalCount) * 100) : 0}%
+                  {totalCount
+                    ? Math.round((onDutyCount / totalCount) * 100)
+                    : 0}
+                  %
                 </span>
               </div>
             </div>
@@ -470,9 +535,11 @@ function CrewAvailabilityPage() {
           {/* Mandatory Rest */}
           <button
             type="button"
-            onClick={() => setStatusFilter(statusFilter === "resting" ? "all" : "resting")}
+            onClick={() =>
+              setStatusFilter(statusFilter === "resting" ? "all" : "resting")
+            }
             className={cn(
-              "glass-panel p-3.5 rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer group border-amber-500/20 bg-amber-500/5",
+              "glass-panel p-3.5 rounded-lg flex items-center justify-between text-left transition-all cursor-pointer group border-amber-500/20 bg-amber-500/5",
               statusFilter === "resting"
                 ? "ring-2 ring-amber-500 bg-amber-500/15 shadow-sm"
                 : "hover:bg-amber-500/10",
@@ -487,7 +554,10 @@ function CrewAvailabilityPage() {
                   {restingCount}
                 </p>
                 <span className="text-[10px] text-amber-600/70 dark:text-amber-400/70 font-mono">
-                  {totalCount ? Math.round((restingCount / totalCount) * 100) : 0}%
+                  {totalCount
+                    ? Math.round((restingCount / totalCount) * 100)
+                    : 0}
+                  %
                 </span>
               </div>
             </div>
@@ -506,9 +576,11 @@ function CrewAvailabilityPage() {
           {/* Leave / Offline */}
           <button
             type="button"
-            onClick={() => setStatusFilter(statusFilter === "leave" ? "all" : "leave")}
+            onClick={() =>
+              setStatusFilter(statusFilter === "leave" ? "all" : "leave")
+            }
             className={cn(
-              "glass-panel p-3.5 rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer group border-rose-500/20 bg-rose-500/5",
+              "glass-panel p-3.5 rounded-lg flex items-center justify-between text-left transition-all cursor-pointer group border-rose-500/20 bg-rose-500/5",
               statusFilter === "leave"
                 ? "ring-2 ring-rose-500 bg-rose-500/15 shadow-sm"
                 : "hover:bg-rose-500/10",
@@ -523,7 +595,8 @@ function CrewAvailabilityPage() {
                   {leaveCount}
                 </p>
                 <span className="text-[10px] text-rose-600/70 dark:text-rose-400/70 font-mono">
-                  {totalCount ? Math.round((leaveCount / totalCount) * 100) : 0}%
+                  {totalCount ? Math.round((leaveCount / totalCount) * 100) : 0}
+                  %
                 </span>
               </div>
             </div>
@@ -541,7 +614,7 @@ function CrewAvailabilityPage() {
         </div>
 
         {/* 2. REFINED FILTER & VIEW BAR */}
-        <div className="glass-panel p-3.5 sm:p-4 rounded-2xl space-y-3">
+        <div className="glass-panel p-3.5 sm:p-4 rounded-lg space-y-3">
           {/* Main Controls Row */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             {/* Left: Role Tabs & Depot */}
@@ -575,7 +648,10 @@ function CrewAvailabilityPage() {
                 >
                   Drivers
                   <span className="text-[10px] font-mono opacity-70 bg-muted px-1.5 py-0.2 rounded-md">
-                    {crewList.filter((c: CrewMember) => c.role === "driver").length}
+                    {
+                      crewList.filter((c: CrewMember) => c.role === "driver")
+                        .length
+                    }
                   </span>
                 </button>
                 <button
@@ -590,7 +666,10 @@ function CrewAvailabilityPage() {
                 >
                   Conductors
                   <span className="text-[10px] font-mono opacity-70 bg-muted px-1.5 py-0.2 rounded-md">
-                    {crewList.filter((c: CrewMember) => c.role === "conductor").length}
+                    {
+                      crewList.filter((c: CrewMember) => c.role === "conductor")
+                        .length
+                    }
                   </span>
                 </button>
               </div>
@@ -708,7 +787,11 @@ function CrewAvailabilityPage() {
 
               <button
                 type="button"
-                onClick={() => setStatusFilter(statusFilter === "available" ? "all" : "available")}
+                onClick={() =>
+                  setStatusFilter(
+                    statusFilter === "available" ? "all" : "available",
+                  )
+                }
                 className={cn(
                   "px-2 py-0.5 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1.5 cursor-pointer border",
                   statusFilter === "available"
@@ -722,7 +805,11 @@ function CrewAvailabilityPage() {
 
               <button
                 type="button"
-                onClick={() => setStatusFilter(statusFilter === "on-duty" ? "all" : "on-duty")}
+                onClick={() =>
+                  setStatusFilter(
+                    statusFilter === "on-duty" ? "all" : "on-duty",
+                  )
+                }
                 className={cn(
                   "px-2 py-0.5 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1.5 cursor-pointer border",
                   statusFilter === "on-duty"
@@ -736,7 +823,11 @@ function CrewAvailabilityPage() {
 
               <button
                 type="button"
-                onClick={() => setStatusFilter(statusFilter === "resting" ? "all" : "resting")}
+                onClick={() =>
+                  setStatusFilter(
+                    statusFilter === "resting" ? "all" : "resting",
+                  )
+                }
                 className={cn(
                   "px-2 py-0.5 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1.5 cursor-pointer border",
                   statusFilter === "resting"
@@ -750,7 +841,9 @@ function CrewAvailabilityPage() {
 
               <button
                 type="button"
-                onClick={() => setStatusFilter(statusFilter === "leave" ? "all" : "leave")}
+                onClick={() =>
+                  setStatusFilter(statusFilter === "leave" ? "all" : "leave")
+                }
                 className={cn(
                   "px-2 py-0.5 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1.5 cursor-pointer border",
                   statusFilter === "leave"
@@ -771,8 +864,11 @@ function CrewAvailabilityPage() {
             {/* Status summary & Clear filters */}
             <div className="flex items-center gap-2 ml-auto text-[11px] text-muted-foreground">
               <span>
-                Showing <strong className="text-foreground">{filteredCrew.length}</strong> of{" "}
-                {totalCount} crew
+                Showing{" "}
+                <strong className="text-foreground">
+                  {filteredCrew.length}
+                </strong>{" "}
+                of {totalCount} crew
               </span>
               {hasActiveFilters && (
                 <button
@@ -788,7 +884,7 @@ function CrewAvailabilityPage() {
         </div>
 
         {/* 3. TIMELINE & ROSTER VIEW */}
-        <div className="glass-panel rounded-3xl overflow-hidden border border-border/70 shadow-sm">
+        <div className="glass-panel rounded-lg overflow-hidden border border-border/70 shadow-sm">
           {isLoading ? (
             <div className="py-24 text-center space-y-3">
               <div className="size-9 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto" />
@@ -798,13 +894,15 @@ function CrewAvailabilityPage() {
             </div>
           ) : filteredCrew.length === 0 ? (
             <div className="py-20 text-center space-y-3">
-              <div className="size-12 rounded-2xl bg-muted/60 text-muted-foreground flex items-center justify-center mx-auto">
+              <div className="size-12 rounded-lg bg-muted/60 text-muted-foreground flex items-center justify-center mx-auto">
                 <Users className="size-6" />
               </div>
-              <p className="text-sm font-bold text-foreground">No matching crew found</p>
+              <p className="text-sm font-bold text-foreground">
+                No matching crew found
+              </p>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                No crew members match your current filters. Try resetting the depot, role, or search
-                term.
+                No crew members match your current filters. Try resetting the
+                depot, role, or search term.
               </p>
               {hasActiveFilters && (
                 <Button
@@ -876,7 +974,9 @@ function CrewAvailabilityPage() {
                   {nowPercent !== null && (
                     <div
                       className="absolute top-0 bottom-0 pointer-events-none z-10 border-l border-rose-500/70 border-dashed"
-                      style={{ left: `calc(260px + (100% - 260px) * ${nowPercent / 100})` }}
+                      style={{
+                        left: `calc(260px + (100% - 260px) * ${nowPercent / 100})`,
+                      }}
                     />
                   )}
 
@@ -936,7 +1036,9 @@ function CrewAvailabilityPage() {
                             <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-muted-foreground truncate">
                               <span className="font-mono">{empId}</span>
                               <span className="opacity-40">•</span>
-                              <span className="truncate">{depot.replace(" Depot", "")}</span>
+                              <span className="truncate">
+                                {depot.replace(" Depot", "")}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -955,9 +1057,12 @@ function CrewAvailabilityPage() {
                                 const theme = getSegmentTheme(seg.status);
                                 const IconComponent = theme.icon;
                                 const widthPercent =
-                                  (seg.durationHours / TIMELINE_HOURS.length) * 100;
+                                  (seg.durationHours / TIMELINE_HOURS.length) *
+                                  100;
                                 const isNarrow = seg.durationHours <= 1;
-                                const isMedium = seg.durationHours > 1 && seg.durationHours <= 4;
+                                const isMedium =
+                                  seg.durationHours > 1 &&
+                                  seg.durationHours <= 4;
 
                                 return (
                                   <div
@@ -995,8 +1100,9 @@ function CrewAvailabilityPage() {
                                             {seg.label}
                                           </span>
                                           <span className="font-mono text-[11px] opacity-80 bg-background/40 px-1.5 py-0.5 rounded-md font-medium shrink-0">
-                                            {formatHour(seg.startHour)} – {formatHour(seg.endHour)}{" "}
-                                            ({seg.durationHours}h)
+                                            {formatHour(seg.startHour)} –{" "}
+                                            {formatHour(seg.endHour)} (
+                                            {seg.durationHours}h)
                                           </span>
                                         </div>
                                       )}
@@ -1014,7 +1120,8 @@ function CrewAvailabilityPage() {
                               }}
                             >
                               {TIMELINE_HOURS.map((hour) => {
-                                const { status, label, shortCode } = getHourStatus(member, hour);
+                                const { status, label, shortCode } =
+                                  getHourStatus(member, hour);
                                 const theme = getSegmentTheme(status);
 
                                 return (
@@ -1058,11 +1165,17 @@ function CrewAvailabilityPage() {
                 <option value={35}>35</option>
                 <option value={100}>All ({filteredCrew.length})</option>
               </select>
-              <span className="hidden sm:inline text-muted-foreground/60">•</span>
+              <span className="hidden sm:inline text-muted-foreground/60">
+                •
+              </span>
               <span className="text-muted-foreground">
-                Showing {Math.min(filteredCrew.length, (currentPage - 1) * pageSize + 1)}–
-                {Math.min(filteredCrew.length, currentPage * pageSize)} of {filteredCrew.length}{" "}
-                crew
+                Showing{" "}
+                {Math.min(
+                  filteredCrew.length,
+                  (currentPage - 1) * pageSize + 1,
+                )}
+                –{Math.min(filteredCrew.length, currentPage * pageSize)} of{" "}
+                {filteredCrew.length} crew
               </span>
             </div>
 
@@ -1080,13 +1193,17 @@ function CrewAvailabilityPage() {
                   Prev
                 </Button>
                 <span className="font-mono text-xs px-2 text-muted-foreground">
-                  Page <strong className="text-foreground">{currentPage}</strong> of {totalPages}
+                  Page{" "}
+                  <strong className="text-foreground">{currentPage}</strong> of{" "}
+                  {totalPages}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
                   className="h-8 px-2.5 text-xs gap-1 cursor-pointer"
                 >
                   Next
@@ -1098,15 +1215,21 @@ function CrewAvailabilityPage() {
         </div>
 
         {/* 4. CREW INSPECTION SHEET DRAWER */}
-        <Sheet open={!!selectedMember} onOpenChange={(open) => !open && setSelectedMember(null)}>
-          <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto p-6 space-y-6">
+        <Sheet
+          open={!!selectedMember}
+          onOpenChange={(open) => !open && setSelectedMember(null)}
+        >
+          <SheetContent
+            side="right"
+            className="w-full sm:max-w-md overflow-y-auto p-6 space-y-6"
+          >
             {selectedMember && (
               <>
                 <SheetHeader className="text-left space-y-2 border-b border-border/60 pb-4">
                   <div className="flex items-center gap-3">
                     <div
                       className={cn(
-                        "size-12 rounded-2xl flex items-center justify-center font-bold text-base shrink-0",
+                        "size-12 rounded-lg flex items-center justify-center font-bold text-base shrink-0",
                         selectedMember.role === "driver"
                           ? "bg-primary/10 text-primary border border-primary/20"
                           : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20",
@@ -1132,12 +1255,15 @@ function CrewAvailabilityPage() {
                               : "border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/5",
                           )}
                         >
-                          {selectedMember.role === "driver" ? "Driver" : "Conductor"}
+                          {selectedMember.role === "driver"
+                            ? "Driver"
+                            : "Conductor"}
                         </Badge>
                       </div>
                       <SheetDescription className="text-xs text-muted-foreground font-mono mt-0.5">
-                        {selectedMember.employeeId || selectedMember.employee_id} •{" "}
-                        {selectedMember.depot || "Meyyanur Depot"}
+                        {selectedMember.employeeId ||
+                          selectedMember.employee_id}{" "}
+                        • {selectedMember.depot || "Meyyanur Depot"}
                       </SheetDescription>
                     </div>
                   </div>
@@ -1168,11 +1294,15 @@ function CrewAvailabilityPage() {
                             <div>
                               <p className="font-bold">{seg.label}</p>
                               <p className="text-[11px] opacity-75 font-mono">
-                                {formatHour(seg.startHour)} – {formatHour(seg.endHour)}
+                                {formatHour(seg.startHour)} –{" "}
+                                {formatHour(seg.endHour)}
                               </p>
                             </div>
                           </div>
-                          <Badge variant="secondary" className="font-mono text-xs font-semibold">
+                          <Badge
+                            variant="secondary"
+                            className="font-mono text-xs font-semibold"
+                          >
                             {seg.durationHours} hrs
                           </Badge>
                         </div>
@@ -1188,19 +1318,27 @@ function CrewAvailabilityPage() {
                     Compliance & Statutory Limits
                   </h4>
 
-                  <div className="bg-muted/40 p-3.5 rounded-2xl border border-border/60 space-y-2.5 text-xs">
+                  <div className="bg-muted/40 p-3.5 rounded-lg border border-border/60 space-y-2.5 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">MVA 8-Hour Rest Compliance</span>
+                      <span className="text-muted-foreground">
+                        MVA 8-Hour Rest Compliance
+                      </span>
                       <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                         <Check className="size-3.5" /> Satisfied
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Max Continuous Driving</span>
-                      <span className="font-mono font-semibold">4.0 hrs (Limit 8.0h)</span>
+                      <span className="text-muted-foreground">
+                        Max Continuous Driving
+                      </span>
+                      <span className="font-mono font-semibold">
+                        4.0 hrs (Limit 8.0h)
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Weekly Duty Accumulated</span>
+                      <span className="text-muted-foreground">
+                        Weekly Duty Accumulated
+                      </span>
                       <span className="font-mono font-semibold">
                         {selectedMember.weeklyHours || 44} / 48 hrs max
                       </span>
@@ -1215,16 +1353,20 @@ function CrewAvailabilityPage() {
                     Credentials & Contact
                   </h4>
 
-                  <div className="bg-muted/40 p-3.5 rounded-2xl border border-border/60 space-y-2 text-xs">
+                  <div className="bg-muted/40 p-3.5 rounded-lg border border-border/60 space-y-2 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Contact Phone</span>
+                      <span className="text-muted-foreground">
+                        Contact Phone
+                      </span>
                       <span className="font-mono font-semibold flex items-center gap-1">
                         <Phone className="size-3 text-muted-foreground" />
                         {selectedMember.phone || "+91 94431 00000"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">License / Badge</span>
+                      <span className="text-muted-foreground">
+                        License / Badge
+                      </span>
                       <span className="font-mono text-muted-foreground">
                         {selectedMember.licenseNumber || "DL-TN-27-2018-00912"}
                       </span>

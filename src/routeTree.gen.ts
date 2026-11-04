@@ -30,6 +30,7 @@ import { Route as FleetBusesRouteImport } from './routes/fleet.buses'
 import { Route as FleetMaintenanceRouteImport } from './routes/fleet.maintenance'
 import { Route as NetworkPlannerRouteImport } from './routes/network.planner'
 import { Route as NetworkRoutesRouteImport } from './routes/network.routes'
+import { Route as OperationsAllocationRouteImport } from './routes/operations.allocation'
 import { Route as OperationsDutiesRouteImport } from './routes/operations.duties'
 import { Route as OperationsIncidentsRouteImport } from './routes/operations.incidents'
 import { Route as OperationsTodayRouteImport } from './routes/operations.today'
@@ -141,6 +142,11 @@ const NetworkRoutesRoute = NetworkRoutesRouteImport.update({
   path: '/network/routes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OperationsAllocationRoute = OperationsAllocationRouteImport.update({
+  id: '/operations/allocation',
+  path: '/operations/allocation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OperationsDutiesRoute = OperationsDutiesRouteImport.update({
   id: '/operations/duties',
   path: '/operations/duties',
@@ -188,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/fleet/maintenance': typeof FleetMaintenanceRoute
   '/network/planner': typeof NetworkPlannerRoute
   '/network/routes': typeof NetworkRoutesRoute
+  '/operations/allocation': typeof OperationsAllocationRoute
   '/operations/duties': typeof OperationsDutiesRoute
   '/operations/incidents': typeof OperationsIncidentsRoute
   '/operations/today': typeof OperationsTodayRoute
@@ -215,6 +222,7 @@ export interface FileRoutesByTo {
   '/fleet/maintenance': typeof FleetMaintenanceRoute
   '/network/planner': typeof NetworkPlannerRoute
   '/network/routes': typeof NetworkRoutesRoute
+  '/operations/allocation': typeof OperationsAllocationRoute
   '/operations/duties': typeof OperationsDutiesRoute
   '/operations/incidents': typeof OperationsIncidentsRoute
   '/operations/today': typeof OperationsTodayRoute
@@ -244,6 +252,7 @@ export interface FileRoutesById {
   '/fleet/maintenance': typeof FleetMaintenanceRoute
   '/network/planner': typeof NetworkPlannerRoute
   '/network/routes': typeof NetworkRoutesRoute
+  '/operations/allocation': typeof OperationsAllocationRoute
   '/operations/duties': typeof OperationsDutiesRoute
   '/operations/incidents': typeof OperationsIncidentsRoute
   '/operations/today': typeof OperationsTodayRoute
@@ -274,6 +283,7 @@ export interface FileRouteTypes {
     | '/fleet/maintenance'
     | '/network/planner'
     | '/network/routes'
+    | '/operations/allocation'
     | '/operations/duties'
     | '/operations/incidents'
     | '/operations/today'
@@ -301,6 +311,7 @@ export interface FileRouteTypes {
     | '/fleet/maintenance'
     | '/network/planner'
     | '/network/routes'
+    | '/operations/allocation'
     | '/operations/duties'
     | '/operations/incidents'
     | '/operations/today'
@@ -329,6 +340,7 @@ export interface FileRouteTypes {
     | '/fleet/maintenance'
     | '/network/planner'
     | '/network/routes'
+    | '/operations/allocation'
     | '/operations/duties'
     | '/operations/incidents'
     | '/operations/today'
@@ -353,6 +365,7 @@ export interface RootRouteChildren {
   FleetMaintenanceRoute: typeof FleetMaintenanceRoute
   NetworkPlannerRoute: typeof NetworkPlannerRoute
   NetworkRoutesRoute: typeof NetworkRoutesRoute
+  OperationsAllocationRoute: typeof OperationsAllocationRoute
   OperationsDutiesRoute: typeof OperationsDutiesRoute
   OperationsIncidentsRoute: typeof OperationsIncidentsRoute
   OperationsTodayRoute: typeof OperationsTodayRoute
@@ -509,6 +522,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NetworkRoutesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/operations/allocation': {
+      id: '/operations/allocation'
+      path: '/operations/allocation'
+      fullPath: '/operations/allocation'
+      preLoaderRoute: typeof OperationsAllocationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/operations/duties': {
       id: '/operations/duties'
       path: '/operations/duties'
@@ -585,6 +605,7 @@ const rootRouteChildren: RootRouteChildren = {
   FleetMaintenanceRoute: FleetMaintenanceRoute,
   NetworkPlannerRoute: NetworkPlannerRoute,
   NetworkRoutesRoute: NetworkRoutesRoute,
+  OperationsAllocationRoute: OperationsAllocationRoute,
   OperationsDutiesRoute: OperationsDutiesRoute,
   OperationsIncidentsRoute: OperationsIncidentsRoute,
   OperationsTodayRoute: OperationsTodayRoute,

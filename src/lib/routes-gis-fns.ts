@@ -2,7 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { toServerFnArgs } from "./server-fn-utils";
 
 const _getRoutes = createServerFn({ method: "GET" })
-  .validator((filters?: { status?: string; direction?: string; search?: string }) => filters)
+  .validator(
+    (filters?: { status?: string; direction?: string; search?: string }) =>
+      filters,
+  )
   .handler(async ({ data }) => {
     const { getRoutesImpl } = await import("../server/routes-gis");
     return await getRoutesImpl(data);
@@ -122,7 +125,8 @@ const _updateRouteStatus = createServerFn({ method: "POST" })
   });
 
 export const updateRouteStatus = async (
-  payload: { id: string; status: string } | { data: { id: string; status: string } },
+  payload:
+    { id: string; status: string } | { data: { id: string; status: string } },
 ) => {
   return await _updateRouteStatus(toServerFnArgs(payload)!);
 };
@@ -209,7 +213,8 @@ const _reorderStops = createServerFn({ method: "POST" })
 
 export const reorderStops = async (
   payload:
-    { routeId: string; stopIds: string[] } | { data: { routeId: string; stopIds: string[] } },
+    | { routeId: string; stopIds: string[] }
+    | { data: { routeId: string; stopIds: string[] } },
 ) => {
   return await _reorderStops(toServerFnArgs(payload)!);
 };

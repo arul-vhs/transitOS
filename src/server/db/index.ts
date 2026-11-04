@@ -1,78 +1,99 @@
-import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
-import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
-import { PGlite } from "@electric-sql/pglite";
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import { eq } from "drizzle-orm";
 import * as schema from "./schema";
-import fs from "fs";
-import path from "path";
 
 if (typeof window !== "undefined") {
-  throw new Error("CRITICAL: The database connection module must only be executed on the server!");
+  throw new Error(
+    "CRITICAL: The database connection module must only be executed on the server!",
+  );
 }
 
-const connectionString = process.env.DATABASE_URL;
-
-let dbInstance: any;
-
-if (connectionString) {
-  // Connect to PostgreSQL (visible in pgAdmin)
-  console.log("[DB] Connecting to PostgreSQL via DATABASE_URL...");
-  const pool = new pg.Pool({ connectionString });
-  dbInstance = drizzlePg(pool, { schema });
-} else {
-  // Fallback to local embedded PGlite
-  console.log("[DB] DATABASE_URL not found. Falling back to local embedded PGlite...");
-  const dataDir = path.join(process.cwd(), ".pgdata");
-  const pglite = new PGlite(dataDir);
-
-  async function initPglite() {
-    await pglite.waitReady;
-    const tableCheck = await pglite.query(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'tenants';",
-    );
-    if (!tableCheck.rows || tableCheck.rows.length === 0) {
-      console.log("[DB] Initializing PGlite PostgreSQL tables and seed data...");
-      const migrationsDir = path.join(process.cwd(), "src/server/db/migrations");
-      if (fs.existsSync(migrationsDir)) {
-        const files = fs
-          .readdirSync(migrationsDir)
-          .filter((f) => f.endsWith(".sql"))
-          .sort();
-        for (const file of files) {
-          const sqlContent = fs.readFileSync(path.join(migrationsDir, file), "utf-8");
-          const statements = sqlContent.split("--> statement-breakpoint");
-          for (const stmt of statements) {
-            const trimmed = stmt.trim();
-            if (trimmed) {
-              try {
-                await pglite.exec(trimmed);
-              } catch (err: any) {
-                // Ignore warnings
-              }
-            }
-          }
-        }
-      }
-
-      const seedSqlPath = path.join(process.cwd(), "cloud_seed.sql");
-      if (fs.existsSync(seedSqlPath)) {
-        const seedSql = fs.readFileSync(seedSqlPath, "utf-8");
-        await pglite.exec(seedSql);
-      }
-      console.log("[DB] PGlite database initialized successfully.");
-    }
+// Load environment variables in Node runtime if not already loaded
+if (typeof process.loadEnvFile === "function") {
+  try {
+    process.loadEnvFile();
+  } catch {
+    // Ignore error if .env file does not exist
   }
-
-  initPglite().catch((err) => console.error("[DB Init Error]:", err));
-  dbInstance = drizzlePglite(pglite, { schema });
 }
 
-export const db = dbInstance;
+const connectionString =
+  process.env.DATABASE_URL ||
+  "postgresql://postgres:1234@localhost:5432/postgres";
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __transitOS_pg_pool: pg.Pool | undefined;
+  // eslint-disable-next-line no-var
+  var __transitOS_drizzle_db: NodePgDatabase<typeof schema> | undefined;
+}
+
+// Reuse connection pool during development hot-reloads to prevent connection exhaustion
+const pool =
+  globalThis.__transitOS_pg_pool ??
+  new pg.Pool({
+    connectionString,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  globalThis.__transitOS_pg_pool = pool;
+}
+
+pool.on("error", (err) => {
+  console.error(
+    "[PostgreSQL Pool Error]: Unexpected client error",
+    err.message,
+  );
+});
+
+export const db: NodePgDatabase<typeof schema> =
+  globalThis.__transitOS_drizzle_db ?? drizzle(pool, { schema });
+
+if (process.env.NODE_ENV !== "production") {
+  globalThis.__transitOS_drizzle_db = db;
+}
+
+export { pool };
 
 /**
  * Reusable server-side helper to enforce tenant-scoping on database queries.
  */
-export function withTenant<T extends { tenantId: any }>(table: T, tenantId: string) {
+export function withTenant<T extends { tenantId: any }>(
+  table: T,
+  tenantId: string,
+) {
   return eq(table.tenantId, tenantId);
+}
+
+/**
+ * Normalizes input to a valid UUID string or null to prevent PostgreSQL invalid syntax errors.
+ */
+export function cleanUuid(val: unknown): string | null {
+  if (!val || typeof val !== "string") return null;
+  const trimmed = val.trim();
+  if (
+    !trimmed ||
+    trimmed === "null" ||
+    trimmed === "undefined" ||
+    trimmed === "none" ||
+    trimmed === ""
+  ) {
+    return null;
+  }
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(trimmed) ? trimmed : null;
+}
+
+/**
+ * Normalizes input to a non-empty string or null.
+ */
+export function cleanString(val: unknown): string | null {
+  if (val === null || val === undefined) return null;
+  const str = String(val).trim();
+  return str.length > 0 ? str : null;
 }

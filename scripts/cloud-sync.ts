@@ -2,6 +2,14 @@ import pg from "pg";
 import fs from "fs";
 import path from "path";
 
+if (typeof process.loadEnvFile === "function") {
+  try {
+    process.loadEnvFile();
+  } catch {
+    // Ignore error if .env does not exist
+  }
+}
+
 async function syncToCloud() {
   const targetUrl = process.env.CLOUD_DATABASE_URL || process.env.DATABASE_URL;
 

@@ -1,6 +1,12 @@
 import { eq, and, desc } from "drizzle-orm";
-import { db } from "../db";
-import { incidents, incidentImpacts, auditLogs, users, reschedulingRuns } from "../db/schema";
+import { db, cleanUuid, cleanString } from "../db";
+import {
+  incidents,
+  incidentImpacts,
+  auditLogs,
+  users,
+  reschedulingRuns,
+} from "../db/schema";
 import { requireAuth, requirePermission } from "../auth";
 import { IncidentType, IncidentStatus } from "./types";
 import { analyzeIncidentImpactImpl } from "./impact-analysis";
@@ -23,6 +29,16 @@ export async function createIncidentImpl(data: {
 
   const tenantId = currentUser.tenantId;
 
+  const cleanedResourceId = cleanUuid(data.resourceId);
+  const cleanedTripId = cleanUuid(data.tripId);
+  const cleanedRouteId = cleanUuid(data.routeId);
+  const cleanedResourceType =
+    data.resourceType === "bus" || data.resourceType === "crew"
+      ? data.resourceType
+      : null;
+  const cleanedLocation = cleanString(data.location);
+  const cleanedDescription = cleanString(data.description);
+
   // Insert Incident
   const [newIncident] = await db
     .insert(incidents)
@@ -32,15 +48,17 @@ export async function createIncidentImpl(data: {
       status: "OPEN",
       severity: data.severity,
       serviceDate: data.serviceDate,
-      resourceType: data.resourceType,
-      resourceId: data.resourceId,
-      tripId: data.tripId,
-      routeId: data.routeId,
-      reportedBy: currentUser.id,
-      startTime: data.startTime,
-      expectedEndTime: data.expectedEndTime,
-      location: data.location,
-      description: data.description,
+      resourceType: cleanedResourceType,
+      resourceId: cleanedResourceId,
+      tripId: cleanedTripId,
+      routeId: cleanedRouteId,
+      reportedBy: cleanUuid(currentUser.id),
+      startTime: Number(data.startTime) || 0,
+      expectedEndTime: data.expectedEndTime
+        ? Number(data.expectedEndTime)
+        : null,
+      location: cleanedLocation,
+      description: cleanedDescription,
     })
     .returning();
 
@@ -55,7 +73,7 @@ export async function createIncidentImpl(data: {
     details: `Created disruption incident of type ${data.type} (Severity: ${data.severity}) at ${data.startTime} minutes`,
   });
 
-  // Calculate direct and downstream impacts immediately!
+  // Calculate direct and downstream impacts immediately
   const impactSummaryList = await analyzeIncidentImpactImpl(newIncident!);
 
   if (impactSummaryList.length > 0) {
@@ -64,11 +82,11 @@ export async function createIncidentImpl(data: {
       for (const imp of impactSummaryList) {
         await tx.insert(incidentImpacts).values({
           incidentId,
-          tripId: imp.tripId,
-          dutyId: imp.dutyId,
-          busId: imp.busId,
-          driverId: imp.driverId,
-          conductorId: imp.conductorId,
+          tripId: cleanUuid(imp.tripId),
+          dutyId: cleanUuid(imp.dutyId),
+          busId: cleanUuid(imp.busId),
+          driverId: cleanUuid(imp.driverId),
+          conductorId: cleanUuid(imp.conductorId),
           impactType: imp.impactType,
           impactLevel: imp.impactLevel,
           reason: imp.reason,
@@ -123,7 +141,10 @@ export async function getIncidentDetailsImpl(incidentId: string) {
   await requirePermission(currentUser.role, "schedule.view");
 
   const incidentObj = await db.query.incidents.findFirst({
-    where: and(eq(incidents.id, incidentId), eq(incidents.tenantId, currentUser.tenantId)),
+    where: and(
+      eq(incidents.id, incidentId),
+      eq(incidents.tenantId, currentUser.tenantId),
+    ),
     with: {
       reporter: true,
       impacts: {

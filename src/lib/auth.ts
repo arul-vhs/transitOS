@@ -10,7 +10,8 @@ const _loginFn = createServerFn({ method: "POST" })
 
 export const loginFn = async (
   credentials:
-    { email: string; password?: string } | { data: { email: string; password?: string } },
+    | { email: string; password?: string }
+    | { data: { email: string; password?: string } },
 ) => {
   return await _loginFn(toServerFnArgs(credentials)!);
 };
@@ -24,10 +25,12 @@ export const logoutFn = async () => {
   return await _logoutFn();
 };
 
-const _getCurrentUserFn = createServerFn({ method: "GET" }).handler(async () => {
-  const { getCurrentUserFnImpl } = await import("../server/auth");
-  return await getCurrentUserFnImpl();
-});
+const _getCurrentUserFn = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const { getCurrentUserFnImpl } = await import("../server/auth");
+    return await getCurrentUserFnImpl();
+  },
+);
 
 export const getCurrentUserFn = async () => {
   return await _getCurrentUserFn();

@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Caches
+.cache/
+.vite/
+.turbo/
+.tanstack/
+.eslintcache
+*.cache
+
+# PostgreSQL dumps, backups, and database files
+*.dump
+*.sql.dump
+*.pgdump
+*.dmp
+*.backup
+dump.sql
+pg_dump*
+.pgdata/
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files & folders
+tmp/
+temp/
+*.tmp
+*.temp
+*~
+*.swp
+*.swo
+
+# Build and deployment outputs
+dist/
+build/
+.output/
+.nitro/
+.wrangler/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# IDE & Editor folders
+.vscode/
+.idea/
