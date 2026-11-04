@@ -425,3 +425,4 @@ export function TransitTable<T extends { id: string }>({
     </div>
   );
 }
+

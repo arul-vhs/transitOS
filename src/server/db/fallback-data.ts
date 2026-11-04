@@ -362,12 +362,30 @@ const mtcTrips: FallbackTrip[] = CHENNAI_MTC_TRIPS.map((t) => {
 
 const mtcDuties: FallbackDuty[] = CHENNAI_MTC_TRIPS.slice(0, 35).map(
   (t, idx) => {
-    const bus = CHENNAI_MTC_BUSES[idx % CHENNAI_MTC_BUSES.length]!;
+    let bus = CHENNAI_MTC_BUSES[idx % CHENNAI_MTC_BUSES.length]!;
     const drivers = CHENNAI_MTC_CREW.filter((c) => c.role === "driver");
     const conductors = CHENNAI_MTC_CREW.filter((c) => c.role === "conductor");
-    const driver = drivers[idx % drivers.length];
-    const conductor = conductors[idx % conductors.length];
+    let driver = drivers[idx % drivers.length]!;
+    let conductor = conductors[idx % conductors.length]!;
     const dutyCode = `D-CHN-${101 + idx}`;
+
+    // Realistic Operational Conflict Scenarios for Live Tracking:
+    // 1. Bus Overlap: Bus 0 (TN-01-N-1001) double-booked on Trip 0 and Trip 1 (overlapping departure windows)
+    if (idx === 1) {
+      bus = CHENNAI_MTC_BUSES[0]!;
+    }
+    // 2. Driver Overlap: Driver 3 (S. Anbalagan) assigned to overlapping trips 3 and 4
+    if (idx === 4) {
+      driver = drivers[3]!;
+    }
+    // 3. Conductor Overlap: Conductor 5 (P. Arumugam) assigned to overlapping trips 5 and 6
+    if (idx === 6) {
+      conductor = conductors[5]!;
+    }
+    // 4. Infeasible Driver Rest Timing: Trip starts at 480 (08:00 AM) but driver mandatory rest until 540 (09:00 AM)
+    if (idx === 8) {
+      driver = { ...driver, restUntil: 540 };
+    }
 
     return {
       id: `duty-mtc-${101 + idx}`,

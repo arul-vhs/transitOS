@@ -70,7 +70,7 @@ const NAV: NavGroup[] = [
       { label: "Schedules & Timetable", to: "/operations/trips", icon: CalendarClock },
       { label: "Smart Fleet Allocation", to: "/operations/allocation", icon: Workflow },
       { label: "Simulation Deck", to: "/simulation", icon: Play },
-      { label: "Live Road Dispatch", to: "/operations/today", icon: Radio },
+      { label: "Live Tracking", to: "/operations/today", icon: Radio },
     ],
   },
   {
@@ -499,7 +499,7 @@ export function AppShell({
                         },
                         {
                           step: "3",
-                          title: "Live Road Dispatch",
+                          title: "Live Tracking",
                           desc: "Monitor active bus runs on the road and log any disruptions or replacements.",
                           to: "/operations/today",
                           badge: "Operations",

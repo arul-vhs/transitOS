@@ -324,3 +324,94 @@ const _validateDuty = createServerFn({ method: "POST" })
 export const validateDuty = async (payload: any) => {
   return await _validateDuty(toServerFnArgs(payload)!);
 };
+
+// ----------------------------------------------------
+// Live Tracking & Assignment Conflict Management
+// ----------------------------------------------------
+
+const _getLiveTrackingAssignments = createServerFn({ method: "GET" })
+  .validator((filters?: { serviceDate?: string }) => filters)
+  .handler(async ({ data }) => {
+    const { getLiveTrackingAssignmentsImpl } = await import(
+      "../server/scheduling-ops"
+    );
+    return await getLiveTrackingAssignmentsImpl(data);
+  });
+
+export const getLiveTrackingAssignments = async (
+  filters?: { serviceDate?: string } | { data?: { serviceDate?: string } },
+) => {
+  return await _getLiveTrackingAssignments(toServerFnArgs(filters));
+};
+
+const _getFeasibleReplacements = createServerFn({ method: "GET" })
+  .validator(
+    (params: {
+      tripId: string;
+      replacementType: "bus" | "driver" | "conductor";
+      serviceDate?: string;
+    }) => params,
+  )
+  .handler(async ({ data }) => {
+    const { getFeasibleReplacementsImpl } = await import(
+      "../server/scheduling-ops"
+    );
+    return await getFeasibleReplacementsImpl(data);
+  });
+
+export const getFeasibleReplacements = async (
+  params:
+    | {
+        tripId: string;
+        replacementType: "bus" | "driver" | "conductor";
+        serviceDate?: string;
+      }
+    | {
+        data: {
+          tripId: string;
+          replacementType: "bus" | "driver" | "conductor";
+          serviceDate?: string;
+        };
+      },
+) => {
+  return await _getFeasibleReplacements(toServerFnArgs(params)!);
+};
+
+const _resolveAssignmentConflict = createServerFn({ method: "POST" })
+  .validator(
+    (params: {
+      tripId: string;
+      dutyId?: string;
+      replacementType: "bus" | "driver" | "conductor";
+      replacementId: string;
+      reason?: string;
+    }) => params,
+  )
+  .handler(async ({ data }) => {
+    const { resolveAssignmentConflictImpl } = await import(
+      "../server/scheduling-ops"
+    );
+    return await resolveAssignmentConflictImpl(data);
+  });
+
+export const resolveAssignmentConflict = async (
+  params:
+    | {
+        tripId: string;
+        dutyId?: string;
+        replacementType: "bus" | "driver" | "conductor";
+        replacementId: string;
+        reason?: string;
+      }
+    | {
+        data: {
+          tripId: string;
+          dutyId?: string;
+          replacementType: "bus" | "driver" | "conductor";
+          replacementId: string;
+          reason?: string;
+        };
+      },
+) => {
+  return await _resolveAssignmentConflict(toServerFnArgs(params)!);
+};

@@ -17,6 +17,8 @@ import {
   FALLBACK_TRIPS,
   FALLBACK_DUTIES,
   FALLBACK_ROUTES,
+  FALLBACK_BUSES,
+  FALLBACK_CREW,
 } from "./db/fallback-data";
 
 // ----------------------------------------------------
@@ -834,29 +836,44 @@ export async function assignBusToDutyImpl(
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "schedule.modify");
 
-  const duty = await db.query.duties.findFirst({
-    where: and(
-      eq(duties.id, dutyId),
-      eq(duties.tenantId, currentUser.tenantId),
-    ),
-  });
-  if (!duty) throw new Error("Duty not found");
+  try {
+    const duty = await db.query.duties.findFirst({
+      where: and(
+        eq(duties.id, dutyId),
+        eq(duties.tenantId, currentUser.tenantId),
+      ),
+    });
+    if (!duty) throw new Error("Duty not found in database");
 
-  await db
-    .update(duties)
-    .set({ busId, updatedAt: new Date() })
-    .where(eq(duties.id, dutyId));
+    await db
+      .update(duties)
+      .set({ busId, updatedAt: new Date() })
+      .where(eq(duties.id, dutyId));
 
-  // Audit log
-  await db.insert(auditLogs).values({
-    tenantId: currentUser.tenantId,
-    userId: currentUser.id,
-    email: currentUser.email,
-    action: "BUS_ASSIGNED",
-    details: `Assigned bus ID ${busId || "None"} to duty ${duty.dutyCode}`,
-  });
+    // Audit log
+    await db.insert(auditLogs).values({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      email: currentUser.email,
+      action: "BUS_ASSIGNED",
+      details: `Assigned bus ID ${busId || "None"} to duty ${duty.dutyCode}`,
+    });
 
-  return { success: true };
+    return { success: true };
+  } catch {
+    const fallbackDuty = FALLBACK_DUTIES.find(
+      (d) => d.id === dutyId && d.tenantId === currentUser.tenantId,
+    );
+    if (!fallbackDuty) throw new Error("Duty not found");
+
+    fallbackDuty.busId = busId;
+    const bus = FALLBACK_BUSES.find((b) => b.id === busId);
+    fallbackDuty.bus = bus as any;
+    fallbackDuty.busRegNumber = bus?.registrationNumber || "Unassigned";
+    fallbackDuty.updatedAt = new Date().toISOString();
+
+    return { success: true };
+  }
 }
 
 export async function assignCrewToDutyImpl(
@@ -867,29 +884,52 @@ export async function assignCrewToDutyImpl(
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "schedule.modify");
 
-  const duty = await db.query.duties.findFirst({
-    where: and(
-      eq(duties.id, dutyId),
-      eq(duties.tenantId, currentUser.tenantId),
-    ),
-  });
-  if (!duty) throw new Error("Duty not found");
+  try {
+    const duty = await db.query.duties.findFirst({
+      where: and(
+        eq(duties.id, dutyId),
+        eq(duties.tenantId, currentUser.tenantId),
+      ),
+    });
+    if (!duty) throw new Error("Duty not found in database");
 
-  await db
-    .update(duties)
-    .set({ driverId, conductorId, updatedAt: new Date() })
-    .where(eq(duties.id, dutyId));
+    await db
+      .update(duties)
+      .set({ driverId, conductorId, updatedAt: new Date() })
+      .where(eq(duties.id, dutyId));
 
-  // Audit log
-  await db.insert(auditLogs).values({
-    tenantId: currentUser.tenantId,
-    userId: currentUser.id,
-    email: currentUser.email,
-    action: "CREW_ASSIGNED",
-    details: `Assigned driver ID ${driverId || "None"} / conductor ID ${conductorId || "None"} to duty ${duty.dutyCode}`,
-  });
+    // Audit log
+    await db.insert(auditLogs).values({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      email: currentUser.email,
+      action: "CREW_ASSIGNED",
+      details: `Assigned driver ID ${driverId || "None"} / conductor ID ${conductorId || "None"} to duty ${duty.dutyCode}`,
+    });
 
-  return { success: true };
+    return { success: true };
+  } catch {
+    const fallbackDuty = FALLBACK_DUTIES.find(
+      (d) => d.id === dutyId && d.tenantId === currentUser.tenantId,
+    );
+    if (!fallbackDuty) throw new Error("Duty not found");
+
+    if (driverId !== undefined) {
+      fallbackDuty.driverId = driverId;
+      const drv = FALLBACK_CREW.find((c) => c.id === driverId);
+      fallbackDuty.driver = drv as any;
+      fallbackDuty.driverName = drv?.name || "Unassigned";
+    }
+    if (conductorId !== undefined) {
+      fallbackDuty.conductorId = conductorId;
+      const cnd = FALLBACK_CREW.find((c) => c.id === conductorId);
+      fallbackDuty.conductor = cnd as any;
+      fallbackDuty.conductorName = cnd?.name || "Unassigned";
+    }
+    fallbackDuty.updatedAt = new Date().toISOString();
+
+    return { success: true };
+  }
 }
 
 export async function createCrewHandoverImpl(data: {
@@ -1252,5 +1292,880 @@ export async function validateDutyImpl(
   return {
     isValid: issues.length === 0,
     issues,
+  };
+}
+
+// ----------------------------------------------------
+// Live Tracking & Assignment Conflict Management
+// ----------------------------------------------------
+
+export interface AssignmentConflict {
+  id: string;
+  tripId: string;
+  tripCode: string;
+  dutyId?: string | undefined;
+  dutyCode?: string | undefined;
+  type:
+    | "BUS_OVERLAP"
+    | "DRIVER_OVERLAP"
+    | "CONDUCTOR_OVERLAP"
+    | "BUS_UNAVAILABLE"
+    | "DRIVER_UNAVAILABLE"
+    | "CONDUCTOR_UNAVAILABLE"
+    | "TIMING_INFEASIBLE";
+  resourceType: "bus" | "driver" | "conductor" | "timing";
+  resourceId?: string | undefined;
+  resourceName: string;
+  description: string;
+  severity: "critical" | "warning";
+  conflictingTripCode?: string | undefined;
+  conflictingDutyCode?: string | undefined;
+}
+
+export interface LiveTrackingAssignment {
+  id: string; // tripId
+  tripId: string;
+  tripCode: string;
+  routeId: string;
+  routeCode: string;
+  routeName: string;
+  origin: string;
+  destination: string;
+  direction: string;
+  startTime: number;
+  endTime: number;
+  durationMin: number;
+  serviceDate: string;
+  dutyId: string | null;
+  dutyCode: string | null;
+  busId: string | null;
+  busRegNumber: string;
+  busType: string;
+  busStatus: string;
+  busDepot: string;
+  driverId: string | null;
+  driverName: string;
+  driverStatus: string;
+  conductorId: string | null;
+  conductorName: string;
+  conductorStatus: string;
+  status: "active" | "scheduled" | "conflicted" | "unassigned";
+  conflicts: AssignmentConflict[];
+}
+
+export interface LiveTrackingResponse {
+  assignments: LiveTrackingAssignment[];
+  conflicts: AssignmentConflict[];
+  summary: {
+    totalTrips: number;
+    activeAssignments: number;
+    conflictedAssignments: number;
+    unassignedTrips: number;
+    availableBuses: number;
+    availableDrivers: number;
+    availableConductors: number;
+  };
+}
+
+export interface FeasibleCandidate {
+  id: string;
+  name: string;
+  secondaryCode?: string | undefined;
+  depot?: string | undefined;
+  status: string;
+  isFeasible: boolean;
+  infeasibilityReason?: string | undefined;
+}
+
+export async function getLiveTrackingAssignmentsImpl(filters?: {
+  serviceDate?: string;
+}): Promise<LiveTrackingResponse> {
+  const currentUser = await requireAuth();
+  await requirePermission(currentUser.role, "schedule.view");
+
+  const targetDate = filters?.serviceDate || "25 Aug 2026";
+
+  let tripRows: any[] = [];
+  const busMap = new Map<string, any>();
+  const crewMap = new Map<string, any>();
+  const dutyTripsMap = new Map<string, any>(); // tripId -> duty
+
+  try {
+    const dbTrips = await db
+      .select({
+        id: trips.id,
+        tripCode: trips.tripCode,
+        direction: trips.direction,
+        startTime: trips.startTime,
+        endTime: trips.endTime,
+        durationMin: trips.durationMin,
+        distanceKm: trips.distanceKm,
+        origin: trips.origin,
+        destination: trips.destination,
+        status: trips.status,
+        serviceDate: trips.serviceDate,
+        routeId: trips.routeId,
+        routeName: routes.name,
+        routeCode: routes.code,
+      })
+      .from(trips)
+      .innerJoin(routes, eq(trips.routeId, routes.id))
+      .where(
+        and(
+          eq(trips.tenantId, currentUser.tenantId),
+          eq(trips.serviceDate, targetDate),
+        ),
+      )
+      .orderBy(trips.startTime);
+
+    if (dbTrips.length === 0) {
+      throw new Error("No database trips for tenant, fallback required");
+    }
+    tripRows = dbTrips;
+
+    const dbDuties = await db
+      .select()
+      .from(duties)
+      .where(
+        and(
+          eq(duties.tenantId, currentUser.tenantId),
+          eq(duties.serviceDate, targetDate),
+        ),
+      );
+
+    const dbDutyTrips = await db
+      .select({
+        dutyId: dutyTrips.dutyId,
+        tripId: dutyTrips.tripId,
+      })
+      .from(dutyTrips)
+      .where(eq(dutyTrips.tenantId, currentUser.tenantId));
+
+    const dutyById = new Map<string, any>();
+    dbDuties.forEach((d) => dutyById.set(d.id, d));
+    dbDutyTrips.forEach((dt) => {
+      const d = dutyById.get(dt.dutyId);
+      if (d) dutyTripsMap.set(dt.tripId, d);
+    });
+
+    const dbBuses = await db
+      .select()
+      .from(buses)
+      .where(eq(buses.tenantId, currentUser.tenantId));
+    dbBuses.forEach((b) => busMap.set(b.id, b));
+
+    const dbCrew = await db
+      .select()
+      .from(crew)
+      .where(eq(crew.tenantId, currentUser.tenantId));
+    dbCrew.forEach((c) => crewMap.set(c.id, c));
+  } catch {
+    const tenantTrips = FALLBACK_TRIPS.filter(
+      (t) =>
+        t.tenantId === currentUser.tenantId &&
+        (t.serviceDate === targetDate || !t.serviceDate),
+    );
+    tripRows = tenantTrips.map((t) => ({
+      id: t.id,
+      tripCode: t.tripNumber,
+      direction: t.direction,
+      startTime: t.startMinutes,
+      endTime: t.endMinutes,
+      durationMin: t.endMinutes - t.startMinutes,
+      origin: t.origin || t.route?.origin || "Central Terminal",
+      destination: t.destination || t.route?.destination || "Depot",
+      status: t.status,
+      serviceDate: targetDate,
+      routeId: t.routeId,
+      routeName: t.route?.name || t.routeName || "Corridor Route",
+      routeCode: t.route?.code || t.routeCode || "MTC",
+    }));
+
+    const tenantDuties = FALLBACK_DUTIES.filter(
+      (d) =>
+        d.tenantId === currentUser.tenantId &&
+        (d.serviceDate === targetDate || !d.serviceDate),
+    );
+
+    FALLBACK_BUSES.filter((b) => b.tenantId === currentUser.tenantId).forEach(
+      (b) => busMap.set(b.id, b),
+    );
+    FALLBACK_CREW.filter((c) => c.tenantId === currentUser.tenantId).forEach(
+      (c) => crewMap.set(c.id, c),
+    );
+
+    tenantDuties.forEach((d) => {
+      if (d.trips) {
+        d.trips.forEach((t: any) => dutyTripsMap.set(t.id, d));
+      }
+      if (d.dutyTrips) {
+        d.dutyTrips.forEach((dt: any) => dutyTripsMap.set(dt.tripId, d));
+      }
+    });
+  }
+
+  const tripConflictsMap = new Map<string, AssignmentConflict[]>();
+  const addConflict = (tId: string, conflict: AssignmentConflict) => {
+    const list = tripConflictsMap.get(tId) || [];
+    list.push(conflict);
+    tripConflictsMap.set(tId, list);
+  };
+
+  const assignments: LiveTrackingAssignment[] = tripRows.map((t) => {
+    const duty = dutyTripsMap.get(t.id);
+    const bus = duty?.bus || (duty?.busId ? busMap.get(duty.busId) : null);
+    const driver =
+      duty?.driver || (duty?.driverId ? crewMap.get(duty.driverId) : null);
+    const conductor =
+      duty?.conductor ||
+      (duty?.conductorId ? crewMap.get(duty.conductorId) : null);
+
+    return {
+      id: t.id,
+      tripId: t.id,
+      tripCode: t.tripCode,
+      routeId: t.routeId,
+      routeCode: t.routeCode,
+      routeName: t.routeName,
+      origin: t.origin,
+      destination: t.destination,
+      direction: t.direction,
+      startTime: t.startTime,
+      endTime: t.endTime,
+      durationMin: t.durationMin || t.endTime - t.startTime,
+      serviceDate: targetDate,
+      dutyId: duty?.id || null,
+      dutyCode: duty?.dutyCode || null,
+      busId: bus?.id || duty?.busId || null,
+      busRegNumber:
+        bus?.registrationNumber || duty?.busRegNumber || "Unassigned",
+      busType: bus?.busType || "Standard Leyland BS-VI",
+      busStatus: bus?.status || (duty?.busId ? "assigned" : "unassigned"),
+      busDepot: bus?.depot || "Depot",
+      driverId: driver?.id || duty?.driverId || null,
+      driverName: driver?.name || duty?.driverName || "Unassigned",
+      driverStatus:
+        driver?.status || (duty?.driverId ? "assigned" : "unassigned"),
+      conductorId: conductor?.id || duty?.conductorId || null,
+      conductorName: conductor?.name || duty?.conductorName || "Unassigned",
+      conductorStatus:
+        conductor?.status || (duty?.conductorId ? "assigned" : "unassigned"),
+      status: "scheduled",
+      conflicts: [],
+    };
+  });
+
+  // 1. Bus Overlaps
+  const busTrips = new Map<string, LiveTrackingAssignment[]>();
+  assignments.forEach((a) => {
+    if (a.busId) {
+      const list = busTrips.get(a.busId) || [];
+      list.push(a);
+      busTrips.set(a.busId, list);
+    }
+  });
+
+  busTrips.forEach((list, bId) => {
+    if (list.length > 1) {
+      list.sort((a, b) => a.startTime - b.startTime);
+      for (let i = 0; i < list.length - 1; i++) {
+        const a1 = list[i]!;
+        const a2 = list[i + 1]!;
+        if (a1.endTime > a2.startTime) {
+          addConflict(a1.tripId, {
+            id: `conf-bus-${a1.tripId}-${a2.tripId}`,
+            tripId: a1.tripId,
+            tripCode: a1.tripCode,
+            dutyId: a1.dutyId || undefined,
+            dutyCode: a1.dutyCode || undefined,
+            type: "BUS_OVERLAP",
+            resourceType: "bus",
+            resourceId: bId,
+            resourceName: a1.busRegNumber,
+            description: `Bus ${a1.busRegNumber} is double-booked: overlaps with Trip ${a2.tripCode} (${formatMinutesToTime(a2.startTime)} - ${formatMinutesToTime(a2.endTime)}).`,
+            severity: "critical",
+            conflictingTripCode: a2.tripCode,
+            conflictingDutyCode: a2.dutyCode || undefined,
+          });
+          addConflict(a2.tripId, {
+            id: `conf-bus-${a2.tripId}-${a1.tripId}`,
+            tripId: a2.tripId,
+            tripCode: a2.tripCode,
+            dutyId: a2.dutyId || undefined,
+            dutyCode: a2.dutyCode || undefined,
+            type: "BUS_OVERLAP",
+            resourceType: "bus",
+            resourceId: bId,
+            resourceName: a2.busRegNumber,
+            description: `Bus ${a2.busRegNumber} is double-booked: overlaps with Trip ${a1.tripCode} (${formatMinutesToTime(a1.startTime)} - ${formatMinutesToTime(a1.endTime)}).`,
+            severity: "critical",
+            conflictingTripCode: a1.tripCode,
+            conflictingDutyCode: a1.dutyCode || undefined,
+          });
+        }
+      }
+    }
+  });
+
+  // 2. Driver Overlaps
+  const driverTrips = new Map<string, LiveTrackingAssignment[]>();
+  assignments.forEach((a) => {
+    if (a.driverId) {
+      const list = driverTrips.get(a.driverId) || [];
+      list.push(a);
+      driverTrips.set(a.driverId, list);
+    }
+  });
+
+  driverTrips.forEach((list, drvId) => {
+    if (list.length > 1) {
+      list.sort((a, b) => a.startTime - b.startTime);
+      for (let i = 0; i < list.length - 1; i++) {
+        const a1 = list[i]!;
+        const a2 = list[i + 1]!;
+        if (a1.endTime > a2.startTime) {
+          addConflict(a1.tripId, {
+            id: `conf-drv-${a1.tripId}-${a2.tripId}`,
+            tripId: a1.tripId,
+            tripCode: a1.tripCode,
+            dutyId: a1.dutyId || undefined,
+            dutyCode: a1.dutyCode || undefined,
+            type: "DRIVER_OVERLAP",
+            resourceType: "driver",
+            resourceId: drvId,
+            resourceName: a1.driverName,
+            description: `Driver ${a1.driverName} is assigned to multiple overlapping duties on Trip ${a1.tripCode} and Trip ${a2.tripCode} (${formatMinutesToTime(a2.startTime)} - ${formatMinutesToTime(a2.endTime)}).`,
+            severity: "critical",
+            conflictingTripCode: a2.tripCode,
+            conflictingDutyCode: a2.dutyCode || undefined,
+          });
+          addConflict(a2.tripId, {
+            id: `conf-drv-${a2.tripId}-${a1.tripId}`,
+            tripId: a2.tripId,
+            tripCode: a2.tripCode,
+            dutyId: a2.dutyId || undefined,
+            dutyCode: a2.dutyCode || undefined,
+            type: "DRIVER_OVERLAP",
+            resourceType: "driver",
+            resourceId: drvId,
+            resourceName: a2.driverName,
+            description: `Driver ${a2.driverName} is assigned to multiple overlapping duties on Trip ${a2.tripCode} and Trip ${a1.tripCode} (${formatMinutesToTime(a1.startTime)} - ${formatMinutesToTime(a1.endTime)}).`,
+            severity: "critical",
+            conflictingTripCode: a1.tripCode,
+            conflictingDutyCode: a1.dutyCode || undefined,
+          });
+        }
+      }
+    }
+  });
+
+  // 3. Conductor Overlaps
+  const conductorTrips = new Map<string, LiveTrackingAssignment[]>();
+  assignments.forEach((a) => {
+    if (a.conductorId) {
+      const list = conductorTrips.get(a.conductorId) || [];
+      list.push(a);
+      conductorTrips.set(a.conductorId, list);
+    }
+  });
+
+  conductorTrips.forEach((list, cndId) => {
+    if (list.length > 1) {
+      list.sort((a, b) => a.startTime - b.startTime);
+      for (let i = 0; i < list.length - 1; i++) {
+        const a1 = list[i]!;
+        const a2 = list[i + 1]!;
+        if (a1.endTime > a2.startTime) {
+          addConflict(a1.tripId, {
+            id: `conf-cnd-${a1.tripId}-${a2.tripId}`,
+            tripId: a1.tripId,
+            tripCode: a1.tripCode,
+            dutyId: a1.dutyId || undefined,
+            dutyCode: a1.dutyCode || undefined,
+            type: "CONDUCTOR_OVERLAP",
+            resourceType: "conductor",
+            resourceId: cndId,
+            resourceName: a1.conductorName,
+            description: `Conductor ${a1.conductorName} is assigned to multiple overlapping duties on Trip ${a1.tripCode} and Trip ${a2.tripCode}.`,
+            severity: "critical",
+            conflictingTripCode: a2.tripCode,
+            conflictingDutyCode: a2.dutyCode || undefined,
+          });
+          addConflict(a2.tripId, {
+            id: `conf-cnd-${a2.tripId}-${a1.tripId}`,
+            tripId: a2.tripId,
+            tripCode: a2.tripCode,
+            dutyId: a2.dutyId || undefined,
+            dutyCode: a2.dutyCode || undefined,
+            type: "CONDUCTOR_OVERLAP",
+            resourceType: "conductor",
+            resourceId: cndId,
+            resourceName: a2.conductorName,
+            description: `Conductor ${a2.conductorName} is assigned to multiple overlapping duties on Trip ${a2.tripCode} and Trip ${a1.tripCode}.`,
+            severity: "critical",
+            conflictingTripCode: a1.tripCode,
+            conflictingDutyCode: a1.dutyCode || undefined,
+          });
+        }
+      }
+    }
+  });
+
+  // 4. Resource Status & Timing Constraints
+  assignments.forEach((a) => {
+    const duty = dutyTripsMap.get(a.tripId);
+    if (a.busId) {
+      const bus = duty?.bus || busMap.get(a.busId);
+      if (bus) {
+        if (bus.status === "maintenance" || bus.status === "breakdown") {
+          addConflict(a.tripId, {
+            id: `conf-bus-unavail-${a.tripId}`,
+            tripId: a.tripId,
+            tripCode: a.tripCode,
+            dutyId: a.dutyId || undefined,
+            dutyCode: a.dutyCode || undefined,
+            type: "BUS_UNAVAILABLE",
+            resourceType: "bus",
+            resourceId: bus.id,
+            resourceName: bus.registrationNumber,
+            description: `Bus ${bus.registrationNumber} is marked "${bus.status}" and unavailable for active trip departure.`,
+            severity: "critical",
+          });
+        }
+        if (bus.availableFrom && a.startTime < bus.availableFrom) {
+          addConflict(a.tripId, {
+            id: `conf-bus-timing-${a.tripId}`,
+            tripId: a.tripId,
+            tripCode: a.tripCode,
+            dutyId: a.dutyId || undefined,
+            dutyCode: a.dutyCode || undefined,
+            type: "TIMING_INFEASIBLE",
+            resourceType: "timing",
+            resourceId: bus.id,
+            resourceName: bus.registrationNumber,
+            description: `Vehicle turnout constraint: Bus ${bus.registrationNumber} available from ${formatMinutesToTime(bus.availableFrom)}, before trip departure at ${formatMinutesToTime(a.startTime)}.`,
+            severity: "warning",
+          });
+        }
+      }
+    }
+
+    if (a.driverId) {
+      const driver = duty?.driver || crewMap.get(a.driverId);
+      if (driver) {
+        if (driver.status === "leave" || driver.status === "unavailable") {
+          addConflict(a.tripId, {
+            id: `conf-drv-unavail-${a.tripId}`,
+            tripId: a.tripId,
+            tripCode: a.tripCode,
+            dutyId: a.dutyId || undefined,
+            dutyCode: a.dutyCode || undefined,
+            type: "DRIVER_UNAVAILABLE",
+            resourceType: "driver",
+            resourceId: driver.id,
+            resourceName: driver.name,
+            description: `Driver ${driver.name} is on ${driver.status} status and unavailable for trip duty.`,
+            severity: "critical",
+          });
+        }
+        if (driver.restUntil && a.startTime < driver.restUntil) {
+          addConflict(a.tripId, {
+            id: `conf-drv-rest-${a.tripId}`,
+            tripId: a.tripId,
+            tripCode: a.tripCode,
+            dutyId: a.dutyId || undefined,
+            dutyCode: a.dutyCode || undefined,
+            type: "TIMING_INFEASIBLE",
+            resourceType: "timing",
+            resourceId: driver.id,
+            resourceName: driver.name,
+            description: `Mandatory rest rule: Driver ${driver.name} requires rest until ${formatMinutesToTime(driver.restUntil)} (departure: ${formatMinutesToTime(a.startTime)}).`,
+            severity: "warning",
+          });
+        }
+      }
+    }
+
+    if (a.conductorId) {
+      const conductor = duty?.conductor || crewMap.get(a.conductorId);
+      if (conductor) {
+        if (conductor.status === "leave" || conductor.status === "unavailable") {
+          addConflict(a.tripId, {
+            id: `conf-cnd-unavail-${a.tripId}`,
+            tripId: a.tripId,
+            tripCode: a.tripCode,
+            dutyId: a.dutyId || undefined,
+            dutyCode: a.dutyCode || undefined,
+            type: "CONDUCTOR_UNAVAILABLE",
+            resourceType: "conductor",
+            resourceId: conductor.id,
+            resourceName: conductor.name,
+            description: `Conductor ${conductor.name} is on ${conductor.status} status and unavailable for trip duty.`,
+            severity: "critical",
+          });
+        }
+        if (conductor.restUntil && a.startTime < conductor.restUntil) {
+          addConflict(a.tripId, {
+            id: `conf-cnd-rest-${a.tripId}`,
+            tripId: a.tripId,
+            tripCode: a.tripCode,
+            dutyId: a.dutyId || undefined,
+            dutyCode: a.dutyCode || undefined,
+            type: "TIMING_INFEASIBLE",
+            resourceType: "timing",
+            resourceId: conductor.id,
+            resourceName: conductor.name,
+            description: `Mandatory rest rule: Conductor ${conductor.name} requires rest until ${formatMinutesToTime(conductor.restUntil)}.`,
+            severity: "warning",
+          });
+        }
+      }
+    }
+  });
+
+  const allConflicts: AssignmentConflict[] = [];
+  const seenConflictIds = new Set<string>();
+
+  assignments.forEach((a) => {
+    const conflicts = tripConflictsMap.get(a.tripId) || [];
+    a.conflicts = conflicts;
+    conflicts.forEach((c) => {
+      if (!seenConflictIds.has(c.id)) {
+        seenConflictIds.add(c.id);
+        allConflicts.push(c);
+      }
+    });
+
+    if (conflicts.length > 0) {
+      a.status = "conflicted";
+    } else if (a.busId && a.driverId && a.conductorId) {
+      a.status = "active";
+    } else {
+      a.status = "unassigned";
+    }
+  });
+
+  const totalTrips = assignments.length;
+  const activeAssignments = assignments.filter((a) => a.status === "active").length;
+  const conflictedAssignments = assignments.filter((a) => a.status === "conflicted").length;
+  const unassignedTrips = assignments.filter((a) => a.status === "unassigned").length;
+
+  const assignedBusIds = new Set(
+    assignments.filter((a) => a.busId).map((a) => a.busId),
+  );
+  const availableBuses = Array.from(busMap.values()).filter(
+    (b) =>
+      (b.status === "available" || b.status === "active") &&
+      !assignedBusIds.has(b.id),
+  ).length;
+
+  const assignedDriverIds = new Set(
+    assignments.filter((a) => a.driverId).map((a) => a.driverId),
+  );
+  const availableDrivers = Array.from(crewMap.values()).filter(
+    (c) =>
+      c.role === "driver" &&
+      c.status === "available" &&
+      !assignedDriverIds.has(c.id),
+  ).length;
+
+  const assignedConductorIds = new Set(
+    assignments.filter((a) => a.conductorId).map((a) => a.conductorId),
+  );
+  const availableConductors = Array.from(crewMap.values()).filter(
+    (c) =>
+      c.role === "conductor" &&
+      c.status === "available" &&
+      !assignedConductorIds.has(c.id),
+  ).length;
+
+  return {
+    assignments,
+    conflicts: allConflicts,
+    summary: {
+      totalTrips,
+      activeAssignments,
+      conflictedAssignments,
+      unassignedTrips,
+      availableBuses,
+      availableDrivers,
+      availableConductors,
+    },
+  };
+}
+
+export async function getFeasibleReplacementsImpl(params: {
+  tripId: string;
+  replacementType: "bus" | "driver" | "conductor";
+  serviceDate?: string;
+}): Promise<{
+  candidates: FeasibleCandidate[];
+  targetTrip: {
+    tripId: string;
+    tripCode: string;
+    startTime: number;
+    endTime: number;
+    routeCode: string;
+    routeName: string;
+  };
+}> {
+  const currentUser = await requireAuth();
+  await requirePermission(currentUser.role, "schedule.view");
+
+  const targetDate = params.serviceDate || "25 Aug 2026";
+  const { assignments } = await getLiveTrackingAssignmentsImpl({
+    serviceDate: targetDate,
+  });
+
+  const targetAssignment = assignments.find((a) => a.tripId === params.tripId);
+  if (!targetAssignment) {
+    throw new Error(`Trip ${params.tripId} not found in operational schedule.`);
+  }
+
+  const { startTime, endTime } = targetAssignment;
+  const candidates: FeasibleCandidate[] = [];
+
+  if (params.replacementType === "bus") {
+    let allBuses: any[] = [];
+    try {
+      allBuses = await db
+        .select()
+        .from(buses)
+        .where(eq(buses.tenantId, currentUser.tenantId));
+      if (allBuses.length === 0) throw new Error();
+    } catch {
+      allBuses = FALLBACK_BUSES.filter(
+        (b) => b.tenantId === currentUser.tenantId,
+      );
+    }
+
+    for (const b of allBuses) {
+      if (b.id === targetAssignment.busId) continue;
+
+      let isFeasible = true;
+      let infeasibilityReason: string | undefined;
+
+      if (b.status === "maintenance" || b.status === "breakdown") {
+        isFeasible = false;
+        infeasibilityReason = `Vehicle is in ${b.status} in ${b.depot}`;
+      } else if (b.availableFrom && startTime < b.availableFrom) {
+        isFeasible = false;
+        infeasibilityReason = `Depot turnout at ${formatMinutesToTime(b.availableFrom)} (departs ${formatMinutesToTime(startTime)})`;
+      } else {
+        const overlappingTrip = assignments.find(
+          (other) =>
+            other.tripId !== targetAssignment.tripId &&
+            other.busId === b.id &&
+            startTime < other.endTime &&
+            endTime > other.startTime,
+        );
+        if (overlappingTrip) {
+          isFeasible = false;
+          infeasibilityReason = `Overlaps with Trip ${overlappingTrip.tripCode} (${formatMinutesToTime(overlappingTrip.startTime)} - ${formatMinutesToTime(overlappingTrip.endTime)})`;
+        }
+      }
+
+      candidates.push({
+        id: b.id,
+        name: b.registrationNumber,
+        secondaryCode: b.fleetNumber || b.busType,
+        depot: b.depot,
+        status: b.status,
+        isFeasible,
+        infeasibilityReason,
+      });
+    }
+  } else if (params.replacementType === "driver") {
+    let allCrew: any[] = [];
+    try {
+      allCrew = await db
+        .select()
+        .from(crew)
+        .where(
+          and(
+            eq(crew.tenantId, currentUser.tenantId),
+            eq(crew.role, "driver"),
+          ),
+        );
+      if (allCrew.length === 0) throw new Error();
+    } catch {
+      allCrew = FALLBACK_CREW.filter(
+        (c) => c.tenantId === currentUser.tenantId && c.role === "driver",
+      );
+    }
+
+    for (const d of allCrew) {
+      if (d.id === targetAssignment.driverId) continue;
+
+      let isFeasible = true;
+      let infeasibilityReason: string | undefined;
+
+      if (d.status === "leave" || d.status === "unavailable") {
+        isFeasible = false;
+        infeasibilityReason = `Driver is on ${d.status}`;
+      } else if (d.restUntil && startTime < d.restUntil) {
+        isFeasible = false;
+        infeasibilityReason = `Requires rest until ${formatMinutesToTime(d.restUntil)}`;
+      } else {
+        const overlappingTrip = assignments.find(
+          (other) =>
+            other.tripId !== targetAssignment.tripId &&
+            other.driverId === d.id &&
+            startTime < other.endTime &&
+            endTime > other.startTime,
+        );
+        if (overlappingTrip) {
+          isFeasible = false;
+          infeasibilityReason = `Scheduled on overlapping Trip ${overlappingTrip.tripCode} (${formatMinutesToTime(overlappingTrip.startTime)} - ${formatMinutesToTime(overlappingTrip.endTime)})`;
+        }
+      }
+
+      candidates.push({
+        id: d.id,
+        name: d.name,
+        secondaryCode: d.employeeId,
+        depot: d.depot,
+        status: d.status,
+        isFeasible,
+        infeasibilityReason,
+      });
+    }
+  } else if (params.replacementType === "conductor") {
+    let allCrew: any[] = [];
+    try {
+      allCrew = await db
+        .select()
+        .from(crew)
+        .where(
+          and(
+            eq(crew.tenantId, currentUser.tenantId),
+            eq(crew.role, "conductor"),
+          ),
+        );
+      if (allCrew.length === 0) throw new Error();
+    } catch {
+      allCrew = FALLBACK_CREW.filter(
+        (c) => c.tenantId === currentUser.tenantId && c.role === "conductor",
+      );
+    }
+
+    for (const c of allCrew) {
+      if (c.id === targetAssignment.conductorId) continue;
+
+      let isFeasible = true;
+      let infeasibilityReason: string | undefined;
+
+      if (c.status === "leave" || c.status === "unavailable") {
+        isFeasible = false;
+        infeasibilityReason = `Conductor is on ${c.status}`;
+      } else if (c.restUntil && startTime < c.restUntil) {
+        isFeasible = false;
+        infeasibilityReason = `Requires rest until ${formatMinutesToTime(c.restUntil)}`;
+      } else {
+        const overlappingTrip = assignments.find(
+          (other) =>
+            other.tripId !== targetAssignment.tripId &&
+            other.conductorId === c.id &&
+            startTime < other.endTime &&
+            endTime > other.startTime,
+        );
+        if (overlappingTrip) {
+          isFeasible = false;
+          infeasibilityReason = `Scheduled on overlapping Trip ${overlappingTrip.tripCode} (${formatMinutesToTime(overlappingTrip.startTime)} - ${formatMinutesToTime(overlappingTrip.endTime)})`;
+        }
+      }
+
+      candidates.push({
+        id: c.id,
+        name: c.name,
+        secondaryCode: c.employeeId,
+        depot: c.depot,
+        status: c.status,
+        isFeasible,
+        infeasibilityReason,
+      });
+    }
+  }
+
+  candidates.sort((a, b) => {
+    if (a.isFeasible && !b.isFeasible) return -1;
+    if (!a.isFeasible && b.isFeasible) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  return {
+    candidates,
+    targetTrip: {
+      tripId: targetAssignment.tripId,
+      tripCode: targetAssignment.tripCode,
+      startTime: targetAssignment.startTime,
+      endTime: targetAssignment.endTime,
+      routeCode: targetAssignment.routeCode,
+      routeName: targetAssignment.routeName,
+    },
+  };
+}
+
+export async function resolveAssignmentConflictImpl(params: {
+  tripId: string;
+  dutyId?: string;
+  replacementType: "bus" | "driver" | "conductor";
+  replacementId: string;
+  reason?: string;
+}): Promise<{ success: boolean; message: string }> {
+  const currentUser = await requireAuth();
+  await requirePermission(currentUser.role, "schedule.modify");
+
+  const { candidates, targetTrip } = await getFeasibleReplacementsImpl({
+    tripId: params.tripId,
+    replacementType: params.replacementType,
+  });
+
+  const chosen = candidates.find((c) => c.id === params.replacementId);
+  if (!chosen) {
+    throw new Error("Selected replacement candidate was not found.");
+  }
+  if (!chosen.isFeasible) {
+    throw new Error(
+      `Cannot assign: ${chosen.infeasibilityReason || "Resource is not eligible"}. Secondary conflicts are prevented.`,
+    );
+  }
+
+  let targetDutyId = params.dutyId;
+  if (!targetDutyId) {
+    const { assignments } = await getLiveTrackingAssignmentsImpl();
+    const match = assignments.find((a) => a.tripId === params.tripId);
+    targetDutyId = match?.dutyId || undefined;
+  }
+
+  if (params.replacementType === "bus") {
+    if (targetDutyId) {
+      await assignBusToDutyImpl(targetDutyId, params.replacementId);
+    }
+  } else if (params.replacementType === "driver") {
+    if (targetDutyId) {
+      await assignCrewToDutyImpl(targetDutyId, params.replacementId, null);
+    }
+  } else if (params.replacementType === "conductor") {
+    if (targetDutyId) {
+      await assignCrewToDutyImpl(targetDutyId, null, params.replacementId);
+    }
+  }
+
+  try {
+    await db.insert(auditLogs).values({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      email: currentUser.email,
+      action: "ASSIGNMENT_CONFLICT_RESOLVED",
+      details: `Resolved ${params.replacementType} conflict on Trip ${targetTrip.tripCode}: assigned ${chosen.name}. Reason: ${params.reason || "Operational dispatch reassignment"}`,
+    });
+  } catch {
+    // In-memory fallback mode
+  }
+
+  return {
+    success: true,
+    message: `Conflict on ${targetTrip.tripCode} resolved: Assigned ${chosen.name}.`,
   };
 }
