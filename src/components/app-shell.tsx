@@ -76,11 +76,6 @@ const NAV: NavGroup[] = [
         icon: Briefcase,
       },
       { label: "Driver Shifts", to: "/operations/duties", icon: CalendarClock },
-      {
-        label: "Fleet Allocation",
-        to: "/operations/allocation",
-        icon: Workflow,
-      },
       { label: "Live Tracking", to: "/operations/today", icon: RouteIcon },
     ],
   },
@@ -88,6 +83,11 @@ const NAV: NavGroup[] = [
     title: "Fleet & Routes",
     items: [
       { label: "Buses", to: "/fleet/buses", icon: Bus },
+      {
+        label: "Demand-Responsive Fleet Allocation",
+        to: "/operations/allocation",
+        icon: Workflow,
+      },
       { label: "Drivers", to: "/crew/drivers", icon: Users },
       { label: "Conductors", to: "/crew/conductors", icon: Users },
       { label: "Routes & Stops", to: "/network/routes", icon: Map },
