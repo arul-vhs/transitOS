@@ -57,6 +57,12 @@ export function formatRouteNumber(
       return match[1].toUpperCase();
     }
 
+    // Check if it's "Route 1", "Route 570", "Route 21G"
+    const routePrefixMatch = trimmed.match(/^Route\s+([0-9]+[A-Z]*|[A-Z]+[0-9]+[A-Z]*)$/i);
+    if (routePrefixMatch && routePrefixMatch[1]) {
+      return routePrefixMatch[1].toUpperCase();
+    }
+
     return trimmed;
   }
 
@@ -69,12 +75,21 @@ export function formatRouteNumber(
     if (trimmed.startsWith("route-mtc-")) {
       return trimmed.replace("route-mtc-", "").toUpperCase();
     }
+    if (trimmed.startsWith("route-slm-")) {
+      return trimmed.replace("route-slm-", "").toUpperCase();
+    }
     // Check if it's a composite string like "5C: Broadway to Tambaram" or "Route 570 - CMBT"
     const match = trimmed.match(
       /^(?:Route\s+)?([0-9]+[A-Z]*|[A-Z]+[0-9]+[A-Z]*)\s*[:\-–]/i,
     );
     if (match && match[1]) {
       return match[1].toUpperCase();
+    }
+
+    // Check if it's "Route 1", "Route 570", "Route 21G"
+    const routePrefixMatch = trimmed.match(/^Route\s+([0-9]+[A-Z]*|[A-Z]+[0-9]+[A-Z]*)$/i);
+    if (routePrefixMatch && routePrefixMatch[1]) {
+      return routePrefixMatch[1].toUpperCase();
     }
 
     return trimmed;

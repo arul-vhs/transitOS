@@ -118,10 +118,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground select-none">
       {/* Brand Header */}
       <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-4 bg-sidebar/90 backdrop-blur-md">
-        <div className="relative flex size-10 items-center justify-center rounded-lg bg-blue-600 text-white shadow-xs">
-          <Bus className="size-5.5 text-white" />
+        <div className="relative flex size-10 items-center justify-center rounded-lg bg-blue-600 text-white shadow-xs shrink-0">
+          <Bus className="size-5 text-white" />
           <span className="absolute -bottom-0.5 -right-0.5 flex size-2.5">
-            <span className="relative inline-flex size-2 rounded bg-emerald-500"></span>
+            <span className="relative inline-flex size-2 rounded-xs bg-emerald-500"></span>
           </span>
         </div>
         <div className="min-w-0 flex-1">
@@ -129,7 +129,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             <span className="text-base font-extrabold tracking-tight text-sidebar-foreground">
               TransitOS
             </span>
-            <span className="rounded bg-slate-800 px-1.5 py-0.2 text-[9px] font-mono font-bold text-slate-300 uppercase border border-slate-700">
+            <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[9px] font-mono font-bold text-slate-300 uppercase border border-slate-700 leading-none">
               OPERATIONS
             </span>
           </div>

@@ -24,7 +24,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { TransitTable, ColumnDef } from "@/components/ui/transit-table";
 import { useActiveTenant } from "@/lib/tenant-context";
-import { RouteBadge } from "@/lib/route-utils";
+import { RouteBadge, formatRouteNumber } from "@/lib/route-utils";
 import { LocationAutocomplete } from "@/components/ui/location-autocomplete";
 import { updateStop } from "@/lib/routes-gis-fns";
 import { Play } from "lucide-react";
@@ -971,10 +971,10 @@ function RoutesPage() {
                 <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
                   <div className="flex items-center justify-between">
                     <span
-                      className="px-2.5 py-0.5 rounded font-bold text-xs text-white"
+                      className="min-w-8 h-6 px-1.5 rounded-md inline-flex items-center justify-center font-mono font-bold text-xs text-white shrink-0 shadow-2xs leading-none"
                       style={{ backgroundColor: route.color || "#2563EB" }}
                     >
-                      {route.code}
+                      {formatRouteNumber(route.code || route.name)}
                     </span>
                     <Badge variant="outline" className="text-[10px] rounded uppercase">
                       {route.status}

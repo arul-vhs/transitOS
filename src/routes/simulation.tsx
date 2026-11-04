@@ -33,6 +33,7 @@ import { useActiveTenant } from "@/lib/tenant-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { formatRouteNumber } from "@/lib/route-utils";
 import { cn, formatMinutesToTime } from "@/lib/utils";
 
 export const Route = createFileRoute("/simulation")({
@@ -1398,13 +1399,13 @@ function SimulationPage() {
 
               {/* Active Route Legend Bar */}
               <div className="mt-2 pt-2 border-t border-border/50 flex flex-wrap items-center gap-3 text-[11px] font-mono">
-                {SALEM_CORRIDORS.map((c) => (
+                {activeCorridors.map((c) => (
                   <div key={c.id} className="flex items-center gap-1.5">
                     <span
-                      className="size-2 rounded-full"
+                      className="size-2 rounded-xs"
                       style={{ backgroundColor: c.color }}
                     ></span>
-                    <span className="text-muted-foreground">{c.code}</span>
+                    <span className="text-muted-foreground">{formatRouteNumber(c.code)}</span>
                   </div>
                 ))}
               </div>

@@ -19,6 +19,7 @@ import {
   EyeOff,
   Navigation,
   Info,
+  Route as RouteIcon,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -28,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { useActiveTenant } from "@/lib/tenant-context";
 import { useTheme } from "@/components/theme-provider";
 import { getRoutes, getAllStops } from "@/lib/routes-gis-fns";
+import { formatRouteNumber } from "@/lib/route-utils";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/network/map")({
@@ -519,13 +521,13 @@ function TransitNetworkMapPage() {
             </div>
 
             {selectedRoute && (
-              <div className="flex items-center gap-1.5 bg-background/95 backdrop-blur-md border border-border px-2.5 py-1 rounded-md shadow-sm">
+              <div className="flex items-center gap-2 bg-background/95 backdrop-blur-md border border-border px-2.5 py-1 rounded-md shadow-sm">
                 <span
-                  className="size-2.5 rounded-sm"
+                  className="size-2.5 rounded-xs shrink-0"
                   style={{ backgroundColor: selectedRoute.color || "#2563EB" }}
                 />
-                <span className="text-xs font-semibold text-foreground">
-                  {selectedRoute.code}
+                <span className="text-xs font-mono font-bold text-foreground">
+                  {formatRouteNumber(selectedRoute.code || selectedRoute.name)}
                 </span>
                 <span className="text-xs text-muted-foreground truncate max-w-[160px]">
                   {selectedRoute.origin} ⇄ {selectedRoute.destination}
@@ -630,21 +632,26 @@ function TransitNetworkMapPage() {
           {sidePanelOpen && (
             <div className="absolute top-16 left-4 bottom-4 z-10 w-84 md:w-96 flex flex-col bg-background/95 backdrop-blur-md border border-border rounded-lg shadow-xl overflow-hidden transition-all">
               {/* Header */}
-              <div className="p-3.5 border-b border-border bg-muted/40 flex items-center justify-between">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
-                    {selectedRoute ? "Corridor Topology" : "Active Transit Corridors"}
-                  </h3>
-                  <p className="text-xs font-semibold text-foreground">
-                    {selectedRoute ? selectedRoute.name : `${filteredRoutes.length} Corridors in Service`}
-                  </p>
+              <div className="p-3.5 border-b border-border bg-muted/40 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="size-7 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <RouteIcon className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono truncate">
+                      {selectedRoute ? "Corridor Topology" : "Active Transit Routes"}
+                    </h3>
+                    <p className="text-xs font-semibold text-foreground truncate">
+                      {selectedRoute ? selectedRoute.name : `${filteredRoutes.length} Corridors in Service`}
+                    </p>
+                  </div>
                 </div>
                 {selectedRoute && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setSelectedRouteId(null)}
-                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground shrink-0"
                   >
                     View All
                   </Button>
@@ -659,18 +666,18 @@ function TransitNetworkMapPage() {
                     {/* Corridor Overview Card */}
                     <div className="p-3 rounded-lg border border-border bg-card/60 space-y-2">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
                           <span
-                            className="inline-flex items-center justify-center size-6 rounded font-bold text-xs text-white"
+                            className="inline-flex items-center justify-center min-w-8 h-6 px-1.5 rounded-md font-mono font-bold text-xs text-white shrink-0 shadow-2xs leading-none"
                             style={{ backgroundColor: selectedRoute.color || "#2563EB" }}
                           >
-                            {selectedRoute.code}
+                            {formatRouteNumber(selectedRoute.code || selectedRoute.name)}
                           </span>
-                          <span className="font-bold text-xs text-foreground">
-                            {selectedRoute.code}: {selectedRoute.origin} ⇄ {selectedRoute.destination}
+                          <span className="font-bold text-xs text-foreground truncate">
+                            {formatRouteNumber(selectedRoute.code || selectedRoute.name)}: {selectedRoute.origin} ⇄ {selectedRoute.destination}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-[10px] uppercase font-mono">
+                        <Badge variant="outline" className="text-[10px] uppercase font-mono shrink-0">
                           {selectedRoute.direction || "UP"}
                         </Badge>
                       </div>
@@ -788,10 +795,10 @@ function TransitNetworkMapPage() {
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <span
-                              className="inline-flex items-center justify-center size-7 rounded font-bold text-xs text-white shrink-0 shadow-2xs"
+                              className="inline-flex items-center justify-center min-w-8 h-7 px-1.5 rounded-md font-mono font-bold text-xs text-white shrink-0 shadow-2xs leading-none"
                               style={{ backgroundColor: r.color || "#2563EB" }}
                             >
-                              {r.code}
+                              {formatRouteNumber(r.code || r.name)}
                             </span>
                             <div className="min-w-0">
                               <p className="font-semibold text-xs text-foreground truncate">
