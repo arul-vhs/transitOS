@@ -410,7 +410,34 @@ export async function getRouteStopsImpl(routeId: string) {
       isTimepoint: s.isTimepoint,
       cumulativeDistanceKm: s.cumulativeDistanceKm,
       cumulativeTimeMinutes: s.cumulativeTimeMinutes,
-    })) as any;
+    })) as unknown as (typeof stops.$inferSelect)[];
+  }
+}
+
+export async function getAllStopsImpl() {
+  const currentUser = await requireAuth();
+  await requirePermission(currentUser.role, "routes.view");
+
+  try {
+    return await db
+      .select()
+      .from(stops)
+      .where(eq(stops.tenantId, currentUser.tenantId))
+      .orderBy(asc(stops.sequence));
+  } catch (err) {
+    return FALLBACK_STOPS.map((s) => ({
+      id: s.id,
+      tenantId: s.tenantId,
+      routeId: s.routeId,
+      name: s.name,
+      code: s.code || s.name,
+      sequence: s.sequenceOrder || s.sequence || 1,
+      latitude: s.latitude,
+      longitude: s.longitude,
+      isTimepoint: s.isTimepoint ?? true,
+      cumulativeDistanceKm: s.cumulativeDistanceKm,
+      cumulativeTimeMinutes: s.cumulativeTimeMinutes,
+    })) as unknown as (typeof stops.$inferSelect)[];
   }
 }
 

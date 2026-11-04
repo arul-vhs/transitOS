@@ -4,6 +4,7 @@ import {
   Bus,
   CalendarClock,
   ChevronRight,
+  Compass,
   Gauge,
   Map,
   Menu,
@@ -57,6 +58,7 @@ const NAV: NavGroup[] = [
     items: [
       { label: "Dashboard", to: "/", icon: Gauge },
       { label: "Routes & Corridors", to: "/network/routes", icon: Map },
+      { label: "Route Planner", to: "/network/planner", icon: Compass },
       { label: "Bus Fleet", to: "/fleet/buses", icon: Bus },
       { label: "Staff & Crew", to: "/crew/drivers", icon: Users },
       { label: "Schedules & Timetable", to: "/operations/trips", icon: CalendarClock },
@@ -84,6 +86,7 @@ function isNavVisible(role: string, to: string): boolean {
     case "/fleet/buses":
     case "/crew/drivers":
     case "/network/routes":
+    case "/network/planner":
       return true;
     case "/settings":
       return ["ORGANIZATION_ADMIN", "PLATFORM_ADMIN"].includes(role);

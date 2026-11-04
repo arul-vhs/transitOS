@@ -149,6 +149,15 @@ const _getRouteStops = createServerFn({ method: "GET" })
     return await getRouteStopsImpl(data);
   });
 
+const _getAllStops = createServerFn({ method: "GET" }).handler(async () => {
+  const { getAllStopsImpl } = await import("../server/routes-gis");
+  return await getAllStopsImpl();
+});
+
+export const getAllStops = async () => {
+  return await _getAllStops();
+};
+
 export const getRouteStops = async (routeId: string | { data: string }) => {
   return await _getRouteStops(toServerFnArgs(routeId)!);
 };
