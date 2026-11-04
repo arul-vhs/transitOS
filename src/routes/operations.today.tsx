@@ -159,17 +159,6 @@ function OperationsTodayPage() {
           <Button
             asChild
             size="sm"
-            variant="outline"
-            className="text-xs h-8 border-border hover:bg-muted rounded-md"
-          >
-            <Link to="/operations/incidents">
-              <AlertTriangle className="size-3.5 mr-1.5 text-warning" />
-              Delays & Incidents ({incidentsList.length})
-            </Link>
-          </Button>
-          <Button
-            asChild
-            size="sm"
             className="text-xs h-8 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md shadow-xs"
           >
             <Link to="/operations/duties">

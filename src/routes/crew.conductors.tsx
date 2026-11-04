@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Users,
+  Calendar,
   Search,
   Plus,
   Edit2,
@@ -30,6 +31,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TimeInput12 } from "@/components/ui/time-input-12";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -73,7 +75,7 @@ import {
   getBuses,
 } from "@/lib/fleet-crew";
 import { getRoutes } from "@/lib/routes-gis-fns";
-import { getDuties, createDuty } from "@/lib/scheduling-fns";
+import { getDuties, createDuty, updateDuty } from "@/lib/scheduling-fns";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/crew/conductors")({
@@ -96,7 +98,8 @@ export const Route = createFileRoute("/crew/conductors")({
 });
 
 // Helpers
-function formatMinutesToTime(min: number): string {
+function formatMinutesToTime(min?: number): string {
+  if (min === undefined || min === null) return "--:--";
   const h = Math.floor(min / 60);
   const m = min % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
@@ -107,6 +110,42 @@ function parseTimeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
   if (isNaN(h || 0) || isNaN(m || 0)) return 330;
   return (h || 0) * 60 + (m || 0);
+}
+
+function getSystemDateFormatted(): string {
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, "0");
+  const monthNames = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+  return `${day} ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+function parse12HourToMinutes(timeStr?: string, period: "AM" | "PM" = "AM"): number {
+  if (!timeStr) return period === "PM" ? 14 * 60 + 30 : 6 * 60 + 30;
+  const parts = timeStr.trim().split(":");
+  let hours = parseInt(parts[0] || "6", 10);
+  const minutes = parseInt(parts[1] || "30", 10);
+
+  if (isNaN(hours)) hours = 6;
+  const safeMinutes = isNaN(minutes) ? 0 : Math.min(Math.max(minutes, 0), 59);
+
+  if (period === "AM") {
+    if (hours === 12) hours = 0;
+    else if (hours > 12) hours = hours % 12;
+  } else {
+    // PM
+    if (hours < 12) hours += 12;
+  }
+
+  return hours * 60 + safeMinutes;
+}
+
+function formatMinutesTo24HourTime(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60) % 24;
+  const m = totalMinutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 function getStatusBadgeClass(status: string) {
@@ -170,6 +209,9 @@ interface RouteItem {
 interface DutyItem {
   id: string;
   dutyCode: string;
+  dutyType?: string;
+  serviceDate?: string;
+  status?: string;
   busId?: string;
   busRegNumber?: string;
   driverId?: string;
@@ -211,7 +253,9 @@ function ConductorsPage() {
   );
   const [assignBusId, setAssignBusId] = useState("");
   const [assignRouteId, setAssignRouteId] = useState("");
-  const [assignStartTime, setAssignStartTime] = useState("06:30");
+  const [assignDate, setAssignDate] = useState<string>(getSystemDateFormatted());
+  const [assignTime, setAssignTime] = useState("06:30");
+  const [assignPeriod, setAssignPeriod] = useState<"AM" | "PM">("AM");
 
   // Form states
   const [formEmpId, setFormEmpId] = useState("");
@@ -239,7 +283,7 @@ function ConductorsPage() {
   const { data: dutiesList = [] } = useQuery<DutyItem[]>({
     queryKey: ["duties-for-conductors"],
     queryFn: async () => {
-      const data = await getDuties({ serviceDate: "25 Aug 2026" });
+      const data = await getDuties({});
       return (data || []) as unknown as DutyItem[];
     },
   });
@@ -342,29 +386,124 @@ function ConductorsPage() {
       if (!assignConductor || !assignBusId || !assignRouteId) {
         throw new Error("Please select both a bus and a route.");
       }
+      if (!assignDate || !assignDate.trim()) {
+        throw new Error("Service date is required.");
+      }
+
       const selectedBus = busesList.find((b) => b.id === assignBusId);
+      const selectedRoute = routesList.find(
+        (r) => r.id === assignRouteId || r.code === assignRouteId,
+      );
+      const routeCode = selectedRoute?.code || "01";
 
-      const [h, m] = assignStartTime.split(":").map(Number);
-      const startMinutes = (h || 6) * 60 + (m || 30);
-      const endMinutes = startMinutes + 8 * 60;
+      const startMinutes = parse12HourToMinutes(assignTime, assignPeriod);
+      const endMinutes = (startMinutes + 8 * 60) % (24 * 60);
+      const time24 = formatMinutesTo24HourTime(startMinutes);
+      const timeCode = time24.replace(":", "");
 
-      return createDuty({
-        serviceDate: "25 Aug 2026",
-        conductorId: assignConductor.id,
-        busId: assignBusId,
-        busRegNumber: selectedBus?.registrationNumber || "TN-27-N-2001",
-        dutyType: "single-split",
-        plannedStartTime: startMinutes,
-        plannedEndTime: endMinutes,
-        depot: assignConductor.depot || "Salem Central Depot",
-        tripIds: [],
-        status: "scheduled",
-      } as unknown as Parameters<typeof createDuty>[0]);
+      // 1. Check if conductor already has an active assignment on this date
+      const existingConductorDuty = dutiesList.find(
+        (d) =>
+          d.serviceDate === assignDate &&
+          d.conductorId === assignConductor.id &&
+          d.status !== "cancelled",
+      );
+      if (existingConductorDuty) {
+        throw new Error(
+          `Conductor ${assignConductor.name} is already assigned to duty ${existingConductorDuty.dutyCode} on ${assignDate}.`,
+        );
+      }
+
+      // 2. Check existing duty records for this bus on this date
+      const existingBusDuty = dutiesList.find(
+        (d) =>
+          d.serviceDate === assignDate &&
+          d.busId === assignBusId &&
+          d.status !== "cancelled",
+      );
+
+      let savedDutyId = "";
+
+      if (existingBusDuty) {
+        if (
+          existingBusDuty.conductorId &&
+          existingBusDuty.conductorId !== assignConductor.id
+        ) {
+          throw new Error(
+            `Bus ${selectedBus?.registrationNumber || ""} is already assigned to another conductor on duty ${existingBusDuty.dutyCode}.`,
+          );
+        }
+
+        // Retrieve existing duty code and update the duty with this conductor
+        const dutyCode = existingBusDuty.dutyCode;
+        savedDutyId = existingBusDuty.id;
+
+        await updateDuty({
+          id: existingBusDuty.id,
+          data: {
+            dutyCode,
+            dutyType: existingBusDuty.dutyType || "LINKED",
+            serviceDate: assignDate,
+            status:
+              existingBusDuty.status === "draft"
+                ? "assigned"
+                : existingBusDuty.status,
+            busId: assignBusId,
+            driverId: existingBusDuty.driverId || null,
+            conductorId: assignConductor.id,
+          },
+        });
+      } else {
+        // Generate duty code from route and shift time
+        let generatedCode = `DTY-${routeCode}-${timeCode}`;
+        if (dutiesList.some((d) => d.dutyCode === generatedCode)) {
+          const empSuffix = (
+            assignConductor.employeeId ||
+            assignConductor.badgeNumber ||
+            "01"
+          )
+            .replace(/[^a-zA-Z0-9]/g, "")
+            .slice(-3);
+          generatedCode = `DTY-${routeCode}-${timeCode}-C${empSuffix}`;
+        }
+        if (dutiesList.some((d) => d.dutyCode === generatedCode)) {
+          generatedCode = `DTY-${routeCode}-${timeCode}-${Date.now().toString().slice(-4)}`;
+        }
+
+        const newDuty = (await createDuty({
+          dutyCode: generatedCode,
+          dutyType: "LINKED",
+          serviceDate: assignDate,
+          busId: assignBusId,
+          conductorId: assignConductor.id,
+          startTime: startMinutes,
+          endTime: endMinutes,
+          status: "assigned",
+        })) as { id?: string; dutyCode?: string };
+
+        if (newDuty?.id) {
+          savedDutyId = newDuty.id;
+          await updateDuty({
+            id: newDuty.id,
+            data: {
+              dutyCode: generatedCode,
+              dutyType: "LINKED",
+              serviceDate: assignDate,
+              status: "assigned",
+              busId: assignBusId,
+              conductorId: assignConductor.id,
+            },
+          });
+        }
+      }
+
+      return { success: true, dutyId: savedDutyId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["conductors"] });
       queryClient.invalidateQueries({ queryKey: ["duties-for-conductors"] });
       queryClient.invalidateQueries({ queryKey: ["duties"] });
+      queryClient.invalidateQueries({ queryKey: ["crew-availability"] });
 
       if (assignConductor) {
         statusMutation.mutate({
@@ -418,7 +557,9 @@ function ConductorsPage() {
     setAssignConductor(conductor);
     setAssignBusId(busesList[0]?.id || "");
     setAssignRouteId(routesList[0]?.id || routesList[0]?.code || "");
-    setAssignStartTime("06:30");
+    setAssignDate(getSystemDateFormatted());
+    setAssignTime("06:30");
+    setAssignPeriod("AM");
     setIsAssignOpen(true);
   };
 
@@ -1101,14 +1242,56 @@ function ConductorsPage() {
               </Select>
             </div>
 
+            {/* Service Date: automatically displays current system date */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Shift Report Time</Label>
-              <Input
-                type="time"
-                value={assignStartTime}
-                onChange={(e) => setAssignStartTime(e.target.value)}
-                className="font-mono text-xs"
-              />
+              <Label className="text-xs font-semibold">Service Date</Label>
+              <div className="relative">
+                <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                <Input
+                  type="text"
+                  value={assignDate}
+                  onChange={(e) => setAssignDate(e.target.value)}
+                  className="pl-8 font-mono text-xs rounded-md"
+                  placeholder="e.g. 04 Nov 2026"
+                />
+              </div>
+            </div>
+
+            {/* 12-hour Time with explicit AM/PM Selection */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Shift Report Time</Label>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="06:30"
+                    value={assignTime}
+                    onChange={(e) => setAssignTime(e.target.value)}
+                    className="pl-8 font-mono text-xs rounded-md"
+                  />
+                </div>
+                <Select
+                  value={assignPeriod}
+                  onValueChange={(val: "AM" | "PM") => setAssignPeriod(val)}
+                >
+                  <SelectTrigger className="w-24 text-xs font-semibold rounded-md">
+                    <SelectValue placeholder="Period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AM" className="text-xs font-mono font-medium">AM</SelectItem>
+                    <SelectItem value="PM" className="text-xs font-mono font-medium">PM</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground px-0.5">
+                <span>
+                  Selected Time: <strong className="text-foreground font-mono">{assignTime} {assignPeriod}</strong>
+                </span>
+                <span className="font-mono text-[10px]">
+                  ({formatMinutesTo24HourTime(parse12HourToMinutes(assignTime, assignPeriod))} 24h)
+                </span>
+              </div>
             </div>
 
             <div className="p-3 bg-muted/50 rounded-lg border border-border text-xs space-y-1 text-muted-foreground">
@@ -1336,12 +1519,10 @@ function ConductorsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Shift Starts At</Label>
-                  <Input
-                    type="time"
+                  <Label className="text-xs font-semibold">Shift Starts At</Label>
+                  <TimeInput12
                     value={formAvailableFrom}
-                    onChange={(e) => setFormAvailableFrom(e.target.value)}
-                    className="font-mono text-xs rounded-md"
+                    onChange={setFormAvailableFrom}
                     required
                   />
                 </div>

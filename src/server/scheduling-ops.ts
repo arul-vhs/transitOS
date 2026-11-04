@@ -536,6 +536,12 @@ export async function createDutyImpl(data: {
   dutyCode: string;
   dutyType: string;
   serviceDate: string;
+  busId?: string | null;
+  driverId?: string | null;
+  conductorId?: string | null;
+  startTime?: number;
+  endTime?: number;
+  status?: string;
 }) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "schedule.modify");
@@ -561,9 +567,12 @@ export async function createDutyImpl(data: {
       dutyCode: data.dutyCode,
       dutyType: data.dutyType || "LINKED",
       serviceDate: data.serviceDate,
-      startTime: 0,
-      endTime: 0,
-      status: "draft",
+      startTime: data.startTime ?? 0,
+      endTime: data.endTime ?? 0,
+      status: data.status || "draft",
+      busId: data.busId || null,
+      driverId: data.driverId || null,
+      conductorId: data.conductorId || null,
     })
     .returning();
 

@@ -34,6 +34,7 @@ import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TimeInput12Minutes } from "@/components/ui/time-input-12";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -1017,28 +1018,18 @@ function IncidentsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Impact Start Time</Label>
-                  <Input
-                    type="time"
-                    value={formatMinutesToTime(startTime)}
-                    onChange={(e) =>
-                      setStartTime(parseTimeToMinutes(e.target.value))
-                    }
-                    className="font-mono text-xs"
+                  <Label className="text-xs font-semibold">Impact Start Time</Label>
+                  <TimeInput12Minutes
+                    value={startTime}
+                    onChange={setStartTime}
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Expected Clearance Time</Label>
-                  <Input
-                    type="time"
-                    value={formatMinutesToTime(
-                      expectedEndTime || startTime + 120,
-                    )}
-                    onChange={(e) =>
-                      setExpectedEndTime(parseTimeToMinutes(e.target.value))
-                    }
-                    className="font-mono text-xs"
+                  <Label className="text-xs font-semibold">Expected Clearance Time</Label>
+                  <TimeInput12Minutes
+                    value={expectedEndTime || startTime + 120}
+                    onChange={(val) => setExpectedEndTime(val)}
                   />
                 </div>
               </div>

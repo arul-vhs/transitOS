@@ -19,6 +19,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TimeInput12 } from "@/components/ui/time-input-12";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -755,17 +756,17 @@ function BusesPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="availFrom" className="text-right text-xs">
+                <Label htmlFor="availFrom" className="text-right text-xs font-semibold">
                   Available From
                 </Label>
-                <Input
-                  id="availFrom"
-                  type="time"
-                  value={formAvailableFrom}
-                  onChange={(e) => setFormAvailableFrom(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
+                <div className="col-span-3">
+                  <TimeInput12
+                    id="availFrom"
+                    value={formAvailableFrom}
+                    onChange={setFormAvailableFrom}
+                    required
+                  />
+                </div>
               </div>
             </div>
             <DialogFooter>
@@ -898,17 +899,17 @@ function BusesPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editAvailFrom" className="text-right text-xs">
+                <Label htmlFor="editAvailFrom" className="text-right text-xs font-semibold">
                   Available From
                 </Label>
-                <Input
-                  id="editAvailFrom"
-                  type="time"
-                  value={formAvailableFrom}
-                  onChange={(e) => setFormAvailableFrom(e.target.value)}
-                  className="col-span-3 font-mono"
-                  required
-                />
+                <div className="col-span-3">
+                  <TimeInput12
+                    id="editAvailFrom"
+                    value={formAvailableFrom}
+                    onChange={setFormAvailableFrom}
+                    required
+                  />
+                </div>
               </div>
             </div>
             <DialogFooter>

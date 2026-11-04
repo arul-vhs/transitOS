@@ -1,5 +1,6 @@
 import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import {
+  Briefcase,
   BarChart3,
   Bus,
   CalendarClock,
@@ -69,13 +70,18 @@ const NAV: NavGroup[] = [
         to: "/operations/trips",
         icon: CalendarClock,
       },
-      { label: "Driver Shifts", to: "/operations/duties", icon: CalendarClock },
-      { label: "Live Tracking", to: "/operations/today", icon: RouteIcon },
       {
-        label: "Reports & Analytics",
-        to: "/analytics",
-        icon: BarChart3,
+        label: "Duties",
+        to: "/operations/duty-roster",
+        icon: Briefcase,
       },
+      { label: "Driver Shifts", to: "/operations/duties", icon: CalendarClock },
+      {
+        label: "Fleet Allocation",
+        to: "/operations/allocation",
+        icon: Workflow,
+      },
+      { label: "Live Tracking", to: "/operations/today", icon: RouteIcon },
     ],
   },
   {
@@ -106,7 +112,9 @@ function isNavVisible(role: string, to: string): boolean {
       return true;
     case "/operations/today":
     case "/operations/trips":
+    case "/operations/duty-roster":
     case "/operations/duties":
+    case "/operations/allocation":
     case "/analytics":
       return [
         "SCHEDULER",

@@ -355,6 +355,7 @@ export function solveFleetAllocation(
         orig.sensedDemandPaxPerHour -
           Math.round((60 / lastAlloc.headwayAfterMin) * orig.busCapacity),
       ),
+      additionalBusesNeeded: Math.max(0, orig.additionalBusesNeeded - allocs.length),
     };
   });
 
@@ -423,5 +424,6 @@ export function solveFleetAllocation(
     networkLoadFactorAfter,
     recommendations,
     routeProfiles: updatedProfiles,
+    availableFleetPool: supplies,
   };
 }

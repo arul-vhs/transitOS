@@ -6,7 +6,11 @@ export type TimePeriodId =
   | "LIVE_SURGE";
 
 export type ShortageSeverity =
-  "CRITICAL" | "HIGH" | "MODERATE" | "OPTIMAL" | "SURPLUS";
+  | "CRITICAL"
+  | "HIGH"
+  | "MODERATE"
+  | "OPTIMAL"
+  | "SURPLUS";
 
 export type AllocationStrategy = "BALANCED_SLA" | "COST_OPTIMAL" | "EQUITY";
 
@@ -38,6 +42,7 @@ export interface RouteDemandProfile {
   passengerWaitTimeMin: number; // headway / 2 * max(1, loadFactor)
   shortageSeverity: ShortageSeverity;
   capacityDeficitPaxPerHour: number; // max(0, sensed - capacity)
+  additionalBusesNeeded: number;
   activeBusesCount: number;
   eligibleAsDonor: boolean;
   minRequiredBuses: number;
@@ -82,7 +87,7 @@ export interface AllocationRecommendation {
   passengersRelievedPerHour: number;
   benefitScore: number;
   strategy: AllocationStrategy;
-  status: "RECOMMENDED" | "DISPATCHED" | "REJECTED";
+  status: "RECOMMENDED" | "DISPATCHED" | "REJECTED" | "PENDING";
   reason: string;
 }
 
@@ -102,10 +107,40 @@ export interface AllocationPlan {
   networkLoadFactorAfter: number;
   recommendations: AllocationRecommendation[];
   routeProfiles: RouteDemandProfile[];
+  availableFleetPool?: SupplyCandidate[];
 }
 
 export interface SurgeScenarioInput {
   routeId: string;
   surgePercent: number; // e.g. 40 (%)
   cause: string;
+}
+
+export interface AllocationDispatchResult {
+  success: boolean;
+  allocationId: string;
+  dutyCode?: string;
+  departureTime12?: string;
+  expectedArrivalTime12?: string;
+  busId?: string;
+  busRegistration?: string;
+  busType?: string;
+  driverName?: string;
+  driverEmployeeId?: string;
+  conductorName?: string;
+  conductorEmployeeId?: string;
+  sourceDepot?: string;
+  targetRouteCode?: string;
+  targetRouteName?: string;
+  deadheadMinutes?: number;
+  deadheadKm?: number;
+  estimatedCost?: number;
+  headwayBeforeMin?: number;
+  headwayAfterMin?: number;
+  waitTimeBeforeMin?: number;
+  waitTimeAfterMin?: number;
+  waitTimeReductionMin?: number;
+  loadFactorBefore?: number;
+  loadFactorAfter?: number;
+  message?: string;
 }

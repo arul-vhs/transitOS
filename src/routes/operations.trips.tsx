@@ -32,6 +32,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TimeInput12 } from "@/components/ui/time-input-12";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -1313,11 +1314,10 @@ function TripsPage() {
                     <Label className="text-xs font-semibold">
                       Scheduled Departure Time
                     </Label>
-                    <Input
-                      type="time"
+                    <TimeInput12
                       value={departureTime}
-                      onChange={(e) => setDepartureTime(e.target.value)}
-                      className="bg-background/60 font-mono text-sm h-10 rounded-lg"
+                      onChange={setDepartureTime}
+                      required
                     />
                   </div>
 
@@ -1609,11 +1609,9 @@ function TripsPage() {
                   <Label className="text-xs font-semibold">
                     First Departure
                   </Label>
-                  <Input
-                    type="time"
+                  <TimeInput12
                     value={genStartTime}
-                    onChange={(e) => setGenStartTime(e.target.value)}
-                    className="text-xs bg-background/60 font-mono rounded-lg"
+                    onChange={setGenStartTime}
                     required
                   />
                 </div>
@@ -1621,11 +1619,9 @@ function TripsPage() {
                   <Label className="text-xs font-semibold">
                     Last Departure
                   </Label>
-                  <Input
-                    type="time"
+                  <TimeInput12
                     value={genEndTime}
-                    onChange={(e) => setGenEndTime(e.target.value)}
-                    className="text-xs bg-background/60 font-mono rounded-lg"
+                    onChange={setGenEndTime}
                     required
                   />
                 </div>

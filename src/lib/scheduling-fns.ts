@@ -145,7 +145,17 @@ export const getDuty = async (id: string | { data: string }) => {
 
 const _createDuty = createServerFn({ method: "POST" })
   .validator(
-    (data: { dutyCode: string; dutyType: string; serviceDate: string }) => data,
+    (data: {
+      dutyCode: string;
+      dutyType: string;
+      serviceDate: string;
+      busId?: string | null;
+      driverId?: string | null;
+      conductorId?: string | null;
+      startTime?: number;
+      endTime?: number;
+      status?: string;
+    }) => data,
   )
   .handler(async ({ data }) => {
     const { createDutyImpl } = await import("../server/scheduling-ops");

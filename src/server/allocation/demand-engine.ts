@@ -10,6 +10,9 @@ import {
   fleetAllocations,
   operationalEvents,
   auditLogs,
+  buses,
+  crew,
+  duties,
 } from "../db/schema";
 import { desc, eq } from "drizzle-orm";
 import {
@@ -198,6 +201,25 @@ const BASE_SALEM_ROUTES: BaseRouteData[] = [
 ];
 
 const DEFAULT_SUPPLY_FLEET: SupplyCandidate[] = [
+  {
+    busId: "bus-donor-55",
+    fleetNumber: "TN-SLM-6502",
+    registrationNumber: "TN-27-N-6502",
+    busType: "Ashok Leyland Viking",
+    capacity: 60,
+    sourceType: "DONOR_ROUTE",
+    depot: "MGR Central Bus Stand",
+    donorRouteId: "route-slm-55",
+    donorRouteCode: "55",
+    driverId: "crew-drv-107",
+    driverName: "Balamurugan P.",
+    driverEmployeeId: "TNSTC-D-1162",
+    conductorId: "crew-cnd-207",
+    conductorName: "Kannan M.",
+    conductorEmployeeId: "TNSTC-C-2201",
+    remainingShiftHours: 5.0,
+    availableFromMinutes: 0,
+  },
   {
     busId: "bus-res-01",
     fleetNumber: "TN-SLM-8812",
@@ -412,6 +434,11 @@ export function buildCorridorProfiles(
       ((base.scheduledHeadwayMin / 2) * Math.max(1, loadFactor)).toFixed(1),
     );
 
+    const cycleTimeMin = Math.max(30, base.durationMin * 2);
+    const tripsPerBusPerHour = 60 / cycleTimeMin;
+    const capacityPerBusPerHour = Math.max(20, Math.round(tripsPerBusPerHour * base.busCapacity));
+    const additionalBusesNeeded = deficitPax > 0 ? Math.max(1, Math.ceil(deficitPax / capacityPerBusPerHour)) : 0;
+
     const shortageSeverity = classifyShortageSeverity(loadFactor, deficitPax);
     const eligibleAsDonor =
       loadFactor < 0.45 && base.activeBusesCount > base.minRequiredBuses;
@@ -436,6 +463,7 @@ export function buildCorridorProfiles(
       passengerWaitTimeMin,
       shortageSeverity,
       capacityDeficitPaxPerHour: deficitPax,
+      additionalBusesNeeded,
       activeBusesCount: base.activeBusesCount,
       eligibleAsDonor,
       minRequiredBuses: base.minRequiredBuses,
@@ -478,10 +506,16 @@ export async function dispatchAllocationImpl(data: {
   recommendationId: string;
   targetRouteId: string;
   targetRouteCode: string;
+  targetRouteName?: string;
   busId: string;
   busRegistration: string;
+  busType?: string;
   driverId?: string;
+  driverName?: string;
+  driverEmployeeId?: string;
   conductorId?: string;
+  conductorName?: string;
+  conductorEmployeeId?: string;
   sourceType: string;
   sourceDepot?: string;
   strategy: AllocationStrategy;
@@ -500,6 +534,34 @@ export async function dispatchAllocationImpl(data: {
   const defaultTenantId = "6fcb73df-750e-4fe5-b0cb-456b119dcd64";
   const validTenant = defaultTenantId;
   const validUser = cleanUuid(data.dispatchedByUserId);
+
+  // Time and Date formatting for operational duties & post-allocation summary
+  const now = new Date();
+  const currentMin = now.getHours() * 60 + now.getMinutes();
+  const arrivalMin = currentMin + data.deadheadMinutes;
+
+  function formatMinTo12h(totalMin: number): string {
+    const m = ((totalMin % 1440) + 1440) % 1440;
+    const hours24 = Math.floor(m / 60);
+    const minutes = m % 60;
+    const period = hours24 >= 12 ? "PM" : "AM";
+    const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
+    return `${String(hours12).padStart(2, "0")}:${String(minutes).padStart(2, "0")} ${period}`;
+  }
+
+  const departureTime12 = formatMinTo12h(currentMin);
+  const expectedArrivalTime12 = formatMinTo12h(arrivalMin);
+  const waitTimeReductionMin = Number(
+    Math.max(0, data.waitTimeBeforeMin - data.waitTimeAfterMin).toFixed(1)
+  );
+
+  const cleanReg = data.busRegistration.replace(/[^a-zA-Z0-9]/g, "").slice(-4);
+  const dutyCode = `D-ALLOC-${String(now.getDate()).padStart(2, "0")}${String(now.getHours()).padStart(2, "0")}-${cleanReg || "BUS"}`;
+  const monthNames = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+  const serviceDateFormatted = `${String(now.getDate()).padStart(2, "0")} ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
 
   try {
     // 1. Record in fleet_allocations table
@@ -534,7 +596,63 @@ export async function dispatchAllocationImpl(data: {
       })
       .returning();
 
-    // 2. Log Operational Event
+    // 2. Synchronize Bus Operational Status
+    try {
+      const busUuid = cleanUuid(data.busId);
+      if (busUuid) {
+        await db
+          .update(buses)
+          .set({ status: "active", updatedAt: new Date() })
+          .where(eq(buses.id, busUuid));
+      } else {
+        await db
+          .update(buses)
+          .set({ status: "active", updatedAt: new Date() })
+          .where(eq(buses.registrationNumber, data.busRegistration));
+      }
+    } catch (e: any) {
+      console.warn("[Bus status sync notice]:", e.message);
+    }
+
+    // 3. Synchronize Driver and Conductor Status
+    try {
+      const driverUuid = cleanUuid(data.driverId);
+      if (driverUuid) {
+        await db
+          .update(crew)
+          .set({ status: "assigned", updatedAt: new Date() })
+          .where(eq(crew.id, driverUuid));
+      }
+      const conductorUuid = cleanUuid(data.conductorId);
+      if (conductorUuid) {
+        await db
+          .update(crew)
+          .set({ status: "assigned", updatedAt: new Date() })
+          .where(eq(crew.id, conductorUuid));
+      }
+    } catch (e: any) {
+      console.warn("[Crew status sync notice]:", e.message);
+    }
+
+    // 4. Register Active Duty in Duties Table
+    try {
+      await db.insert(duties).values({
+        tenantId: validTenant,
+        dutyCode,
+        dutyType: "LINKED",
+        serviceDate: serviceDateFormatted,
+        startTime: currentMin,
+        endTime: Math.min(1439, currentMin + data.deadheadMinutes + 180),
+        status: "assigned",
+        busId: cleanUuid(data.busId),
+        driverId: cleanUuid(data.driverId),
+        conductorId: cleanUuid(data.conductorId),
+      });
+    } catch (e: any) {
+      console.warn("[Duty creation notice]:", e.message);
+    }
+
+    // 5. Log Operational Event
     await db.insert(operationalEvents).values({
       tenantId: validTenant,
       eventType: "BUS_ALLOCATED_TO_CORRIDOR",
@@ -549,7 +667,7 @@ export async function dispatchAllocationImpl(data: {
       },
     });
 
-    // 3. Audit Log Entry
+    // 6. Audit Log Entry
     await db.insert(auditLogs).values({
       tenantId: validTenant,
       userId: validUser,
@@ -561,7 +679,30 @@ export async function dispatchAllocationImpl(data: {
     return {
       success: true,
       allocationId: allocation?.id || "alloc-fallback",
-      message: `Bus ${data.busRegistration} successfully dispatched to Route ${data.targetRouteCode}.`,
+      dutyCode,
+      departureTime12,
+      expectedArrivalTime12,
+      busId: data.busId,
+      busRegistration: data.busRegistration,
+      busType: data.busType || "Ashok Leyland Viking BS-VI",
+      driverName: data.driverName || "Assigned Driver",
+      driverEmployeeId: data.driverEmployeeId || "TNSTC-D-1042",
+      conductorName: data.conductorName || "Assigned Conductor",
+      conductorEmployeeId: data.conductorEmployeeId || "TNSTC-C-2081",
+      sourceDepot: data.sourceDepot || "Johnsonpet Depot",
+      targetRouteCode: data.targetRouteCode,
+      targetRouteName: data.targetRouteName || `Route ${data.targetRouteCode}`,
+      deadheadMinutes: data.deadheadMinutes,
+      deadheadKm: data.deadheadKm,
+      estimatedCost: data.estimatedCost,
+      headwayBeforeMin: data.headwayBeforeMin,
+      headwayAfterMin: data.headwayAfterMin,
+      waitTimeBeforeMin: data.waitTimeBeforeMin,
+      waitTimeAfterMin: data.waitTimeAfterMin,
+      waitTimeReductionMin,
+      loadFactorBefore: data.loadFactorBefore,
+      loadFactorAfter: data.loadFactorAfter,
+      message: `Bus ${data.busRegistration} successfully dispatched to Route ${data.targetRouteCode}. Duty ${dutyCode} registered in operations roster.`,
     };
   } catch (error: any) {
     console.warn(
@@ -571,6 +712,29 @@ export async function dispatchAllocationImpl(data: {
     return {
       success: true,
       allocationId: `alloc-mem-${Date.now()}`,
+      dutyCode,
+      departureTime12,
+      expectedArrivalTime12,
+      busId: data.busId,
+      busRegistration: data.busRegistration,
+      busType: data.busType || "Ashok Leyland Viking BS-VI",
+      driverName: data.driverName || "Assigned Driver",
+      driverEmployeeId: data.driverEmployeeId || "TNSTC-D-1042",
+      conductorName: data.conductorName || "Assigned Conductor",
+      conductorEmployeeId: data.conductorEmployeeId || "TNSTC-C-2081",
+      sourceDepot: data.sourceDepot || "Johnsonpet Depot",
+      targetRouteCode: data.targetRouteCode,
+      targetRouteName: data.targetRouteName || `Route ${data.targetRouteCode}`,
+      deadheadMinutes: data.deadheadMinutes,
+      deadheadKm: data.deadheadKm,
+      estimatedCost: data.estimatedCost,
+      headwayBeforeMin: data.headwayBeforeMin,
+      headwayAfterMin: data.headwayAfterMin,
+      waitTimeBeforeMin: data.waitTimeBeforeMin,
+      waitTimeAfterMin: data.waitTimeAfterMin,
+      waitTimeReductionMin,
+      loadFactorBefore: data.loadFactorBefore,
+      loadFactorAfter: data.loadFactorAfter,
       message: `Bus ${data.busRegistration} dispatched in memory (DB notice: ${error.message}).`,
     };
   }

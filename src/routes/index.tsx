@@ -95,31 +95,6 @@ function Dashboard() {
     <AppShell
       title="Salem Operations Hub"
       subtitle={`${orgName} · ${depotName} · ${SCHEDULE_DATE}`}
-      actions={
-        <div className="flex items-center gap-2">
-          <Button
-            asChild
-            size="sm"
-            variant="outline"
-            className="text-xs rounded-md border-border hover:bg-muted"
-          >
-            <Link to="/operations/trips">
-              <CalendarClock className="mr-1.5 size-3.5 text-primary" />
-              Bus Schedules
-            </Link>
-          </Button>
-          <Button
-            asChild
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-md shadow-xs cursor-pointer"
-          >
-            <Link to="/operations/duties">
-              <Users className="mr-1.5 size-3.5" />
-              Assign Shifts
-            </Link>
-          </Button>
-        </div>
-      }
     >
       <div className="space-y-6 max-w-7xl mx-auto">
         {/* WELCOME HERO */}

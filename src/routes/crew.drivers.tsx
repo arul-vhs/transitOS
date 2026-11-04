@@ -35,6 +35,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TimeInput12 } from "@/components/ui/time-input-12";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -937,11 +938,9 @@ function DriversPage() {
                 <Label className="text-xs font-semibold">
                   Shift Start Time
                 </Label>
-                <Input
-                  type="time"
+                <TimeInput12
                   value={assignStartTime}
-                  onChange={(e) => setAssignStartTime(e.target.value)}
-                  className="text-xs bg-background/60 font-mono rounded-lg"
+                  onChange={setAssignStartTime}
                   required
                 />
               </div>

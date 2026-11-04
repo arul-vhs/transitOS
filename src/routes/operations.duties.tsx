@@ -39,6 +39,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TimeInput12 } from "@/components/ui/time-input-12";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -1212,22 +1213,18 @@ function DutiesPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Start Time</Label>
-                  <Input
-                    type="time"
+                  <Label className="text-xs font-semibold">Start Time</Label>
+                  <TimeInput12
                     value={handoverStartTime}
-                    onChange={(e) => setHandoverStartTime(e.target.value)}
-                    className="font-mono text-xs"
+                    onChange={setHandoverStartTime}
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">End Time</Label>
-                  <Input
-                    type="time"
+                  <Label className="text-xs font-semibold">End Time</Label>
+                  <TimeInput12
                     value={handoverEndTime}
-                    onChange={(e) => setHandoverEndTime(e.target.value)}
-                    className="font-mono text-xs"
+                    onChange={setHandoverEndTime}
                     required
                   />
                 </div>

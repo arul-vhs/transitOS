@@ -59,9 +59,15 @@ const _dispatchFleetAllocation = createServerFn({ method: "POST" })
       recommendationId: string;
       targetRouteId: string;
       targetRouteCode: string;
+      targetRouteName?: string;
       busId: string;
       busRegistration: string;
+      busType?: string;
       driverId?: string;
+      driverName?: string;
+      driverEmployeeId?: string;
+      conductorName?: string;
+      conductorEmployeeId?: string;
       conductorId?: string;
       sourceType: string;
       sourceDepot?: string;
