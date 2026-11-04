@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import {
   Bus,
-  Map,
   Users,
   CalendarClock,
   ArrowRight,
@@ -106,7 +105,7 @@ function Dashboard() {
     >();
 
     dutiesList.forEach((duty) => {
-      duty.trips?.forEach((t: any) => {
+      duty.trips?.forEach((t: { id: string }) => {
         const bus = busesList.find((b) => b.id === duty.busId);
         const driver = driversList.find((d) => d.id === duty.driverId);
         const conductor = conductorsList.find((c) => c.id === duty.conductorId);
