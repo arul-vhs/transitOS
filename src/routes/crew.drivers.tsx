@@ -1,35 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  User,
+  Users,
   Search,
   Plus,
   Edit2,
-  Eye,
-  Calendar,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  Filter,
-  ShieldCheck,
-  Award,
-  Zap,
-  Activity,
   CheckCircle2,
-  CalendarClock,
-  Briefcase,
-  IdCard,
-  Phone,
-  LayoutGrid,
-  List,
-  Bus as BusIcon,
-  Route as RouteIcon,
-  UserCheck,
-  Check,
-  ChevronRight,
-  Sparkles,
+  Clock,
+  ArrowRight,
+  ShieldCheck,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -60,26 +41,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
 import {
   getDrivers,
-  getCrewMember,
   createCrewMember,
   updateCrewMember,
   updateCrewStatus,
-  getBuses,
 } from "@/lib/fleet-crew";
-import { getRoutes } from "@/lib/routes-gis-fns";
-import { getDuties, createDuty, updateDuty } from "@/lib/scheduling-fns";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/crew/drivers")({
   beforeLoad: ({ context }) => {
@@ -89,100 +58,41 @@ export const Route = createFileRoute("/crew/drivers")({
   },
   head: () => ({
     meta: [
-      { title: "Driver Roster & Profile: TransitOS" },
+      { title: "Driver Roster: TransitOS" },
       {
         name: "description",
-        content:
-          "Driver registry, HPV licensing compliance, availability timeline and shift logs.",
+        content: "Driver registry, depot allocation, and shift availability status.",
       },
     ],
   }),
   component: DriversPage,
 });
 
-// Helpers
-function formatMinutesToTime(min: number): string {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-function parseTimeToMinutes(time: string): number {
-  if (!time) return 330;
-  const [h, m] = time.split(":").map(Number);
-  if (isNaN(h || 0) || isNaN(m || 0)) return 330;
-  return (h || 0) * 60 + (m || 0);
-}
-
 function getStatusBadgeClass(status: string) {
   switch (status) {
     case "available":
-      return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
-    case "on-duty":
-      return "bg-primary/10 text-primary border-primary/30";
+      return "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10";
+    case "assigned":
+      return "border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/10";
     case "resting":
-      return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30";
+      return "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10";
     case "leave":
-      return "bg-destructive/10 text-destructive border-destructive/30";
-    case "unavailable":
-      return "bg-muted text-muted-foreground border-border";
+      return "border-muted-foreground/30 text-muted-foreground bg-muted/20";
     default:
-      return "bg-secondary text-secondary-foreground";
+      return "border-border text-muted-foreground bg-muted/20";
   }
-}
-
-interface DriverAssignment {
-  busReg: string;
-  routeCode?: string;
-  routeName?: string;
-  dutyCode: string;
 }
 
 interface DriverItem {
   id: string;
-  employeeId: string;
-  badgeNumber?: string;
   name: string;
-  role?: string;
-  status: string;
+  employeeId?: string;
   depot: string;
+  status: string;
+  licenseCategory?: string | null;
+  licenseExpiry?: string | null;
   availableFrom?: number;
   restUntil?: number;
-  phoneNumber?: string;
-  licenseCategory?: string;
-  licenseExpiry?: string | Date;
-}
-
-interface BusItem {
-  id: string;
-  registrationNumber: string;
-  fleetNumber?: string;
-  busType?: string;
-  makeModel?: string;
-  capacity?: number;
-  depot?: string;
-  status?: string;
-}
-
-interface RouteItem {
-  id: string;
-  code: string;
-  name: string;
-  startLocation?: string;
-  endLocation?: string;
-}
-
-interface DutyItem {
-  id: string;
-  dutyCode: string;
-  busId?: string;
-  busRegNumber?: string;
-  driverId?: string;
-  conductorId?: string;
-  trips?: Array<{
-    routeCode?: string;
-    routeName?: string;
-  }>;
 }
 
 function DriversPage() {
@@ -191,122 +101,46 @@ function DriversPage() {
   const user = context?.user;
   const canManage = hasPermission(user?.role || "", "crew.manage");
 
-  // View Mode: Cards or Table
-  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
-
-  // Filters State
+  // Filters state
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [depotFilter, setDepotFilter] = useState("all");
 
-  // Dialog / Sheet states
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isAssignOpen, setIsAssignOpen] = useState(false);
+  // Dialog state
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingDriverId, setEditingDriverId] = useState<string | null>(null);
 
-  // Selected driver
-  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
-
-  // Quick Assignment state
-  const [assignDriver, setAssignDriver] = useState<DriverItem | null>(null);
-  const [assignBusId, setAssignBusId] = useState("");
-  const [assignRouteId, setAssignRouteId] = useState("");
-  const [assignStartTime, setAssignStartTime] = useState("06:30");
-
-  // Form states
-  const [formEmpId, setFormEmpId] = useState("");
-  const [formName, setFormName] = useState("");
-  const [formPhone, setFormPhone] = useState("+91 98421 ");
-  const [formStatus, setFormStatus] = useState("available");
-  const [formDepot, setFormDepot] = useState("Meyyanur Central Depot");
-  const [formAvailableFrom, setFormAvailableFrom] = useState("05:30");
-  const [formRestUntil, setFormRestUntil] = useState("05:30");
-  const [formLicenseCategory, setFormLicenseCategory] = useState(
-    "Heavy Passenger Vehicle (HPV)",
+  // Form values
+  const [name, setName] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
+  const [depot, setDepot] = useState("Meyyanur Depot");
+  const [status, setStatus] = useState("available");
+  const [licenseCategory, setLicenseCategory] = useState(
+    "Heavy Passenger Vehicle (HPV) / PSV Badge",
   );
-  const [formLicenseExpiry, setFormLicenseExpiry] = useState("2028-12-31");
 
-  // 1. Fetch Drivers
+  // Query Drivers
   const { data: driversList = [], isLoading } = useQuery<DriverItem[]>({
     queryKey: ["drivers", statusFilter, depotFilter, search],
-    queryFn: async () => {
-      const data = await getDrivers({
+    queryFn: () =>
+      getDrivers({
         status: statusFilter,
         depot: depotFilter,
         search,
-      });
-      return (data || []) as unknown as DriverItem[];
-    },
+      }) as Promise<DriverItem[]>,
   });
-
-  // 2. Fetch Duties to resolve real-time bus and route assignments
-  const { data: dutiesList = [] } = useQuery<DutyItem[]>({
-    queryKey: ["duties-for-drivers"],
-    queryFn: async () => {
-      const data = await getDuties({ serviceDate: "25 Aug 2026" });
-      return (data || []) as unknown as DutyItem[];
-    },
-  });
-
-  // 3. Fetch Buses for Quick Assign
-  const { data: busesList = [] } = useQuery<BusItem[]>({
-    queryKey: ["buses-for-driver-assign"],
-    queryFn: async () => {
-      const data = await getBuses();
-      return (data || []) as unknown as BusItem[];
-    },
-  });
-
-  // 4. Fetch Routes for Quick Assign
-  const { data: routesList = [] } = useQuery<RouteItem[]>({
-    queryKey: ["routes-for-driver-assign"],
-    queryFn: async () => {
-      const data = await getRoutes({ status: "active" });
-      return (data || []) as unknown as RouteItem[];
-    },
-  });
-
-  // 5. Fetch Selected Driver details
-  const { data: selectedDriverDetails } = useQuery<DriverItem | null>({
-    queryKey: ["crew-member", selectedDriverId],
-    queryFn: async () => {
-      if (!selectedDriverId) return null;
-      const data = await getCrewMember(selectedDriverId);
-      return data as unknown as DriverItem;
-    },
-    enabled: !!selectedDriverId,
-  });
-
-  // Build Driver to Duty map
-  const driverAssignmentMap = useMemo(() => {
-    const map = new Map<string, DriverAssignment>();
-    dutiesList.forEach((duty) => {
-      if (duty.driverId) {
-        const firstTrip = duty.trips?.[0];
-        map.set(duty.driverId, {
-          busReg: duty.busRegNumber || "Assigned Bus",
-          routeCode: firstTrip?.routeCode || "1",
-          routeName: firstTrip?.routeName || "Town Bus Stand - Salem Junction",
-          dutyCode: duty.dutyCode,
-        });
-      }
-    });
-    return map;
-  }, [dutiesList]);
 
   // Mutations
   const createMutation = useMutation({
     mutationFn: createCrewMember,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      queryClient.invalidateQueries({ queryKey: ["crew-availability"] });
-      toast.success("Driver profile created successfully.");
-      setIsCreateOpen(false);
+      toast.success("Driver enrolled successfully.");
+      setIsFormOpen(false);
       resetForm();
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Failed to create driver");
+      toast.error(err.message || "Failed to enroll driver.");
     },
   });
 
@@ -314,18 +148,12 @@ function DriversPage() {
     mutationFn: updateCrewMember,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      queryClient.invalidateQueries({ queryKey: ["crew-availability"] });
-      if (selectedDriverId) {
-        queryClient.invalidateQueries({
-          queryKey: ["crew-member", selectedDriverId],
-        });
-      }
-      toast.success("Driver updated successfully");
-      setIsEditOpen(false);
+      toast.success("Driver profile updated.");
+      setIsFormOpen(false);
       resetForm();
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Failed to update driver");
+      toast.error(err.message || "Failed to update driver.");
     },
   });
 
@@ -333,617 +161,395 @@ function DriversPage() {
     mutationFn: updateCrewStatus,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      queryClient.invalidateQueries({ queryKey: ["crew-availability"] });
-      toast.success("Driver duty status updated.");
+      toast.success("Driver availability status updated.");
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Failed to update status");
+      toast.error(err.message || "Failed to update status.");
     },
   });
 
   const resetForm = () => {
-    setFormEmpId(`DRV-${Date.now().toString().slice(-3)}`);
-    setFormName("");
-    setFormPhone("+91 98421 ");
-    setFormStatus("available");
-    setFormDepot("Meyyanur Central Depot");
-    setFormAvailableFrom("05:30");
-    setFormRestUntil("05:30");
-    setFormLicenseCategory("Heavy Passenger Vehicle (HPV)");
-    setFormLicenseExpiry("2028-12-31");
+    setEditingDriverId(null);
+    setName("");
+    setEmployeeId("");
+    setDepot("Meyyanur Depot");
+    setStatus("available");
+    setLicenseCategory("Heavy Passenger Vehicle (HPV) / PSV Badge");
+  };
+
+  const handleOpenCreate = () => {
+    resetForm();
+    setIsFormOpen(true);
   };
 
   const handleOpenEdit = (driver: DriverItem) => {
-    setSelectedDriverId(driver.id);
-    setFormEmpId(driver.employeeId || driver.badgeNumber || "");
-    setFormName(driver.name);
-    setFormStatus(driver.status);
-    setFormDepot(driver.depot);
-    setFormAvailableFrom(formatMinutesToTime(driver.availableFrom || 330));
-    setFormRestUntil(formatMinutesToTime(driver.restUntil || 330));
-    setFormLicenseCategory(
-      driver.licenseCategory || "Heavy Passenger Vehicle (HPV)",
+    setEditingDriverId(driver.id);
+    setName(driver.name);
+    setEmployeeId(driver.employeeId || "");
+    setDepot(driver.depot);
+    setStatus(driver.status);
+    setLicenseCategory(
+      driver.licenseCategory || "Heavy Passenger Vehicle (HPV) / PSV Badge",
     );
-    setFormLicenseExpiry(
-      driver.licenseExpiry
-        ? new Date(driver.licenseExpiry).toISOString().split("T")[0]!
-        : "2028-12-31",
-    );
-    setIsEditOpen(true);
+    setIsFormOpen(true);
   };
 
-  const handleOpenAssign = (driver: DriverItem) => {
-    setAssignDriver(driver);
-    if (busesList.length > 0 && !assignBusId) {
-      setAssignBusId(busesList[0].id);
-    }
-    if (routesList.length > 0 && !assignRouteId) {
-      setAssignRouteId(routesList[0].id);
-    }
-    setIsAssignOpen(true);
-  };
-
-  const handleQuickAssignSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!assignDriver || !assignBusId || !assignRouteId) {
-      toast.error("Please select a bus and route");
+    if (!name.trim()) {
+      toast.error("Driver name is required.");
       return;
     }
-    try {
-      const selectedRoute = routesList.find((r) => r.id === assignRouteId);
-      const dutyCode = `SFT-${selectedRoute?.code || "01"}-${assignStartTime.replace(":", "")}`;
 
-      const newDuty = await createDuty({
-        dutyCode,
-        dutyType: "single-split",
-        serviceDate: "25 Aug 2026",
-      } as unknown as Parameters<typeof createDuty>[0]);
-
-      if (newDuty && (newDuty as unknown as { id: string }).id) {
-        await updateDuty({
-          id: (newDuty as unknown as { id: string }).id,
-          data: {
-            dutyCode,
-            dutyType: "single-split",
-            serviceDate: "25 Aug 2026",
-            status: "active",
-            busId: assignBusId,
-            driverId: assignDriver.id,
-          } as unknown as Parameters<typeof updateDuty>[0]["data"],
-        });
-      }
-
-      await statusMutation.mutateAsync({
-        id: assignDriver.id,
-        status: "on-duty",
+    if (editingDriverId) {
+      updateMutation.mutate({
+        id: editingDriverId,
+        data: {
+          name: name.trim(),
+          employeeId: employeeId.trim() || undefined,
+          depot,
+          status,
+          role: "driver",
+          licenseCategory,
+        },
       });
-
-      queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      queryClient.invalidateQueries({ queryKey: ["duties-for-drivers"] });
-      toast.success(
-        `Assigned ${assignDriver.name} to Bus on Route ${selectedRoute?.code || "1"}.`,
-      );
-      setIsAssignOpen(false);
-    } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to assign driver";
-      toast.error(msg);
+    } else {
+      createMutation.mutate({
+        name: name.trim(),
+        employeeId: employeeId.trim() || `TNSTC-SLM-DR-${Date.now().toString().slice(-3)}`,
+        depot,
+        status,
+        role: "driver",
+        licenseCategory,
+      });
     }
   };
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createMutation.mutate({
-      employeeId: formEmpId,
-      name: formName,
-      role: "driver",
-      status: formStatus,
-      depot: formDepot,
-      availableFrom: parseTimeToMinutes(formAvailableFrom),
-      restUntil: parseTimeToMinutes(formRestUntil),
-      licenseCategory: formLicenseCategory,
-      licenseExpiry: new Date(formLicenseExpiry),
-    });
-  };
-
-  const handleEditSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedDriverId) return;
-    updateMutation.mutate({
-      id: selectedDriverId,
-      data: {
-        employeeId: formEmpId,
-        name: formName,
-        status: formStatus,
-        depot: formDepot,
-        availableFrom: parseTimeToMinutes(formAvailableFrom),
-        restUntil: parseTimeToMinutes(formRestUntil),
-        licenseCategory: formLicenseCategory,
-        licenseExpiry: new Date(formLicenseExpiry),
-      },
-    });
-  };
-
-  const totalCount = driversList.length;
-  const availableCount = driversList.filter(
-    (d) => d.status === "available",
+  // Metrics
+  const totalDrivers = driversList.length;
+  const availableDrivers = driversList.filter((d) => d.status === "available").length;
+  const assignedDrivers = driversList.filter((d) => d.status === "assigned").length;
+  const restingDrivers = driversList.filter(
+    (d) => d.status === "resting" || d.status === "leave",
   ).length;
-  const onDutyCount = driversList.filter((d) => d.status === "on-duty").length;
-  const restingCount = driversList.filter((d) => d.status === "resting").length;
-  const leaveCount = driversList.filter((d) => d.status === "leave").length;
 
   return (
     <AppShell
-      title="Driver Directory & Shifts"
-      subtitle="Driver roster, contact details, live availability status, and vehicle assignments."
+      title="Driver Roster & Staff"
+      subtitle="Driver directory, operating depot allocation, and shift availability status."
       actions={
-        canManage ? (
+        <div className="flex items-center gap-2">
           <Button
+            asChild
+            variant="outline"
             size="sm"
-            onClick={() => {
-              resetForm();
-              setIsCreateOpen(true);
-            }}
-            className="bg-primary text-primary-foreground font-semibold text-xs rounded-lg shadow-sm"
+            className="text-xs rounded-md border-border hover:bg-muted font-medium"
           >
-            <Plus className="mr-1.5 size-3.5" />
-            Add Driver
+            <Link to="/crew/conductors">
+              <span>View Conductors</span>
+            </Link>
           </Button>
-        ) : undefined
+          {canManage && (
+            <Button
+              size="sm"
+              onClick={handleOpenCreate}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md shadow-xs cursor-pointer"
+            >
+              <Plus className="mr-1.5 size-3.5" />
+              Add Driver
+            </Button>
+          )}
+        </div>
       }
     >
-      <div className="space-y-6">
-        {/* 1. METRICS OVERVIEW */}
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
-          <div className="glass-card p-4 rounded-xl border flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Total Roster
+      <div className="space-y-6 max-w-7xl mx-auto">
+        {/* End-to-End Workflow Progress Banner */}
+        <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex size-7 items-center justify-center rounded-md bg-blue-600 text-white text-xs font-bold font-mono">
+              4
             </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-foreground">
-              {totalCount} Drivers
-            </span>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                Staff & Crew Roster (Step 4 of 6)
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Ensure licensed drivers and conductors are on roster before scheduling daily trips.
+              </p>
+            </div>
           </div>
-          <div className="glass-card p-4 rounded-xl border-l-4 border-l-emerald-500 flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Ready & Available
-            </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-emerald-600 dark:text-emerald-400">
-              {availableCount}
-            </span>
+          <Button
+            asChild
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md shadow-xs shrink-0"
+          >
+            <Link to="/operations/trips">
+              <span>Next: Timetable & Scheduling</span>
+              <ArrowRight className="ml-1.5 size-3.5" />
+            </Link>
+          </Button>
+        </div>
+
+        {/* 1. Clear 4-KPI Metric Grid */}
+        <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg border border-border/80 bg-card p-4 flex flex-col justify-between shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Total Drivers
+              </span>
+              <Users className="size-4 text-primary" />
+            </div>
+            <p className="text-3xl font-extrabold tracking-tight mt-1 text-foreground">
+              {totalDrivers}
+            </p>
+            <p className="text-[11px] text-muted-foreground">Salem Division</p>
           </div>
-          <div className="glass-card p-4 rounded-xl border-l-4 border-l-primary flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              On Active Duty
-            </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-primary">
-              {onDutyCount}
-            </span>
+
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col justify-between shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                Available to Drive
+              </span>
+              <CheckCircle2 className="size-4 text-emerald-500" />
+            </div>
+            <p className="text-3xl font-extrabold tracking-tight mt-1 text-emerald-600 dark:text-emerald-400">
+              {availableDrivers}
+            </p>
+            <p className="text-[11px] text-muted-foreground">Rest period satisfied</p>
           </div>
-          <div className="glass-card p-4 rounded-xl border-l-4 border-l-amber-500 flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Mandatory Rest
-            </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-amber-600 dark:text-amber-400">
-              {restingCount}
-            </span>
+
+          <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4 flex flex-col justify-between shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                On Duty / Assigned
+              </span>
+              <span className="size-2 rounded bg-blue-500"></span>
+            </div>
+            <p className="text-3xl font-extrabold tracking-tight mt-1 text-blue-600 dark:text-blue-400">
+              {assignedDrivers}
+            </p>
+            <p className="text-[11px] text-muted-foreground">Assigned to daily shifts</p>
           </div>
-          <div className="glass-card p-4 rounded-xl border-l-4 border-l-destructive flex flex-col justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              On Leave
-            </span>
-            <span className="text-2xl font-bold font-mono mt-1 text-destructive">
-              {leaveCount}
-            </span>
+
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 flex flex-col justify-between shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                Resting / On Leave
+              </span>
+              <Clock className="size-4 text-amber-500" />
+            </div>
+            <p className="text-3xl font-extrabold tracking-tight mt-1 text-amber-600 dark:text-amber-400">
+              {restingDrivers}
+            </p>
+            <p className="text-[11px] text-muted-foreground">Off duty</p>
           </div>
         </div>
 
-        {/* 2. FILTER & VIEW SWITCHER BAR */}
-        <div className="glass-panel p-4 flex flex-wrap gap-4 items-center justify-between">
-          <div className="flex flex-1 flex-wrap gap-3 items-center min-w-[280px]">
-            <div className="relative flex-1 max-w-sm min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+        {/* 2. Filter Bar */}
+        <div className="rounded-lg border border-border/80 bg-card p-4 flex flex-wrap gap-3 items-center justify-between shadow-xs">
+          <div className="flex flex-1 flex-wrap gap-2.5 items-center min-w-[280px]">
+            <div className="relative flex-1 max-w-xs min-w-[180px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
               <Input
-                placeholder="Search driver by name or badge..."
+                placeholder="Search driver name or employee ID..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 bg-background/60 text-xs border-border/80 rounded-lg"
+                className="pl-8 h-8 text-xs rounded-md"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="size-3.5 text-muted-foreground shrink-0" />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-36 bg-background/60 text-xs border-border/80 rounded-lg">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="available">Ready / Available</SelectItem>
-                  <SelectItem value="on-duty">On Active Duty</SelectItem>
-                  <SelectItem value="resting">In Mandatory Rest</SelectItem>
-                  <SelectItem value="leave">On Leave</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Select value={depotFilter} onValueChange={setDepotFilter}>
-                <SelectTrigger className="w-44 bg-background/60 text-xs border-border/80 rounded-lg">
-                  <SelectValue placeholder="Depot" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Depots</SelectItem>
-                  <SelectItem value="Meyyanur Central Depot">
-                    Meyyanur Central Depot
-                  </SelectItem>
-                  <SelectItem value="Salem Junction Depot">
-                    Salem Junction Depot
-                  </SelectItem>
-                  <SelectItem value="Suramangalam Depot">
-                    Suramangalam Depot
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px] h-8 text-xs rounded-md">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="assigned">Assigned</SelectItem>
+                <SelectItem value="resting">Resting</SelectItem>
+                <SelectItem value="leave">On Leave</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={depotFilter} onValueChange={setDepotFilter}>
+              <SelectTrigger className="w-[170px] h-8 text-xs rounded-md">
+                <SelectValue placeholder="Depot" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Depots</SelectItem>
+                <SelectItem value="Meyyanur Depot">Meyyanur Depot</SelectItem>
+                <SelectItem value="Johnsonpet Depot">Johnsonpet Depot</SelectItem>
+                <SelectItem value="Hasthampatti Depot">Hasthampatti Depot</SelectItem>
+                <SelectItem value="Steel Plant Depot">Steel Plant Depot</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* View Toggle */}
-          <div className="flex items-center bg-secondary/50 p-1 rounded-lg border border-border/60">
-            <Button
-              variant={viewMode === "cards" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("cards")}
-              className="h-7 text-xs px-2.5 rounded-md gap-1"
-            >
-              <LayoutGrid className="size-3.5" /> Staff Cards
-            </Button>
-            <Button
-              variant={viewMode === "table" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("table")}
-              className="h-7 text-xs px-2.5 rounded-md gap-1"
-            >
-              <List className="size-3.5" /> Roster Table
-            </Button>
-          </div>
+          <span className="text-xs text-muted-foreground">
+            Total: <span className="font-bold text-foreground">{driversList.length}</span> drivers
+          </span>
         </div>
 
-        {/* 3A. VISUAL STAFF CARDS VIEW */}
-        {viewMode === "cards" && (
-          <div>
-            {isLoading ? (
-              <div className="py-20 text-center text-xs text-muted-foreground">
-                Loading driver directory...
-              </div>
-            ) : driversList.length === 0 ? (
-              <div className="py-16 text-center text-xs text-muted-foreground glass-panel p-8">
-                No drivers match the current search filters.
-              </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {driversList.map((driver) => {
-                  const assignment = driverAssignmentMap.get(driver.id);
-                  const isAvailable = driver.status === "available";
-                  const isOnDuty = driver.status === "on-duty";
-                  const isResting = driver.status === "resting";
-                  return (
-                    <div
-                      key={driver.id}
-                      className="glass-card p-4 rounded-xl border border-border/70 hover:border-primary/40 transition-all flex flex-col justify-between space-y-3.5"
-                    >
-                      {/* Driver Card Header */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="size-10 border-2 border-primary/20">
-                            <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
-                              {driver.name
-                                .split(" ")
-                                .map((n: string) => n[0])
-                                .join("")
-                                .toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h4 className="text-sm font-bold text-foreground">
-                              {driver.name}
-                            </h4>
-                            <div className="text-[10px] font-mono text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                              <Badge
-                                variant="outline"
-                                className="text-[9px] px-1 py-0 rounded"
-                              >
-                                {driver.employeeId ||
-                                  driver.badgeNumber ||
-                                  "DRV"}
-                              </Badge>
-                              <span>{driver.depot || "Meyyanur Depot"}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Status Badge */}
-                        <div>
-                          {isAvailable ? (
-                            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] rounded-md">
-                              ● Ready
-                            </Badge>
-                          ) : isOnDuty ? (
-                            <Badge className="bg-primary/15 text-primary border-primary/30 text-[10px] rounded-md">
-                              ● On Duty
-                            </Badge>
-                          ) : isResting ? (
-                            <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[10px] rounded-md">
-                              ● Resting
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="secondary"
-                              className="text-[10px] rounded-md"
-                            >
-                              Leave
-                            </Badge>
-                          )}
-                        </div>
+        {/* 3. Driver Directory Table */}
+        <div className="rounded-lg border border-border/80 bg-card overflow-hidden shadow-xs">
+          <Table>
+            <TableHeader className="bg-muted/40">
+              <TableRow>
+                <TableHead className="text-xs font-bold text-foreground">Employee ID</TableHead>
+                <TableHead className="text-xs font-bold text-foreground">Driver Name</TableHead>
+                <TableHead className="text-xs font-bold text-foreground">Reporting Depot</TableHead>
+                <TableHead className="text-xs font-bold text-foreground">License Badge</TableHead>
+                <TableHead className="text-xs font-bold text-foreground">Availability Status</TableHead>
+                {canManage && <TableHead className="text-right text-xs font-bold text-foreground">Actions</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-10 text-xs text-muted-foreground">
+                    Loading driver roster...
+                  </TableCell>
+                </TableRow>
+              ) : driversList.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-10 text-xs text-muted-foreground">
+                    No drivers matching filter criteria.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                driversList.map((driver) => (
+                  <TableRow key={driver.id}>
+                    <TableCell className="font-mono text-xs font-bold text-foreground">
+                      {driver.employeeId || "TNSTC-DR"}
+                    </TableCell>
+                    <TableCell className="text-xs font-semibold text-foreground">
+                      {driver.name}
+                    </TableCell>
+                    <TableCell className="text-xs font-medium text-foreground">
+                      {driver.depot}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <ShieldCheck className="size-3.5 text-primary shrink-0" />
+                        <span className="truncate max-w-[200px]">
+                          {driver.licenseCategory || "Heavy Passenger Vehicle (HPV)"}
+                        </span>
                       </div>
-
-                      {/* Contact & License Info */}
-                      <div className="space-y-1.5 text-xs border-y border-border/50 py-2.5">
-                        <div className="flex items-center justify-between text-muted-foreground">
-                          <span className="flex items-center gap-1.5">
-                            <Phone className="size-3 text-primary" /> Phone:
-                          </span>
-                          <span className="font-mono text-foreground font-medium">
-                            {driver.phoneNumber || "+91 98421 11001"}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-muted-foreground">
-                          <span className="flex items-center gap-1.5">
-                            <Award className="size-3 text-primary" /> License:
-                          </span>
-                          <span className="font-mono text-foreground">
-                            {driver.licenseCategory || "HPV Heavy Passenger"}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Current Assignment Status */}
-                      <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/50 text-xs">
-                        {assignment ? (
-                          <div className="space-y-1">
-                            <div className="text-[10px] font-bold uppercase text-primary tracking-wider">
-                              Assigned Active Run:
-                            </div>
-                            <div className="font-semibold text-foreground flex items-center gap-1">
-                              <BusIcon className="size-3 text-primary" />
-                              <span>{assignment.busReg}</span>
-                              <span className="text-muted-foreground">·</span>
-                              <span>Route {assignment.routeCode}</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between text-muted-foreground">
-                            <span>No shift assigned yet</span>
-                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">
-                              Available Now
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Card Actions */}
-                      <div className="flex items-center gap-2 pt-1">
-                        {canManage && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenAssign(driver)}
-                            className="flex-1 text-xs h-8 rounded-lg font-semibold hover:bg-primary hover:text-primary-foreground transition-all"
-                          >
-                            <CalendarClock className="size-3 mr-1" /> Assign
-                            Shift
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleOpenEdit(driver)}
-                          className="h-8 text-xs text-muted-foreground hover:text-foreground rounded-lg"
+                    </TableCell>
+                    <TableCell>
+                      {canManage ? (
+                        <Select
+                          value={driver.status}
+                          onValueChange={(val) => statusMutation.mutate({ id: driver.id, status: val })}
                         >
-                          <Edit2 className="size-3 mr-1" /> Edit
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 3B. TABLE VIEW */}
-        {viewMode === "table" && (
-          <div className="glass-panel overflow-hidden">
-            {isLoading ? (
-              <div className="py-16 text-center text-xs text-muted-foreground">
-                Loading driver registry...
-              </div>
-            ) : driversList.length === 0 ? (
-              <div className="py-16 text-center text-xs text-muted-foreground">
-                No drivers found matching current search.
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border/60 text-[11px]">
-                    <TableHead className="w-24">Badge ID</TableHead>
-                    <TableHead>Driver Name</TableHead>
-                    <TableHead>Contact Phone</TableHead>
-                    <TableHead>Home Depot</TableHead>
-                    <TableHead>Assigned Vehicle & Route</TableHead>
-                    <TableHead className="w-32">Duty Status</TableHead>
+                          <SelectTrigger className={`h-7 w-[125px] text-[11px] rounded font-medium ${getStatusBadgeClass(driver.status)}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="available">Available</SelectItem>
+                            <SelectItem value="assigned">Assigned</SelectItem>
+                            <SelectItem value="resting">Resting</SelectItem>
+                            <SelectItem value="leave">On Leave</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge variant="outline" className={`text-[10px] rounded ${getStatusBadgeClass(driver.status)}`}>
+                          {driver.status}
+                        </Badge>
+                      )}
+                    </TableCell>
                     {canManage && (
-                      <TableHead className="w-28 text-right">Actions</TableHead>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenEdit(driver)}
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md"
+                        >
+                          <Edit2 className="size-3.5 mr-1" />
+                          Edit
+                        </Button>
+                      </TableCell>
                     )}
                   </TableRow>
-                </TableHeader>
-                <TableBody className="text-xs">
-                  {driversList.map((driver) => {
-                    const assignment = driverAssignmentMap.get(driver.id);
-                    return (
-                      <TableRow
-                        key={driver.id}
-                        className="border-border/40 hover:bg-muted/40 transition-colors"
-                      >
-                        <TableCell className="font-mono font-bold text-primary">
-                          {driver.employeeId || driver.badgeNumber || "DRV"}
-                        </TableCell>
-                        <TableCell className="font-bold text-foreground">
-                          {driver.name}
-                        </TableCell>
-                        <TableCell className="font-mono text-muted-foreground">
-                          {driver.phoneNumber || "+91 98421 11001"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {driver.depot}
-                        </TableCell>
-                        <TableCell>
-                          {assignment ? (
-                            <span className="font-semibold text-foreground">
-                              {assignment.busReg} (Route {assignment.routeCode})
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground italic">
-                              Ready for assignment
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={driver.status}
-                            onValueChange={(val) =>
-                              statusMutation.mutate({
-                                id: driver.id,
-                                status: val,
-                              })
-                            }
-                          >
-                            <SelectTrigger
-                              className={cn(
-                                "h-7 w-28 text-[10px] font-semibold uppercase tracking-wider rounded-md border",
-                                getStatusBadgeClass(driver.status),
-                              )}
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="available">
-                                Available
-                              </SelectItem>
-                              <SelectItem value="on-duty">On Duty</SelectItem>
-                              <SelectItem value="resting">Resting</SelectItem>
-                              <SelectItem value="leave">Leave</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        {canManage && (
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleOpenAssign(driver)}
-                                className="h-7 text-[11px] rounded"
-                              >
-                                Assign
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleOpenEdit(driver)}
-                                className="h-7 text-[11px] rounded"
-                              >
-                                Edit
-                              </Button>
-                            </div>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-        )}
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-        {/* QUICK ASSIGN DRIVER TO BUS & ROUTE MODAL */}
-        <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
-          <DialogContent className="sm:max-w-md bg-card border-border rounded-xl">
+        {/* 4. Modal: Add / Edit Driver */}
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogContent className="sm:max-w-md rounded-lg">
             <DialogHeader>
-              <DialogTitle className="text-base font-bold flex items-center gap-2">
-                <CalendarClock className="size-4 text-primary" /> Assign Driver
-                to Bus & Route
+              <DialogTitle className="text-base font-bold text-foreground">
+                {editingDriverId ? "Edit Driver Profile" : "Enroll Driver"}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Quickly dispatch {assignDriver?.name} to an active vehicle and
-                corridor.
+                Provide employee credentials and operating depot assignment.
               </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleQuickAssignSubmit} className="space-y-4 py-2">
+            <form onSubmit={handleSubmit} className="space-y-3.5 py-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Driver</Label>
+                <Label className="text-xs font-semibold">Driver Full Name</Label>
                 <Input
-                  value={assignDriver?.name || ""}
-                  disabled
-                  className="text-xs bg-muted/40 font-bold"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Select Bus</Label>
-                <Select value={assignBusId} onValueChange={setAssignBusId}>
-                  <SelectTrigger className="text-xs bg-background/60 rounded-lg font-mono">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {busesList.map((bus) => (
-                      <SelectItem key={bus.id} value={bus.id}>
-                        {bus.registrationNumber} · {bus.model || "65-Seater"} (
-                        {bus.depot || "Meyyanur"})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">
-                  Select Route Corridor
-                </Label>
-                <Select value={assignRouteId} onValueChange={setAssignRouteId}>
-                  <SelectTrigger className="text-xs bg-background/60 rounded-lg">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {routesList.map((route) => (
-                      <SelectItem key={route.id} value={route.id}>
-                        Route {route.code}: {route.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">
-                  Shift Start Time
-                </Label>
-                <Input
-                  type="time"
-                  value={assignStartTime}
-                  onChange={(e) => setAssignStartTime(e.target.value)}
-                  className="text-xs bg-background/60 font-mono rounded-lg"
+                  placeholder="e.g. Murugesan K."
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-8.5 text-xs rounded-md"
                   required
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Employee ID / Token</Label>
+                  <Input
+                    placeholder="e.g. TNSTC-SLM-DR-025"
+                    value={employeeId}
+                    onChange={(e) => setEmployeeId(e.target.value)}
+                    className="h-8.5 text-xs font-mono uppercase rounded-md"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Reporting Depot</Label>
+                  <Select value={depot} onValueChange={setDepot}>
+                    <SelectTrigger className="h-8.5 text-xs rounded-md">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Meyyanur Depot">Meyyanur Depot</SelectItem>
+                      <SelectItem value="Johnsonpet Depot">Johnsonpet Depot</SelectItem>
+                      <SelectItem value="Hasthampatti Depot">Hasthampatti Depot</SelectItem>
+                      <SelectItem value="Steel Plant Depot">Steel Plant Depot</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">License Badge Category</Label>
+                <Input
+                  value={licenseCategory}
+                  onChange={(e) => setLicenseCategory(e.target.value)}
+                  className="h-8.5 text-xs rounded-md"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Availability Status</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="h-8.5 text-xs rounded-md">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="available">Available (Ready for duty)</SelectItem>
+                    <SelectItem value="assigned">Assigned to shift</SelectItem>
+                    <SelectItem value="resting">Resting</SelectItem>
+                    <SelectItem value="leave">On Leave</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <DialogFooter className="pt-2">
@@ -951,229 +557,18 @@ function DriversPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsAssignOpen(false)}
-                  className="text-xs rounded-lg"
+                  onClick={() => setIsFormOpen(false)}
+                  className="text-xs rounded-md"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   size="sm"
-                  className="bg-primary text-primary-foreground font-semibold text-xs rounded-lg"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md"
                 >
-                  Confirm Assignment
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* CREATE DRIVER MODAL */}
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogContent className="sm:max-w-md bg-card border-border rounded-xl">
-            <form onSubmit={handleCreateSubmit}>
-              <DialogHeader>
-                <DialogTitle className="text-base font-bold flex items-center gap-2">
-                  <Plus className="size-4 text-primary" /> Register New Driver
-                </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground">
-                  Add a new driver to the transit authority staff roster.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="py-4 space-y-3.5">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">
-                      Employee Badge ID
-                    </Label>
-                    <Input
-                      type="text"
-                      value={formEmpId}
-                      onChange={(e) => setFormEmpId(e.target.value)}
-                      className="font-mono text-xs rounded-lg"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Full Name</Label>
-                    <Input
-                      type="text"
-                      placeholder="e.g. S. Murugan"
-                      value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
-                      className="text-xs rounded-lg"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">
-                      Contact Phone
-                    </Label>
-                    <Input
-                      type="tel"
-                      value={formPhone}
-                      onChange={(e) => setFormPhone(e.target.value)}
-                      className="font-mono text-xs rounded-lg"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">
-                      Assigned Depot
-                    </Label>
-                    <Select value={formDepot} onValueChange={setFormDepot}>
-                      <SelectTrigger className="text-xs rounded-lg">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Meyyanur Central Depot">
-                          Meyyanur Central Depot
-                        </SelectItem>
-                        <SelectItem value="Salem Junction Depot">
-                          Salem Junction Depot
-                        </SelectItem>
-                        <SelectItem value="Suramangalam Depot">
-                          Suramangalam Depot
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">
-                      License Category
-                    </Label>
-                    <Input
-                      value={formLicenseCategory}
-                      onChange={(e) => setFormLicenseCategory(e.target.value)}
-                      className="text-xs rounded-lg"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">
-                      License Expiry Date
-                    </Label>
-                    <Input
-                      type="date"
-                      value={formLicenseExpiry}
-                      onChange={(e) => setFormLicenseExpiry(e.target.value)}
-                      className="font-mono text-xs rounded-lg"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsCreateOpen(false)}
-                  className="text-xs rounded-lg"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={createMutation.isPending}
-                  className="bg-primary text-primary-foreground text-xs font-semibold rounded-lg"
-                >
-                  {createMutation.isPending ? "Creating..." : "Save Driver"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* EDIT DRIVER MODAL */}
-        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-          <DialogContent className="sm:max-w-md bg-card border-border rounded-xl">
-            <form onSubmit={handleEditSubmit}>
-              <DialogHeader>
-                <DialogTitle className="text-base font-bold flex items-center gap-2">
-                  <Edit2 className="size-4 text-primary" /> Edit Driver
-                  Information
-                </DialogTitle>
-              </DialogHeader>
-
-              <div className="py-4 space-y-3.5">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Badge ID</Label>
-                    <Input
-                      value={formEmpId}
-                      onChange={(e) => setFormEmpId(e.target.value)}
-                      className="font-mono text-xs rounded-lg"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Full Name</Label>
-                    <Input
-                      value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
-                      className="text-xs rounded-lg"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Status</Label>
-                    <Select value={formStatus} onValueChange={setFormStatus}>
-                      <SelectTrigger className="text-xs rounded-lg font-mono">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="available">Available</SelectItem>
-                        <SelectItem value="on-duty">On Duty</SelectItem>
-                        <SelectItem value="resting">Resting</SelectItem>
-                        <SelectItem value="leave">Leave</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">
-                      License Expiry
-                    </Label>
-                    <Input
-                      type="date"
-                      value={formLicenseExpiry}
-                      onChange={(e) => setFormLicenseExpiry(e.target.value)}
-                      className="font-mono text-xs rounded-lg"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditOpen(false)}
-                  className="text-xs rounded-lg"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={updateMutation.isPending}
-                  className="bg-primary text-primary-foreground text-xs font-semibold rounded-lg"
-                >
-                  {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                  {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Save Driver"}
                 </Button>
               </DialogFooter>
             </form>

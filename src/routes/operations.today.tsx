@@ -173,7 +173,7 @@ function OperationsTodayPage() {
             className="text-xs h-8 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md shadow-xs"
           >
             <Link to="/operations/duties">
-              <Sparkles className="size-3.5 mr-1.5" />
+              <CalendarClock className="size-3.5 mr-1.5" />
               Manage Shifts
             </Link>
           </Button>
@@ -181,6 +181,43 @@ function OperationsTodayPage() {
       }
     >
       <div className="space-y-6">
+        {/* OPERATIONAL LIFECYCLE STEP 6 OF 6 GUIDANCE BANNER */}
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-lg border border-primary/20 bg-primary/5">
+          <div className="flex items-center gap-3">
+            <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground font-mono font-bold text-xs">
+              6
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-foreground">
+                  Daily Operations (Step 6 of 6)
+                </span>
+                <Badge
+                  variant="outline"
+                  className="text-[10px] rounded-md font-mono text-primary border-primary/30"
+                >
+                  Live Road Dispatch
+                </Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Monitor real-time vehicle dispatch, driver sign-ons, and manage live service disruptions.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              asChild
+              size="sm"
+              variant="outline"
+              className="text-xs h-7 rounded-md border-border hover:bg-muted"
+            >
+              <Link to="/operations/trips">
+                <ArrowRight className="size-3 mr-1 rotate-180" />
+                Back to Timetable
+              </Link>
+            </Button>
+          </div>
+        </div>
         {/* 1. TELEMETRY STATS GRID */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <MetricTile
@@ -358,7 +395,7 @@ function OperationsTodayPage() {
                         <div className="flex items-center gap-3 text-xs">
                           <span className="font-mono font-semibold text-foreground flex items-center gap-1">
                             <Clock className="size-3 text-primary" />
-                            {formatMinutesToTime(d.startTime)} –{" "}
+                            {formatMinutesToTime(d.startTime)} -{" "}
                             {formatMinutesToTime(d.endTime)}
                           </span>
                           <Button
@@ -601,7 +638,7 @@ function MetricTile({
         {badge ? (
           <span
             className={cn(
-              "rounded-full border px-1.5 py-0.2 text-[9px] font-mono font-bold",
+              "rounded-md border px-1.5 py-0.2 text-[9px] font-mono font-bold",
               badgeColor,
             )}
           >

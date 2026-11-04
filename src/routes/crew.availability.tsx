@@ -958,7 +958,7 @@ function CrewAvailabilityPage() {
                         className="absolute top-0 bottom-0 pointer-events-none z-30 -translate-x-1/2 flex flex-col items-center"
                         style={{ left: `${nowPercent}%` }}
                       >
-                        <div className="bg-rose-500 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-md flex items-center gap-1">
+                        <div className="bg-rose-500 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-md shadow-md flex items-center gap-1">
                           <span className="size-1 rounded-full bg-white animate-ping" />
                           NOW {String(currentHour).padStart(2, "0")}:
                           {String(currentMinute).padStart(2, "0")}
@@ -1072,7 +1072,7 @@ function CrewAvailabilityPage() {
                                   >
                                     <div
                                       onClick={() => setSelectedMember(member)}
-                                      title={`${member.name} (${formatHour(seg.startHour)} – ${formatHour(seg.endHour)})\nStatus: ${seg.label}\nDuration: ${seg.durationHours} hours`}
+                                      title={`${member.name} (${formatHour(seg.startHour)} - ${formatHour(seg.endHour)})\nStatus: ${seg.label}\nDuration: ${seg.durationHours} hours`}
                                       className={cn(
                                         "w-full h-full rounded-lg border text-xs flex items-center justify-center transition-all cursor-pointer select-none px-2 overflow-hidden shadow-2xs group/bar",
                                         theme.bg,
@@ -1100,7 +1100,7 @@ function CrewAvailabilityPage() {
                                             {seg.label}
                                           </span>
                                           <span className="font-mono text-[11px] opacity-80 bg-background/40 px-1.5 py-0.5 rounded-md font-medium shrink-0">
-                                            {formatHour(seg.startHour)} –{" "}
+                                            {formatHour(seg.startHour)} -{" "}
                                             {formatHour(seg.endHour)} (
                                             {seg.durationHours}h)
                                           </span>
@@ -1128,7 +1128,7 @@ function CrewAvailabilityPage() {
                                   <div
                                     key={hour}
                                     onClick={() => setSelectedMember(member)}
-                                    title={`${member.name} (${formatHour(hour)} – ${formatHour(hour + 1)})\nStatus: ${label}`}
+                                    title={`${member.name} (${formatHour(hour)} - ${formatHour(hour + 1)})\nStatus: ${label}`}
                                     className={cn(
                                       "rounded-md text-[10px] font-mono font-bold flex items-center justify-center transition-all cursor-pointer select-none border",
                                       density === "comfortable" ? "h-9" : "h-7",
@@ -1174,7 +1174,7 @@ function CrewAvailabilityPage() {
                   filteredCrew.length,
                   (currentPage - 1) * pageSize + 1,
                 )}
-                –{Math.min(filteredCrew.length, currentPage * pageSize)} of{" "}
+                -{Math.min(filteredCrew.length, currentPage * pageSize)} of{" "}
                 {filteredCrew.length} crew
               </span>
             </div>
@@ -1294,7 +1294,7 @@ function CrewAvailabilityPage() {
                             <div>
                               <p className="font-bold">{seg.label}</p>
                               <p className="text-[11px] opacity-75 font-mono">
-                                {formatHour(seg.startHour)} –{" "}
+                                {formatHour(seg.startHour)} -{" "}
                                 {formatHour(seg.endHour)}
                               </p>
                             </div>

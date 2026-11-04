@@ -568,7 +568,7 @@ function DutiesPage() {
                         <div className="flex items-center justify-between">
                           <span className="flex items-center gap-1 font-mono text-[10px]">
                             <Clock className="size-3 text-muted-foreground" />
-                            {formatMinutesToTime(d.startTime)} –{" "}
+                            {formatMinutesToTime(d.startTime)} -{" "}
                             {formatMinutesToTime(d.endTime)}
                           </span>
                           <Badge
@@ -843,7 +843,7 @@ function DutiesPage() {
                             className="flex items-center justify-between p-2.5 rounded-lg border border-border/60 bg-background/70 hover:border-primary/40 transition-colors"
                           >
                             <div className="flex items-center gap-3">
-                              <span className="size-6 rounded-full bg-primary/10 text-primary font-bold text-xs grid place-items-center font-mono">
+                              <span className="size-6 rounded-md bg-primary/10 text-primary font-bold text-xs grid place-items-center font-mono">
                                 {idx + 1}
                               </span>
                               <div>
@@ -965,7 +965,7 @@ function DutiesPage() {
               </div>
             ) : (
               <div className="py-28 text-center text-muted-foreground flex-1 flex flex-col items-center justify-center p-6 space-y-3">
-                <div className="size-14 rounded-2xl bg-primary/10 text-primary grid place-items-center mb-1 border border-primary/20">
+                <div className="size-14 rounded-lg bg-primary/10 text-primary grid place-items-center mb-1 border border-primary/20">
                   <CalendarClock className="size-7" />
                 </div>
                 <h4 className="text-base font-bold text-foreground">

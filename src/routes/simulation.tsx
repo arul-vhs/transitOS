@@ -1044,7 +1044,7 @@ function SimulationPage() {
               {/* Leaflet DOM Node */}
               <div
                 ref={mapRef}
-                className="flex-1 w-full rounded-2xl z-0 mt-2"
+                className="flex-1 w-full rounded-lg z-0 mt-2"
               />
 
               {/* Active Route Legend Bar */}
@@ -1224,7 +1224,7 @@ function SimulationPage() {
 
                   {/* Current Journey Route Path & Progress */}
                   {selectedBus.status !== "standby" && (
-                    <div className="mt-3 p-2.5 rounded-2xl bg-muted/30 border border-border/60 space-y-1.5">
+                    <div className="mt-3 p-2.5 rounded-lg bg-muted/30 border border-border/60 space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className="font-bold text-foreground truncate">
@@ -1338,13 +1338,13 @@ function SimulationPage() {
 
                   <p className="text-xs text-muted-foreground">
                     Click any real-world incident below to see how TransitOS's
-                    AI Disruption Radar and Rescheduling Engine respond in
+                    Disruption Radar and Rescheduling Engine respond in
                     real-time:
                   </p>
 
                   <div className="space-y-2">
                     {/* Scenario 1: Breakdown */}
-                    <div className="p-3 rounded-2xl border border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 transition-colors">
+                    <div className="p-3 rounded-lg border border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 transition-colors">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-1.5">
@@ -1381,7 +1381,7 @@ function SimulationPage() {
                     </div>
 
                     {/* Scenario 2: Traffic Delay */}
-                    <div className="p-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
+                    <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-1.5">
@@ -1407,7 +1407,7 @@ function SimulationPage() {
                     </div>
 
                     {/* Scenario 3: Driver Rest Compliance Handover */}
-                    <div className="p-3 rounded-2xl border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors">
+                    <div className="p-3 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-1.5">

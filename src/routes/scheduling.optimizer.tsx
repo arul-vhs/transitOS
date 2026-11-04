@@ -291,11 +291,11 @@ function OptimizerPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="grid size-8 place-items-center rounded-xl bg-primary/15 text-primary border border-primary/20">
-                <Sparkles className="size-4 text-amber-400" />
+                <Cpu className="size-4 text-primary" />
               </div>
               <div>
                 <h2 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
-                  <span>Google OR-Tools AI Schedule Optimizer</span>
+                  <span>Automated Schedule Optimization</span>
                   <Badge
                     variant="outline"
                     className="border-primary/30 text-primary text-[10px] font-mono"
@@ -319,7 +319,7 @@ function OptimizerPage() {
                     : "border-border/60 text-muted-foreground",
                 )}
               >
-                <span className="size-4 rounded-full bg-primary/20 grid place-items-center text-[10px] font-mono">
+                <span className="size-4 rounded-md bg-primary/20 grid place-items-center text-[10px] font-mono">
                   1
                 </span>
                 <span>Configure Strategy</span>
@@ -333,7 +333,7 @@ function OptimizerPage() {
                     : "border-border/60 text-muted-foreground",
                 )}
               >
-                <span className="size-4 rounded-full bg-primary/20 grid place-items-center text-[10px] font-mono">
+                <span className="size-4 rounded-md bg-primary/20 grid place-items-center text-[10px] font-mono">
                   2
                 </span>
                 <span>Run Solver Engine</span>
@@ -347,7 +347,7 @@ function OptimizerPage() {
                     : "border-border/60 text-muted-foreground",
                 )}
               >
-                <span className="size-4 rounded-full bg-success/20 grid place-items-center text-[10px] font-mono">
+                <span className="size-4 rounded-md bg-success/20 grid place-items-center text-[10px] font-mono">
                   3
                 </span>
                 <span>Review & Publish</span>
@@ -505,7 +505,7 @@ function OptimizerPage() {
                 ) : (
                   <>
                     <Zap className="mr-2 size-4 text-amber-300" />
-                    Step 2: Run Google OR-Tools AI Solver
+                    Step 2: Run Automated Optimization Engine
                   </>
                 )}
               </Button>
@@ -641,7 +641,7 @@ function OptimizerPage() {
                 <div className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                 <div>
                   <h4 className="text-sm font-bold text-foreground">
-                    Google OR-Tools CP-SAT Solver Active
+                    Optimization Solver Engine Active
                   </h4>
                   <p className="text-xs text-primary font-medium font-mono">
                     {OPT_STAGES[stageIndex] || "Executing solver..."}
@@ -663,7 +663,7 @@ function OptimizerPage() {
         {proposal && (
           <div className="space-y-6">
             {/* EXECUTIVE PROPOSAL SUMMARY BANNER */}
-            <div className="glass-panel p-5 rounded-2xl border-l-4 border-l-primary bg-gradient-to-r from-primary/10 via-background to-success/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-md">
+            <div className="glass-panel p-5 rounded-xl border-l-4 border-l-primary bg-gradient-to-r from-primary/10 via-background to-success/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-md">
               <div className="flex items-start gap-3.5">
                 <div className="grid size-10 place-items-center rounded-xl bg-success/15 text-success border border-success/30 shrink-0 mt-0.5">
                   <CheckCircle2 className="size-5" />
@@ -681,7 +681,7 @@ function OptimizerPage() {
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1 max-w-2xl leading-relaxed">
-                    Google OR-Tools analyzed all departures and generated{" "}
+                    The optimization engine evaluated departures and generated{" "}
                     <strong>{proposal.dutiesCreated} optimal duties</strong>{" "}
                     using only <strong>{proposal.busesUsed} buses</strong>. All
                     continuous driving limits (&lt;240 mins) and mandatory
@@ -745,7 +745,7 @@ function OptimizerPage() {
                   {proposal.busesUsed}
                 </span>
                 <span className="text-[10px] text-muted-foreground">
-                  Fleet efficiency +18%
+                  Minimizes idle vehicles
                 </span>
               </div>
 

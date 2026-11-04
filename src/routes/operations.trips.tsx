@@ -1,32 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   CalendarClock,
   Search,
   Plus,
-  Compass,
-  ArrowUpDown,
-  Filter,
-  Trash2,
-  Calendar,
-  Clock,
-  Lightbulb,
   ArrowRight,
-  Info,
-  CheckCircle2,
   Bus as BusIcon,
   Users,
-  UserCheck,
+  CheckCircle2,
+  Clock,
   AlertTriangle,
-  ShieldCheck,
+  RefreshCw,
+  Filter,
   Check,
   ChevronRight,
-  ChevronLeft,
-  X,
-  RefreshCw,
   Sparkles,
+  Calendar,
+  X,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -57,7 +49,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
 import { getRoutes } from "@/lib/routes-gis-fns";
@@ -69,10 +60,13 @@ import {
   generateTrips,
   getDuties,
   createDuty,
-  updateDuty,
   addTripToDuty,
 } from "@/lib/scheduling-fns";
-import { cn, formatMinutesToTime } from "@/lib/utils";
+import {
+  generateOptimizedSchedule,
+  publishSchedule,
+} from "@/lib/optimization-fns";
+import { formatMinutesToTime } from "@/lib/utils";
 
 export const Route = createFileRoute("/operations/trips")({
   beforeLoad: ({ context }) => {
@@ -82,11 +76,11 @@ export const Route = createFileRoute("/operations/trips")({
   },
   head: () => ({
     meta: [
-      { title: "Schedule Bus Trips: TransitOS" },
+      { title: "Scheduling & Timetable: TransitOS" },
       {
         name: "description",
         content:
-          "Daily bus timetables, 7-step guided run scheduler, and driver assignments.",
+          "Daily bus timetables, step-by-step trip scheduler, bus and crew assignments with conflict detection.",
       },
     ],
   }),
@@ -102,7 +96,7 @@ function parseTimeToMinutes(timeStr: string): number {
 }
 
 function formatMinutesToTimeString(min: number): string {
-  const h = Math.floor(min / 60);
+  const h = Math.floor(min / 60) % 24;
   const m = min % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
@@ -113,7 +107,7 @@ interface RouteItem {
   name: string;
   origin?: string;
   destination?: string;
-  distanceKm?: string | number;
+  lengthKm?: string | number;
   durationMin?: number;
   status?: string;
 }
@@ -121,7 +115,8 @@ interface RouteItem {
 interface BusItem {
   id: string;
   registrationNumber: string;
-  model?: string;
+  fleetNumber?: string;
+  busType?: string;
   capacity?: number;
   status?: string;
   depot?: string;
@@ -130,35 +125,28 @@ interface BusItem {
 interface CrewItem {
   id: string;
   name: string;
-  badgeNumber?: string;
-  phoneNumber?: string;
+  employeeId?: string;
   role?: string;
   status?: string;
   depot?: string;
+  restUntil?: number;
 }
 
 interface TripItem {
   id: string;
   tripCode: string;
   routeId: string;
-  routeCode: string;
-  routeName: string;
+  routeCode?: string;
+  routeName?: string;
   direction: string;
   startTime: number;
   endTime: number;
   durationMin: number;
   distanceKm: string | number;
+  origin: string;
+  destination: string;
   status: string;
   serviceDate: string;
-}
-
-interface DutyTripItem {
-  id: string;
-  tripCode: string;
-  startTime: number;
-  endTime: number;
-  routeCode: string;
-  routeName: string;
 }
 
 interface DutyItem {
@@ -170,7 +158,7 @@ interface DutyItem {
   busRegNumber?: string;
   driverName?: string;
   conductorName?: string;
-  trips?: DutyTripItem[];
+  trips?: { id: string }[];
 }
 
 function TripsPage() {
@@ -185,20 +173,24 @@ function TripsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [directionFilter, setDirectionFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewTab, setViewTab] = useState<
-    "timetable" | "timeline" | "generator"
-  >("timetable");
 
-  // 7-Step Guided Scheduler Wizard Modal State
+  // 7-Step Guided Trip Scheduler State
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
-  const [selectedBusId, setSelectedBusId] = useState("");
   const [selectedRouteId, setSelectedRouteId] = useState("");
+  const [departureTime, setDepartureTime] = useState("06:30");
+  const [scheduleDirection, setScheduleDirection] = useState("OUTBOUND");
+  const [selectedBusId, setSelectedBusId] = useState("");
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [selectedConductorId, setSelectedConductorId] = useState("");
-  const [departureTime, setDepartureTime] = useState("07:30");
-  const [scheduleDirection, setScheduleDirection] = useState("OUTBOUND");
   const [wizardSubmitting, setWizardSubmitting] = useState(false);
+
+  // Quick Assign Single Trip Modal State
+  const [quickAssignTrip, setQuickAssignTrip] = useState<TripItem | null>(null);
+  const [quickBusId, setQuickBusId] = useState("");
+  const [quickDriverId, setQuickDriverId] = useState("");
+  const [quickConductorId, setQuickConductorId] = useState("");
+  const [quickSaving, setQuickSaving] = useState(false);
 
   // Frequency Generator Modal State
   const [isGenOpen, setIsGenOpen] = useState(false);
@@ -207,6 +199,10 @@ function TripsPage() {
   const [genEndTime, setGenEndTime] = useState("10:00");
   const [genFrequency, setGenFrequency] = useState("30");
   const [genDirection, setGenDirection] = useState("OUTBOUND");
+  const [genSubmitting, setGenSubmitting] = useState(false);
+
+  // Auto-Scheduling State
+  const [isAutoScheduling, setIsAutoScheduling] = useState(false);
 
   // 1. Fetch Routes
   const { data: routesList = [] } = useQuery<RouteItem[]>({
@@ -232,17 +228,9 @@ function TripsPage() {
     queryFn: () => getConductors() as Promise<CrewItem[]>,
   });
 
-  // 5. Fetch Trips List
-  const { data: tripsList = [], isLoading: tripsLoading } = useQuery<
-    TripItem[]
-  >({
-    queryKey: [
-      "trips",
-      serviceDate,
-      routeFilter,
-      statusFilter,
-      directionFilter,
-    ],
+  // 5. Fetch Trips
+  const { data: tripsList = [], isLoading: tripsLoading } = useQuery<TripItem[]>({
+    queryKey: ["trips", serviceDate, routeFilter, statusFilter, directionFilter],
     queryFn: () =>
       getTrips({
         serviceDate,
@@ -252,207 +240,136 @@ function TripsPage() {
       }) as Promise<TripItem[]>,
   });
 
-  // 6. Fetch Duties (to resolve assigned bus and staff for each trip)
+  // 6. Fetch Duties (resolve bus and staff assignments)
   const { data: dutiesList = [] } = useQuery<DutyItem[]>({
     queryKey: ["duties-for-trips", serviceDate],
     queryFn: () => getDuties({ serviceDate }) as Promise<DutyItem[]>,
   });
 
-  // Automatically select defaults when dropdown lists load
-  useEffect(() => {
-    if (routesList.length > 0) {
-      if (!selectedRouteId) setSelectedRouteId(routesList[0].id);
-      if (!genRouteId) setGenRouteId(routesList[0].id);
-    }
-    if (busesList.length > 0 && !selectedBusId) {
-      const activeBus =
-        busesList.find((b) => b.status === "active") || busesList[0];
-      if (activeBus) setSelectedBusId(activeBus.id);
-    }
-    if (driversList.length > 0 && !selectedDriverId) {
-      const availableDriver =
-        driversList.find((d) => d.status === "available") || driversList[0];
-      if (availableDriver) setSelectedDriverId(availableDriver.id);
-    }
-    if (conductorsList.length > 0 && !selectedConductorId) {
-      const availableConductor =
-        conductorsList.find((c) => c.status === "available") ||
-        conductorsList[0];
-      if (availableConductor) setSelectedConductorId(availableConductor.id);
-    }
-  }, [routesList, busesList, driversList, conductorsList]);
+  // Auto-fill defaults for wizard
+  const selectedRoute = useMemo(
+    () => routesList.find((r) => r.id === selectedRouteId) || routesList[0],
+    [routesList, selectedRouteId],
+  );
 
-  // Trip to Assignment mapping (Trip ID -> Bus, Driver, Conductor names)
+  const calculatedDuration = selectedRoute?.durationMin || 30;
+  const calculatedEndTimeMinutes = useMemo(() => {
+    const startMin = parseTimeToMinutes(departureTime);
+    return startMin + calculatedDuration;
+  }, [departureTime, calculatedDuration]);
+
+  // Trip to Assignment mapping (Trip ID -> Bus, Driver, Conductor, Duty)
   const tripAssignmentMap = useMemo(() => {
     const map = new Map<
       string,
       {
+        dutyId: string;
+        busId?: string | null;
+        driverId?: string | null;
+        conductorId?: string | null;
         busReg: string;
         driverName: string;
         conductorName: string;
         dutyCode: string;
       }
     >();
+
     dutiesList.forEach((duty) => {
       duty.trips?.forEach((t) => {
+        const bus = busesList.find((b) => b.id === duty.busId);
+        const driver = driversList.find((d) => d.id === duty.driverId);
+        const conductor = conductorsList.find((c) => c.id === duty.conductorId);
+
         map.set(t.id, {
-          busReg: duty.busRegNumber || "Unassigned Bus",
-          driverName: duty.driverName || "Unassigned Driver",
-          conductorName: duty.conductorName || "Unassigned Conductor",
+          dutyId: duty.id,
+          busId: duty.busId,
+          driverId: duty.driverId,
+          conductorId: duty.conductorId,
+          busReg: bus ? `${bus.registrationNumber} (${bus.fleetNumber || "Bus"})` : "Unassigned",
+          driverName: driver ? driver.name : "Unassigned",
+          conductorName: conductor ? conductor.name : "Unassigned",
           dutyCode: duty.dutyCode,
         });
       });
     });
+
     return map;
-  }, [dutiesList]);
+  }, [dutiesList, busesList, driversList, conductorsList]);
 
-  // Selected Entities for Wizard Preview
-  const selectedBus = useMemo(
-    () => busesList.find((b) => b.id === selectedBusId),
-    [busesList, selectedBusId],
-  );
-  const selectedRoute = useMemo(
-    () => routesList.find((r) => r.id === selectedRouteId),
-    [routesList, selectedRouteId],
-  );
-  const selectedDriver = useMemo(
-    () => driversList.find((d) => d.id === selectedDriverId),
-    [driversList, selectedDriverId],
-  );
-  const selectedConductor = useMemo(
-    () => conductorsList.find((c) => c.id === selectedConductorId),
-    [conductorsList, selectedConductorId],
-  );
+  // Real-time conflict detection: checks for bus or crew assigned to overlapping trips
+  const schedulingConflicts = useMemo(() => {
+    const conflicts = new Map<string, string[]>();
 
-  // Estimated Arrival calculation
-  const departureMinutes = parseTimeToMinutes(departureTime);
-  const estimatedDuration = selectedRoute?.durationMin || 30;
-  const arrivalMinutes = departureMinutes + estimatedDuration;
-  const estimatedArrivalTime = formatMinutesToTimeString(arrivalMinutes);
+    for (let i = 0; i < tripsList.length; i++) {
+      const tripA = tripsList[i];
+      const assignA = tripAssignmentMap.get(tripA.id);
+      if (!assignA) continue;
 
-  // Conflict Checking Logic
-  const conflictWarnings = useMemo(() => {
-    const warnings: string[] = [];
-    if (selectedDriver?.status === "resting") {
-      warnings.push(
-        `${selectedDriver.name} is currently in statutory rest (Motor Vehicles Act minimum 45m buffer).`,
-      );
-    } else if (selectedDriver?.status === "leave") {
-      warnings.push(`${selectedDriver.name} is marked on official leave.`);
-    }
+      for (let j = i + 1; j < tripsList.length; j++) {
+        const tripB = tripsList[j];
+        const assignB = tripAssignmentMap.get(tripB.id);
+        if (!assignB) continue;
 
-    if (selectedBus?.status === "maintenance") {
-      warnings.push(
-        `Bus ${selectedBus.registrationNumber} is marked under maintenance in the workshop.`,
-      );
-    }
-    return warnings;
-  }, [selectedDriver, selectedBus]);
+        // Check time overlap
+        const overlaps =
+          tripA.startTime < tripB.endTime && tripB.startTime < tripA.endTime;
 
-  // Mutations
-  const cancelTripMutation = useMutation({
-    mutationFn: cancelTrip,
-    onSuccess: (updatedT: { tripCode?: string }) => {
-      queryClient.invalidateQueries({ queryKey: ["trips"] });
-      queryClient.invalidateQueries({ queryKey: ["duties-for-trips"] });
-      toast.success(`Trip ${updatedT.tripCode || ""} cancelled successfully.`);
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || "Failed to cancel trip");
-    },
-  });
+        if (overlaps) {
+          // Bus overlap conflict
+          if (assignA.busId && assignB.busId && assignA.busId === assignB.busId) {
+            const listA = conflicts.get(tripA.id) || [];
+            listA.push(`Bus overlapping with trip ${tripB.tripCode}`);
+            conflicts.set(tripA.id, listA);
 
-  const generateTripsMutation = useMutation({
-    mutationFn: generateTrips,
-    onSuccess: (tripsArray: unknown[]) => {
-      queryClient.invalidateQueries({ queryKey: ["trips"] });
-      queryClient.invalidateQueries({ queryKey: ["duties-for-trips"] });
-      toast.success(`Generated ${tripsArray.length} trips successfully.`);
-      setIsGenOpen(false);
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || "Failed to generate trips");
-    },
-  });
+            const listB = conflicts.get(tripB.id) || [];
+            listB.push(`Bus overlapping with trip ${tripA.tripCode}`);
+            conflicts.set(tripB.id, listB);
+          }
 
-  // Complete 7-Step Schedule Publishing Handler
-  const handlePublishSchedule = async () => {
-    if (!selectedRouteId) {
-      toast.error("Please select a route.");
-      return;
-    }
-    setWizardSubmitting(true);
-    try {
-      // 1. Create the Trip
-      const newTrip = (await createTrip({
-        routeId: selectedRouteId,
-        startTime: departureMinutes,
-        serviceDate,
-        direction: scheduleDirection,
-        status: "scheduled",
-      })) as { id?: string; tripCode?: string };
+          // Driver overlap conflict
+          if (
+            assignA.driverId &&
+            assignB.driverId &&
+            assignA.driverId === assignB.driverId
+          ) {
+            const listA = conflicts.get(tripA.id) || [];
+            listA.push(`Driver overlapping with trip ${tripB.tripCode}`);
+            conflicts.set(tripA.id, listA);
 
-      // 2. Create the Duty linking Bus, Driver, Conductor
-      const dutyCode = `SFT-${selectedRoute?.code || "01"}-${departureTime.replace(":", "")}`;
-      const newDuty = (await createDuty({
-        dutyCode,
-        dutyType: "LINKED",
-        serviceDate,
-      })) as { id?: string; dutyCode?: string };
-
-      if (newDuty && newDuty.id) {
-        await updateDuty({
-          id: newDuty.id,
-          data: {
-            dutyCode,
-            dutyType: "LINKED",
-            serviceDate,
-            status: "active",
-            busId: selectedBusId || null,
-            driverId: selectedDriverId || null,
-            conductorId: selectedConductorId || null,
-          },
-        });
-
-        // 3. Link the trip to the duty
-        if (newTrip && newTrip.id) {
-          await addTripToDuty({
-            dutyId: newDuty.id,
-            tripId: newTrip.id,
-          });
+            const listB = conflicts.get(tripB.id) || [];
+            listB.push(`Driver overlapping with trip ${tripA.tripCode}`);
+            conflicts.set(tripB.id, listB);
+          }
         }
       }
-
-      queryClient.invalidateQueries({ queryKey: ["trips"] });
-      queryClient.invalidateQueries({ queryKey: ["duties-for-trips"] });
-
-      toast.success(
-        `Schedule published: Bus ${selectedBus?.registrationNumber || "Assigned"} on Route ${selectedRoute?.code || "1"} with ${selectedDriver?.name || "Driver"}!`,
-      );
-      setIsWizardOpen(false);
-      setWizardStep(1);
-    } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to publish schedule";
-      toast.error(msg);
-    } finally {
-      setWizardSubmitting(false);
     }
-  };
 
-  // Filtered trips list
+    return conflicts;
+  }, [tripsList, tripAssignmentMap]);
+
+  // Operational metrics
+  const totalTrips = tripsList.length;
+  const unassignedTrips = tripsList.filter(
+    (t) =>
+      !tripAssignmentMap.get(t.id) ||
+      tripAssignmentMap.get(t.id)?.busReg === "Unassigned" ||
+      tripAssignmentMap.get(t.id)?.driverName === "Unassigned",
+  ).length;
+  const fullyAssignedTrips = totalTrips - unassignedTrips;
+  const conflictCount = schedulingConflicts.size;
+
+  // Filtered trips list for display
   const filteredTrips = useMemo(() => {
-    return tripsList.filter((t) => {
+    return tripsList.filter((trip) => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const assignment = tripAssignmentMap.get(t.id);
-        const matchesCode = t.tripCode?.toLowerCase().includes(q);
-        const matchesRoute =
-          t.routeCode?.toLowerCase().includes(q) ||
-          t.routeName?.toLowerCase().includes(q);
+        const matchesCode = trip.tripCode.toLowerCase().includes(q);
+        const matchesOrigin = trip.origin?.toLowerCase().includes(q);
+        const matchesDest = trip.destination?.toLowerCase().includes(q);
+        const assignment = tripAssignmentMap.get(trip.id);
         const matchesBus = assignment?.busReg.toLowerCase().includes(q);
         const matchesDriver = assignment?.driverName.toLowerCase().includes(q);
-        if (!matchesCode && !matchesRoute && !matchesBus && !matchesDriver) {
+        if (!matchesCode && !matchesOrigin && !matchesDest && !matchesBus && !matchesDriver) {
           return false;
         }
       }
@@ -460,143 +377,414 @@ function TripsPage() {
     });
   }, [tripsList, searchQuery, tripAssignmentMap]);
 
+  // Cancel trip mutation
+  const cancelMutation = useMutation({
+    mutationFn: cancelTrip,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
+      queryClient.invalidateQueries({ queryKey: ["duties-for-trips"] });
+      toast.success("Trip marked as cancelled.");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to cancel trip.");
+    },
+  });
+
+  // Automated 1-Click Schedule with internal defaults
+  const handleAutoSchedule = async () => {
+    if (!canModify) {
+      toast.error("Permission denied.");
+      return;
+    }
+    setIsAutoScheduling(true);
+    try {
+      toast.info("Analyzing timetable trips and depot fleet inventory...");
+      const optResult = await generateOptimizedSchedule({
+        serviceDate,
+        mode: "HYBRID",
+      });
+
+      if (optResult?.result && optResult.runId) {
+        await publishSchedule({
+          runId: optResult.runId,
+          proposal: optResult.result,
+        });
+        await queryClient.invalidateQueries({ queryKey: ["trips"] });
+        await queryClient.invalidateQueries({ queryKey: ["duties-for-trips"] });
+        await queryClient.invalidateQueries({ queryKey: ["buses-for-scheduling"] });
+        await queryClient.invalidateQueries({ queryKey: ["drivers-for-scheduling"] });
+        toast.success(
+          `Schedule generated and published: ${optResult.result.tripsCovered} trips assigned using ${optResult.result.busesUsed} buses.`,
+        );
+      } else {
+        toast.error("Schedule engine could not generate a complete plan.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to run automatic scheduler.");
+    } finally {
+      setIsAutoScheduling(false);
+    }
+  };
+
+  // Open 7-Step Guided Wizard
+  const handleStartWizard = () => {
+    if (routesList.length > 0 && !selectedRouteId) {
+      setSelectedRouteId(routesList[0].id);
+    }
+    if (busesList.length > 0 && !selectedBusId) {
+      const avail = busesList.find((b) => b.status === "available") || busesList[0];
+      setSelectedBusId(avail?.id || "");
+    }
+    if (driversList.length > 0 && !selectedDriverId) {
+      const avail = driversList.find((d) => d.status === "available") || driversList[0];
+      setSelectedDriverId(avail?.id || "");
+    }
+    if (conductorsList.length > 0 && !selectedConductorId) {
+      const avail = conductorsList.find((c) => c.status === "available") || conductorsList[0];
+      setSelectedConductorId(avail?.id || "");
+    }
+    setWizardStep(1);
+    setIsWizardOpen(true);
+  };
+
+  // Complete Step-by-Step Schedule creation
+  const handleCompleteWizard = async () => {
+    if (!selectedRouteId || !departureTime) {
+      toast.error("Please specify route and departure time.");
+      return;
+    }
+    setWizardSubmitting(true);
+    try {
+      const startMin = parseTimeToMinutes(departureTime);
+      const endMin = calculatedEndTimeMinutes;
+      const targetRoute = routesList.find((r) => r.id === selectedRouteId);
+      const tripCode = `${targetRoute?.code?.replace(/\s+/g, "") || "R"}-${departureTime.replace(":", "")}`;
+
+      // 1. Create Trip
+      const createdTrip = await createTrip({
+        routeId: selectedRouteId,
+        tripCode,
+        direction: scheduleDirection,
+        startTime: startMin,
+        endTime: endMin,
+        serviceDate,
+        origin: targetRoute?.origin || "Salem Central",
+        destination: targetRoute?.destination || "Terminus",
+        distanceKm: Number(targetRoute?.lengthKm || 10),
+      });
+
+      // 2. If bus or crew assigned, create duty record
+      if (selectedBusId || selectedDriverId || selectedConductorId) {
+        const dutyCode = `D-${tripCode}`;
+        const newDuty = await createDuty({
+          dutyCode,
+          dutyType: "LINKED",
+          serviceDate,
+          startTime: startMin,
+          endTime: endMin,
+          busId: selectedBusId || undefined,
+          driverId: selectedDriverId || undefined,
+          conductorId: selectedConductorId || undefined,
+        });
+
+        if (newDuty?.id && createdTrip?.id) {
+          await addTripToDuty({
+            dutyId: newDuty.id,
+            tripId: createdTrip.id,
+          });
+        }
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["trips"] });
+      await queryClient.invalidateQueries({ queryKey: ["duties-for-trips"] });
+      toast.success(`Trip ${tripCode} scheduled and published successfully.`);
+      setIsWizardOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to schedule trip.");
+    } finally {
+      setWizardSubmitting(false);
+    }
+  };
+
+  // Quick Assign Handlers
+  const handleOpenQuickAssign = (trip: TripItem) => {
+    setQuickAssignTrip(trip);
+    const existing = tripAssignmentMap.get(trip.id);
+    setQuickBusId(existing?.busId || "");
+    setQuickDriverId(existing?.driverId || "");
+    setQuickConductorId(existing?.conductorId || "");
+  };
+
+  const handleSaveQuickAssign = async () => {
+    if (!quickAssignTrip) return;
+    setQuickSaving(true);
+    try {
+      const existing = tripAssignmentMap.get(quickAssignTrip.id);
+      if (existing?.dutyId) {
+        // Duty already exists; update it or create new
+        const dutyCode = `D-${quickAssignTrip.tripCode}`;
+        const newDuty = await createDuty({
+          dutyCode,
+          dutyType: "LINKED",
+          serviceDate,
+          startTime: quickAssignTrip.startTime,
+          endTime: quickAssignTrip.endTime,
+          busId: quickBusId || undefined,
+          driverId: quickDriverId || undefined,
+          conductorId: quickConductorId || undefined,
+        });
+        if (newDuty?.id) {
+          await addTripToDuty({ dutyId: newDuty.id, tripId: quickAssignTrip.id });
+        }
+      } else {
+        const dutyCode = `D-${quickAssignTrip.tripCode}`;
+        const newDuty = await createDuty({
+          dutyCode,
+          dutyType: "LINKED",
+          serviceDate,
+          startTime: quickAssignTrip.startTime,
+          endTime: quickAssignTrip.endTime,
+          busId: quickBusId || undefined,
+          driverId: quickDriverId || undefined,
+          conductorId: quickConductorId || undefined,
+        });
+        if (newDuty?.id) {
+          await addTripToDuty({ dutyId: newDuty.id, tripId: quickAssignTrip.id });
+        }
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["trips"] });
+      await queryClient.invalidateQueries({ queryKey: ["duties-for-trips"] });
+      toast.success(`Trip ${quickAssignTrip.tripCode} assigned.`);
+      setQuickAssignTrip(null);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to assign resources.");
+    } finally {
+      setQuickSaving(false);
+    }
+  };
+
+  // Generate Frequency Trips Handler
+  const handleGenerateTrips = async () => {
+    if (!genRouteId) {
+      toast.error("Please select a route.");
+      return;
+    }
+    setGenSubmitting(true);
+    try {
+      const startMin = parseTimeToMinutes(genStartTime);
+      const endMin = parseTimeToMinutes(genEndTime);
+      const freq = parseInt(genFrequency, 10) || 30;
+
+      await generateTrips({
+        routeId: genRouteId,
+        serviceDate,
+        startTime: startMin,
+        endTime: endMin,
+        frequencyMinutes: freq,
+        direction: genDirection,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["trips"] });
+      toast.success("Corridor timetable trips generated successfully.");
+      setIsGenOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to generate trips.");
+    } finally {
+      setGenSubmitting(false);
+    }
+  };
+
   return (
     <AppShell
-      title="Bus Schedules & Timetables"
-      subtitle="Easily schedule bus runs, assign drivers and conductors, and view daily departure timetables."
+      title="Daily Timetable & Scheduling"
+      subtitle="Operational bus schedules, staff assignments, and timetable conflict monitoring."
       actions={
-        canModify ? (
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setIsGenOpen(true)}
-              className="text-xs h-8.5 rounded-lg border-border hover:bg-muted font-medium"
-            >
-              <CalendarClock className="mr-1.5 size-3.5 text-primary" />
-              Auto-Fill Frequency
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                setWizardStep(1);
-                setIsWizardOpen(true);
-              }}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-8.5 rounded-lg shadow-sm"
-            >
-              <Plus className="mr-1.5 size-3.5" />
-              Schedule a Bus Run
-            </Button>
-          </div>
-        ) : undefined
+        <div className="flex items-center gap-2">
+          {canModify && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsGenOpen(true)}
+                className="text-xs rounded-md border-border hover:bg-muted font-medium cursor-pointer"
+              >
+                <RefreshCw className="mr-1.5 size-3.5 text-muted-foreground" />
+                Fill Frequency
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAutoSchedule}
+                disabled={isAutoScheduling}
+                className="text-xs rounded-md border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 font-medium cursor-pointer"
+              >
+                <Sparkles className="mr-1.5 size-3.5 text-blue-600 dark:text-blue-400" />
+                {isAutoScheduling ? "Solving..." : "Auto-Schedule"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleStartWizard}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md shadow-xs cursor-pointer"
+              >
+                <Plus className="mr-1.5 size-3.5" />
+                Schedule a Trip
+              </Button>
+            </>
+          )}
+        </div>
       }
     >
-      <div className="space-y-6">
-        {/* Beginner Explainer Banner */}
-        <div className="glass-panel p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-3">
-            <div className="size-9 rounded-xl bg-primary/10 text-primary grid place-items-center font-bold shrink-0">
-              <CalendarClock className="size-5" />
-            </div>
+      <div className="space-y-6 max-w-7xl mx-auto">
+        {/* End-to-End Workflow Progress Banner */}
+        <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex size-7 items-center justify-center rounded-md bg-blue-600 text-white text-xs font-bold font-mono">
+              5
+            </span>
             <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-bold text-foreground">
-                  Daily Dispatch Schedule
-                </h3>
-                <Badge
-                  variant="outline"
-                  className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[10px] font-mono rounded-md"
-                >
-                  ● Active Service Day
-                </Badge>
-              </div>
+              <p className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                Scheduling (Step 5 of 6)
+              </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Every entry pairs a <strong>Bus</strong> with a{" "}
-                <strong>Route</strong>, <strong>Driver</strong>, and{" "}
-                <strong>Conductor</strong>. Click "+ Schedule a Bus Run" for the
-                guided 7-step wizard.
+                Assign available buses, drivers, and conductors to daily corridor trips. Review conflicts before dispatch.
               </p>
             </div>
           </div>
+          <Button
+            asChild
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md shadow-xs shrink-0"
+          >
+            <Link to="/operations/today">
+              <span>Next: Live Dispatch Board</span>
+              <ArrowRight className="ml-1.5 size-3.5" />
+            </Link>
+          </Button>
+        </div>
 
-          <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-            <span className="px-2.5 py-1 bg-secondary/60 rounded-md border border-border/60">
-              Total Runs: <strong>{tripsList.length}</strong>
-            </span>
-            <span className="px-2.5 py-1 bg-secondary/60 rounded-md border border-border/60">
-              Scheduled:{" "}
-              <strong>
-                {tripsList.filter((t) => t.status !== "cancelled").length}
-              </strong>
-            </span>
+        {/* 1. Operational Status Banner */}
+        <div className="grid gap-3.5 sm:grid-cols-2 md:grid-cols-5">
+          <div className="rounded-lg border border-border/80 bg-card p-4 flex flex-col justify-between shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Total Trips
+              </span>
+              <CalendarClock className="size-4 text-primary" />
+            </div>
+            <p className="text-2xl font-extrabold tracking-tight mt-1 text-foreground">
+              {totalTrips}
+            </p>
+            <p className="text-[11px] text-muted-foreground">{serviceDate}</p>
+          </div>
+
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col justify-between shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                Fully Assigned
+              </span>
+              <CheckCircle2 className="size-4 text-emerald-500" />
+            </div>
+            <p className="text-2xl font-extrabold tracking-tight mt-1 text-emerald-600 dark:text-emerald-400">
+              {fullyAssignedTrips}
+            </p>
+            <p className="text-[11px] text-muted-foreground">Bus + Driver + Conductor</p>
+          </div>
+
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 flex flex-col justify-between shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                Unassigned Trips
+              </span>
+              <Clock className="size-4 text-amber-500" />
+            </div>
+            <p className="text-2xl font-extrabold tracking-tight mt-1 text-amber-600 dark:text-amber-400">
+              {unassignedTrips}
+            </p>
+            <p className="text-[11px] text-muted-foreground">Needs bus or crew</p>
+          </div>
+
+          <div className="rounded-lg border border-border/80 bg-card p-4 flex flex-col justify-between shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Available Buses
+              </span>
+              <BusIcon className="size-4 text-primary" />
+            </div>
+            <p className="text-2xl font-extrabold tracking-tight mt-1 text-foreground">
+              {busesList.filter((b) => b.status === "available").length}
+            </p>
+            <p className="text-[11px] text-muted-foreground">Ready for assignment</p>
+          </div>
+
+          <div
+            className={`rounded-lg border p-4 flex flex-col justify-between shadow-xs ${
+              conflictCount > 0
+                ? "border-rose-500/30 bg-rose-500/5"
+                : "border-border/80 bg-card"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span
+                className={`text-[11px] font-semibold uppercase tracking-wider ${
+                  conflictCount > 0 ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground"
+                }`}
+              >
+                Scheduling Conflicts
+              </span>
+              <AlertTriangle
+                className={`size-4 ${conflictCount > 0 ? "text-rose-500" : "text-muted-foreground"}`}
+              />
+            </div>
+            <p
+              className={`text-2xl font-extrabold tracking-tight mt-1 ${
+                conflictCount > 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground"
+              }`}
+            >
+              {conflictCount}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {conflictCount > 0 ? "Overlapping trips detected" : "No conflicts detected"}
+            </p>
           </div>
         </div>
 
-        {/* View Switcher & Main Filters Bar */}
-        <div className="glass-panel p-4 space-y-4">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            {/* View Tabs */}
-            <Tabs
-              value={viewTab}
-              onValueChange={(v) =>
-                setViewTab(v as "timetable" | "timeline" | "generator")
-              }
-              className="w-auto"
-            >
-              <TabsList className="bg-secondary/40 p-1 rounded-lg border border-border/60 h-8.5">
-                <TabsTrigger
-                  value="timetable"
-                  className="text-xs px-3 h-6.5 gap-1.5 data-[state=active]:bg-card rounded-md"
-                >
-                  <Clock className="size-3.5" /> Daily Timetable
-                </TabsTrigger>
-                <TabsTrigger
-                  value="timeline"
-                  className="text-xs px-3 h-6.5 gap-1.5 data-[state=active]:bg-card rounded-md"
-                >
-                  <Compass className="size-3.5" /> Hourly Visual Gantt
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
+        {/* 2. Filter & Date Toolbar */}
+        <div className="rounded-lg border border-border/80 bg-card p-4 flex flex-wrap gap-3 items-center justify-between shadow-xs">
+          <div className="flex flex-1 flex-wrap gap-2.5 items-center min-w-[300px]">
             {/* Service Date Selector */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 border border-border rounded-md px-2.5 py-1 bg-muted/30">
               <Calendar className="size-3.5 text-muted-foreground" />
-              <span className="text-xs font-semibold text-muted-foreground">
-                Date:
-              </span>
-              <Input
+              <input
                 type="text"
                 value={serviceDate}
                 onChange={(e) => setServiceDate(e.target.value)}
-                className="w-32 bg-background/60 h-8 text-xs font-mono rounded-lg"
+                className="bg-transparent text-xs font-semibold focus:outline-none w-24"
+                title="Service Date"
               />
             </div>
-          </div>
 
-          {/* Search and Dropdown Filter Row */}
-          <div className="flex flex-wrap gap-2.5 items-center pt-1 border-t border-border/50">
             {/* Search */}
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <div className="relative flex-1 max-w-xs min-w-[180px]">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
               <Input
-                placeholder="Search route, driver, or bus plate..."
+                placeholder="Search trip code, route, or crew..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 bg-background/60 h-8.5 text-xs rounded-lg"
+                className="pl-8 h-8 text-xs rounded-md"
               />
             </div>
 
             {/* Route Filter */}
             <Select value={routeFilter} onValueChange={setRouteFilter}>
-              <SelectTrigger className="w-48 bg-background/60 h-8.5 text-xs rounded-lg">
-                <SelectValue placeholder="All Corridors" />
+              <SelectTrigger className="w-[180px] h-8 text-xs rounded-md">
+                <SelectValue placeholder="All Routes" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Corridors</SelectItem>
                 {routesList.map((r) => (
                   <SelectItem key={r.id} value={r.id}>
-                    Route {r.code}: {r.name}
+                    {r.code}: {r.name.split("⇄")[0]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -604,953 +792,457 @@ function TripsPage() {
 
             {/* Direction Filter */}
             <Select value={directionFilter} onValueChange={setDirectionFilter}>
-              <SelectTrigger className="w-36 bg-background/60 h-8.5 text-xs rounded-lg">
-                <SelectValue placeholder="All Directions" />
+              <SelectTrigger className="w-[130px] h-8 text-xs rounded-md">
+                <SelectValue placeholder="Direction" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Both Directions</SelectItem>
+                <SelectItem value="all">All Directions</SelectItem>
                 <SelectItem value="OUTBOUND">Outbound</SelectItem>
                 <SelectItem value="INBOUND">Inbound</SelectItem>
               </SelectContent>
             </Select>
+          </div>
 
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-32 bg-background/60 h-8.5 text-xs rounded-lg">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="scheduled">Scheduled</SelectItem>
-                <SelectItem value="planned">Planned</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {(searchQuery ||
-              routeFilter !== "all" ||
-              statusFilter !== "all" ||
-              directionFilter !== "all") && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearchQuery("");
-                  setRouteFilter("all");
-                  setStatusFilter("all");
-                  setDirectionFilter("all");
-                }}
-                className="h-8 text-xs text-muted-foreground hover:text-foreground rounded-lg"
-              >
-                <X className="size-3 mr-1" /> Clear Filters
-              </Button>
-            )}
+          <div className="text-xs text-muted-foreground">
+            Showing <span className="font-bold text-foreground">{filteredTrips.length}</span> trips
           </div>
         </div>
 
-        {/* TAB 1: DAILY TIMETABLE (Primary Operator View) */}
-        {viewTab === "timetable" && (
-          <div className="glass-panel p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <div>
-                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <Clock className="size-4 text-primary" /> Daily Timetable &
-                  Departures
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Chronological timetable displaying scheduled departure times,
-                  bus registrations, and driver crew assignments.
-                </p>
-              </div>
-              <Badge variant="outline" className="font-mono text-xs rounded-md">
-                Showing {filteredTrips.length} of {tripsList.length} departures
-              </Badge>
-            </div>
+        {/* 3. Timetable Table */}
+        <div className="rounded-lg border border-border/80 bg-card overflow-hidden shadow-xs">
+          <Table>
+            <TableHeader className="bg-muted/40">
+              <TableRow>
+                <TableHead className="w-[120px] text-xs font-bold text-foreground">Trip Code</TableHead>
+                <TableHead className="text-xs font-bold text-foreground">Route Corridor</TableHead>
+                <TableHead className="w-[140px] text-xs font-bold text-foreground">Departure / Arrival</TableHead>
+                <TableHead className="w-[100px] text-xs font-bold text-foreground">Direction</TableHead>
+                <TableHead className="w-[180px] text-xs font-bold text-foreground">Assigned Bus</TableHead>
+                <TableHead className="w-[160px] text-xs font-bold text-foreground">Assigned Driver</TableHead>
+                <TableHead className="w-[160px] text-xs font-bold text-foreground">Assigned Conductor</TableHead>
+                <TableHead className="w-[120px] text-xs font-bold text-foreground">Status</TableHead>
+                {canModify && <TableHead className="w-[100px] text-right text-xs font-bold text-foreground">Actions</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {tripsLoading ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-10 text-xs text-muted-foreground">
+                    Loading timetable trips...
+                  </TableCell>
+                </TableRow>
+              ) : filteredTrips.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-12 space-y-3">
+                    <p className="text-sm font-semibold text-foreground">No trips scheduled for this date.</p>
+                    <p className="text-xs text-muted-foreground">
+                      Use Auto-Schedule or click "Schedule a Trip" to generate today's timetable.
+                    </p>
+                    {canModify && (
+                      <Button
+                        size="sm"
+                        onClick={handleStartWizard}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md shadow-xs cursor-pointer mt-2"
+                      >
+                        <Plus className="mr-1.5 size-3.5" />
+                        Schedule First Trip
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredTrips.map((trip) => {
+                  const assign = tripAssignmentMap.get(trip.id);
+                  const isUnassigned = !assign || assign.busReg === "Unassigned" || assign.driverName === "Unassigned";
+                  const conflictMsgs = schedulingConflicts.get(trip.id);
+                  const hasConflict = !!conflictMsgs && conflictMsgs.length > 0;
 
-            {tripsLoading ? (
-              <div className="py-20 text-center text-xs text-muted-foreground">
-                Loading daily timetable...
-              </div>
-            ) : filteredTrips.length === 0 ? (
-              <div className="py-16 text-center space-y-3">
-                <div className="size-12 rounded-xl bg-secondary/40 text-muted-foreground grid place-items-center mx-auto">
-                  <CalendarClock className="size-6" />
-                </div>
-                <h4 className="text-sm font-bold text-foreground">
-                  No Scheduled Departures Found
-                </h4>
-                <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                  No trips match the current filter criteria for {serviceDate}.
-                  Click below to schedule a new bus run.
-                </p>
-                <Button
-                  onClick={() => {
-                    setWizardStep(1);
-                    setIsWizardOpen(true);
-                  }}
-                  size="sm"
-                  className="bg-primary text-primary-foreground font-semibold text-xs rounded-lg"
-                >
-                  <Plus className="size-3.5 mr-1" /> Schedule Run Now
-                </Button>
-              </div>
-            ) : (
-              <div className="border border-border/60 rounded-xl overflow-hidden bg-background/40">
-                <Table>
-                  <TableHeader className="bg-secondary/40 text-[11px]">
-                    <TableRow>
-                      <TableHead className="font-semibold text-foreground w-28">
-                        Departure Time
-                      </TableHead>
-                      <TableHead className="font-semibold text-foreground">
-                        Route & Corridor
-                      </TableHead>
-                      <TableHead className="font-semibold text-foreground w-28">
-                        Direction
-                      </TableHead>
-                      <TableHead className="font-semibold text-foreground">
-                        Assigned Bus
-                      </TableHead>
-                      <TableHead className="font-semibold text-foreground">
-                        Driver & Conductor
-                      </TableHead>
-                      <TableHead className="font-semibold text-foreground text-center w-28">
-                        Status
-                      </TableHead>
+                  return (
+                    <TableRow
+                      key={trip.id}
+                      className={hasConflict ? "bg-rose-500/5 hover:bg-rose-500/10" : undefined}
+                    >
+                      <TableCell className="font-mono text-xs font-bold text-foreground">
+                        {trip.tripCode}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        <p className="font-semibold text-foreground truncate max-w-[200px]">
+                          {trip.routeName || trip.routeCode || "Route Corridor"}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {trip.origin} → {trip.destination}
+                        </p>
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        <span className="font-bold text-foreground font-mono">
+                          {formatMinutesToTimeString(trip.startTime)}
+                        </span>
+                        <span className="text-muted-foreground mx-1">-</span>
+                        <span className="font-mono text-muted-foreground">
+                          {formatMinutesToTimeString(trip.endTime)}
+                        </span>
+                        <span className="block text-[10px] text-muted-foreground">
+                          {trip.durationMin} mins
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-mono border-border text-muted-foreground rounded"
+                        >
+                          {trip.direction}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {assign && assign.busReg !== "Unassigned" ? (
+                          <div className="flex items-center gap-1.5">
+                            <BusIcon className="size-3.5 text-primary shrink-0" />
+                            <span className="font-medium text-foreground truncate">{assign.busReg}</span>
+                          </div>
+                        ) : (
+                          <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">Unassigned</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {assign && assign.driverName !== "Unassigned" ? (
+                          <div className="flex items-center gap-1.5">
+                            <Users className="size-3.5 text-primary shrink-0" />
+                            <span className="font-medium text-foreground truncate">{assign.driverName}</span>
+                          </div>
+                        ) : (
+                          <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">Unassigned</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {assign && assign.conductorName !== "Unassigned" ? (
+                          <div className="flex items-center gap-1.5">
+                            <Users className="size-3.5 text-muted-foreground shrink-0" />
+                            <span className="font-medium text-foreground truncate">{assign.conductorName}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Unassigned</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {hasConflict ? (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10 rounded"
+                            title={conflictMsgs?.join("\n")}
+                          >
+                            Conflict
+                          </Badge>
+                        ) : isUnassigned ? (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded"
+                          >
+                            Unassigned
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 rounded"
+                          >
+                            Scheduled
+                          </Badge>
+                        )}
+                      </TableCell>
                       {canModify && (
-                        <TableHead className="font-semibold text-foreground text-right w-24">
-                          Action
-                        </TableHead>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenQuickAssign(trip)}
+                              className="h-7 px-2 text-[11px] rounded-md border-border hover:bg-muted font-medium"
+                            >
+                              Assign
+                            </Button>
+                            {trip.status !== "cancelled" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => cancelMutation.mutate(trip.id)}
+                                className="h-7 px-1.5 text-[11px] text-muted-foreground hover:text-rose-600 rounded-md"
+                                title="Cancel trip"
+                              >
+                                <X className="size-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
                       )}
                     </TableRow>
-                  </TableHeader>
-                  <TableBody className="text-xs font-sans">
-                    {filteredTrips.map((trip) => {
-                      const assignment = tripAssignmentMap.get(trip.id);
-                      const isCancelled = trip.status === "cancelled";
-                      const depTimeStr = formatMinutesToTimeString(
-                        trip.startTime,
-                      );
-                      const arrTimeStr = formatMinutesToTimeString(
-                        trip.endTime,
-                      );
-                      return (
-                        <TableRow
-                          key={trip.id}
-                          className={cn(
-                            isCancelled && "opacity-60 bg-muted/20",
-                          )}
-                        >
-                          {/* Departure & Arrival */}
-                          <TableCell className="font-mono">
-                            <div className="font-bold text-foreground text-sm">
-                              {depTimeStr}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground">
-                              Arr: {arrTimeStr} ({trip.durationMin}m)
-                            </div>
-                          </TableCell>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-                          {/* Route */}
-                          <TableCell>
-                            <div className="font-bold text-foreground flex items-center gap-1.5">
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] font-mono border-primary/40 text-primary bg-primary/5 rounded"
-                              >
-                                Route {trip.routeCode}
-                              </Badge>
-                              <span>{trip.routeName}</span>
-                            </div>
-                            <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                              {trip.distanceKm} km · Run #{trip.tripCode}
-                            </div>
-                          </TableCell>
-
-                          {/* Direction */}
-                          <TableCell>
-                            <Badge
-                              variant="secondary"
-                              className="text-[10px] rounded-md font-mono"
-                            >
-                              {trip.direction === "OUTBOUND"
-                                ? "Outbound"
-                                : "Inbound"}
-                            </Badge>
-                          </TableCell>
-
-                          {/* Bus */}
-                          <TableCell>
-                            {assignment?.busReg &&
-                            assignment.busReg !== "Unassigned Bus" ? (
-                              <div className="flex items-center gap-1.5 font-mono text-foreground font-semibold">
-                                <BusIcon className="size-3.5 text-primary" />
-                                {assignment.busReg}
-                              </div>
-                            ) : (
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] text-muted-foreground border-dashed border-border rounded"
-                              >
-                                Standby Bus Pending
-                              </Badge>
-                            )}
-                          </TableCell>
-
-                          {/* Driver & Conductor */}
-                          <TableCell>
-                            <div className="space-y-0.5">
-                              <div className="flex items-center gap-1.5 font-medium text-foreground">
-                                <UserCheck className="size-3 text-emerald-600 dark:text-emerald-400" />
-                                <span>
-                                  {assignment?.driverName ||
-                                    "Driver Unassigned"}
-                                </span>
-                              </div>
-                              <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                <Users className="size-3 text-muted-foreground" />
-                                <span>
-                                  {assignment?.conductorName ||
-                                    "Conductor Unassigned"}
-                                </span>
-                              </div>
-                            </div>
-                          </TableCell>
-
-                          {/* Status */}
-                          <TableCell className="text-center font-mono">
-                            {isCancelled ? (
-                              <Badge
-                                variant="destructive"
-                                className="text-[10px] rounded-md font-sans"
-                              >
-                                Cancelled
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] rounded-md font-sans">
-                                ● Scheduled
-                              </Badge>
-                            )}
-                          </TableCell>
-
-                          {/* Action */}
-                          {canModify && (
-                            <TableCell className="text-right">
-                              {!isCancelled ? (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() =>
-                                    cancelTripMutation.mutate(trip.id)
-                                  }
-                                  className="h-7 text-[11px] text-destructive hover:bg-destructive/10 rounded-md"
-                                >
-                                  Cancel
-                                </Button>
-                              ) : (
-                                <span className="text-[11px] text-muted-foreground">
-                                  --
-                                </span>
-                              )}
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 2: HOURLY VISUAL GANTT TIMELINE */}
-        {viewTab === "timeline" && (
-          <div className="glass-panel p-5 space-y-5">
-            <div className="border-b border-border/60 pb-3 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <Compass className="size-4 text-primary" /> Hourly Schedule
-                  Progression (06:00 to 22:00)
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Visual corridor timeline illustrating headway distribution and
-                  peak service intervals across Salem.
-                </p>
-              </div>
-              <Badge variant="outline" className="text-xs font-mono rounded-md">
-                6 Active Corridors
-              </Badge>
-            </div>
-
-            <div className="space-y-4">
-              {routesList.map((route) => {
-                const routeTrips = tripsList.filter(
-                  (t) => t.routeId === route.id && t.status !== "cancelled",
-                );
-                return (
-                  <div
-                    key={route.id}
-                    className="p-3.5 rounded-xl border border-border/60 bg-background/50 space-y-2.5"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-primary/10 text-primary border-primary/30 font-mono text-xs rounded-md">
-                          Route {route.code}
-                        </Badge>
-                        <span className="text-xs font-bold text-foreground">
-                          {route.name}
-                        </span>
-                      </div>
-                      <span className="text-[11px] font-mono text-muted-foreground">
-                        {routeTrips.length} Departures ·{" "}
-                        {route.distanceKm || "8"} km
-                      </span>
-                    </div>
-
-                    {/* 24-hour timeline bar */}
-                    <div className="relative h-9 bg-secondary/30 rounded-lg border border-border/40 overflow-hidden flex items-center px-2">
-                      {routeTrips.length === 0 ? (
-                        <span className="text-[10px] text-muted-foreground mx-auto font-mono">
-                          No departures scheduled today for this corridor.
-                        </span>
-                      ) : (
-                        routeTrips.map((t) => {
-                          // Scale position between 06:00 (360m) and 22:00 (1320m)
-                          const minStart = 360;
-                          const maxEnd = 1320;
-                          const pct = Math.max(
-                            2,
-                            Math.min(
-                              92,
-                              ((t.startTime - minStart) / (maxEnd - minStart)) *
-                                100,
-                            ),
-                          );
-                          const depStr = formatMinutesToTimeString(t.startTime);
-                          return (
-                            <div
-                              key={t.id}
-                              style={{ left: `${pct}%` }}
-                              title={`Departure: ${depStr} (Run #${t.tripCode})`}
-                              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 px-2 py-0.5 rounded bg-primary text-primary-foreground text-[10px] font-mono font-bold shadow-xs whitespace-nowrap cursor-default"
-                            >
-                              {depStr}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* 7-STEP GUIDED BUS SCHEDULING WIZARD MODAL */}
+        {/* 4. MODAL: 7-STEP GUIDED OPERATIONAL SCHEDULER */}
         <Dialog open={isWizardOpen} onOpenChange={setIsWizardOpen}>
-          <DialogContent className="sm:max-w-2xl bg-card border-border rounded-xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="border-b border-border/60 pb-3">
+          <DialogContent className="sm:max-w-xl rounded-lg">
+            <DialogHeader>
               <div className="flex items-center justify-between">
-                <DialogTitle className="text-base font-bold flex items-center gap-2">
-                  <CalendarClock className="size-4 text-primary" /> Schedule a
-                  New Bus Run
-                </DialogTitle>
-                <Badge
-                  variant="outline"
-                  className="text-[10px] font-mono rounded-md"
-                >
-                  Step {wizardStep} of 7
+                <div>
+                  <DialogTitle className="text-base font-bold text-foreground">
+                    Step-by-Step Trip Scheduler
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                    Step {wizardStep} of 7: {
+                      wizardStep === 1 ? "Confirm Service Date" :
+                      wizardStep === 2 ? "Select Route Corridor" :
+                      wizardStep === 3 ? "Set Departure & Running Timings" :
+                      wizardStep === 4 ? "Assign Available Bus" :
+                      wizardStep === 5 ? "Assign Available Driver" :
+                      wizardStep === 6 ? "Assign Available Conductor" :
+                      "Review & Publish Schedule"
+                    }
+                  </DialogDescription>
+                </div>
+                <Badge variant="outline" className="text-[10px] font-mono rounded">
+                  {wizardStep}/7
                 </Badge>
               </div>
-              <DialogDescription className="text-xs text-muted-foreground">
-                Follow this simple 7-step guided workflow to dispatch a bus,
-                route, and crew.
-              </DialogDescription>
             </DialogHeader>
 
-            {/* Step Progress Pills */}
-            <div className="flex items-center justify-between gap-1 py-2 overflow-x-auto text-[10px] font-mono">
-              {[
-                { s: 1, label: "1. Bus" },
-                { s: 2, label: "2. Route" },
-                { s: 3, label: "3. Driver" },
-                { s: 4, label: "4. Conductor" },
-                { s: 5, label: "5. Time" },
-                { s: 6, label: "6. Check" },
-                { s: 7, label: "7. Publish" },
-              ].map((step) => (
-                <div
-                  key={step.s}
-                  onClick={() => setWizardStep(step.s)}
-                  className={cn(
-                    "px-2 py-1 rounded cursor-pointer transition-colors whitespace-nowrap",
-                    wizardStep === step.s
-                      ? "bg-primary text-primary-foreground font-bold"
-                      : wizardStep > step.s
-                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold"
-                        : "bg-secondary text-muted-foreground",
-                  )}
-                >
-                  {step.label}
-                </div>
-              ))}
-            </div>
-
-            {/* STEP 1: SELECT BUS */}
-            {wizardStep === 1 && (
-              <div className="space-y-4 py-3">
-                <div className="border-b border-border/40 pb-2">
-                  <h4 className="text-xs font-bold text-foreground">
-                    Step 1: Choose an Available Bus
-                  </h4>
-                  <p className="text-[11px] text-muted-foreground">
-                    Select the physical vehicle to assign to this run.
+            <div className="py-4 space-y-4">
+              {/* Step 1: Service Date */}
+              {wizardStep === 1 && (
+                <div className="space-y-3">
+                  <Label className="text-xs font-bold text-foreground">1. Operating Service Date</Label>
+                  <Input
+                    value={serviceDate}
+                    onChange={(e) => setServiceDate(e.target.value)}
+                    className="h-9 text-xs rounded-md"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The calendar date when this bus journey will be operated.
                   </p>
                 </div>
+              )}
 
-                <div className="grid gap-2.5 max-h-64 overflow-y-auto pr-1">
-                  {busesList.map((bus) => {
-                    const isSelected = bus.id === selectedBusId;
-                    const isMaintenance = bus.status === "maintenance";
-                    return (
-                      <div
-                        key={bus.id}
-                        onClick={() =>
-                          !isMaintenance && setSelectedBusId(bus.id)
-                        }
-                        className={cn(
-                          "p-3 rounded-lg border text-xs flex items-center justify-between cursor-pointer transition-all",
-                          isSelected
-                            ? "border-primary bg-primary/10"
-                            : isMaintenance
-                              ? "opacity-50 border-border bg-muted/20 cursor-not-allowed"
-                              : "border-border/70 hover:border-primary/50 bg-background/50",
-                        )}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div className="size-8 rounded bg-primary/10 text-primary grid place-items-center">
-                            <BusIcon className="size-4" />
-                          </div>
-                          <div>
-                            <div className="font-bold text-foreground font-mono">
-                              {bus.registrationNumber}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground">
-                              {bus.model || "Ashok Leyland 65-Seater"} ·{" "}
-                              {bus.depot || "Meyyanur Depot"}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          {isMaintenance ? (
-                            <Badge
-                              variant="destructive"
-                              className="text-[9px] rounded"
-                            >
-                              Maintenance
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[9px] rounded">
-                              ● Ready
-                            </Badge>
-                          )}
-                          {isSelected && (
-                            <Check className="size-4 text-primary shrink-0" />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* STEP 2: SELECT ROUTE */}
-            {wizardStep === 2 && (
-              <div className="space-y-4 py-3">
-                <div className="border-b border-border/40 pb-2">
-                  <h4 className="text-xs font-bold text-foreground">
-                    Step 2: Choose Route & Direction
-                  </h4>
-                  <p className="text-[11px] text-muted-foreground">
-                    Select the corridor path and whether the run is outbound or
-                    inbound.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Direction</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant={
-                        scheduleDirection === "OUTBOUND" ? "default" : "outline"
-                      }
-                      size="sm"
-                      onClick={() => setScheduleDirection("OUTBOUND")}
-                      className="text-xs rounded-lg"
-                    >
-                      Outbound (Forward)
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={
-                        scheduleDirection === "INBOUND" ? "default" : "outline"
-                      }
-                      size="sm"
-                      onClick={() => setScheduleDirection("INBOUND")}
-                      className="text-xs rounded-lg"
-                    >
-                      Inbound (Return)
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="grid gap-2.5 max-h-60 overflow-y-auto pr-1">
-                  {routesList.map((route) => {
-                    const isSelected = route.id === selectedRouteId;
-                    return (
-                      <div
-                        key={route.id}
-                        onClick={() => setSelectedRouteId(route.id)}
-                        className={cn(
-                          "p-3 rounded-lg border text-xs flex items-center justify-between cursor-pointer transition-all",
-                          isSelected
-                            ? "border-primary bg-primary/10"
-                            : "border-border/70 hover:border-primary/50 bg-background/50",
-                        )}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <Badge className="bg-primary/20 text-primary border-primary/30 font-mono text-xs rounded">
-                            Route {route.code}
-                          </Badge>
-                          <div>
-                            <div className="font-bold text-foreground">
-                              {route.name}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground font-mono">
-                              {route.distanceKm || "8"} km · ~
-                              {route.durationMin || "30"} mins
-                            </div>
-                          </div>
-                        </div>
-
-                        {isSelected && (
-                          <Check className="size-4 text-primary shrink-0" />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* STEP 3: SELECT DRIVER */}
-            {wizardStep === 3 && (
-              <div className="space-y-4 py-3">
-                <div className="border-b border-border/40 pb-2 flex items-center justify-between">
-                  <div>
-                    <h4 className="text-xs font-bold text-foreground">
-                      Step 3: Assign a Driver
-                    </h4>
-                    <p className="text-[11px] text-muted-foreground">
-                      Pick a driver who has completed required rest under Motor
-                      Vehicles Act rules.
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      const avail = driversList.find(
-                        (d) => d.status === "available",
-                      );
-                      if (avail) {
-                        setSelectedDriverId(avail.id);
-                        toast.success(
-                          `Suggested next available driver: ${avail.name}`,
-                        );
-                      }
-                    }}
-                    className="text-[11px] h-7 gap-1 rounded-lg"
-                  >
-                    <Sparkles className="size-3 text-primary" /> Auto-Suggest
-                  </Button>
-                </div>
-
-                <div className="grid gap-2.5 max-h-64 overflow-y-auto pr-1">
-                  {driversList.map((driver) => {
-                    const isSelected = driver.id === selectedDriverId;
-                    const isResting = driver.status === "resting";
-                    return (
-                      <div
-                        key={driver.id}
-                        onClick={() => setSelectedDriverId(driver.id)}
-                        className={cn(
-                          "p-3 rounded-lg border text-xs flex items-center justify-between cursor-pointer transition-all",
-                          isSelected
-                            ? "border-primary bg-primary/10"
-                            : "border-border/70 hover:border-primary/50 bg-background/50",
-                        )}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div className="size-8 rounded-full bg-secondary grid place-items-center font-bold text-foreground text-xs">
-                            {driver.name.charAt(0)}
-                          </div>
-                          <div>
-                            <div className="font-bold text-foreground flex items-center gap-1.5">
-                              <span>{driver.name}</span>
-                              <Badge
-                                variant="outline"
-                                className="text-[9px] font-mono rounded"
-                              >
-                                {driver.badgeNumber || "DRV"}
-                              </Badge>
-                            </div>
-                            <div className="text-[10px] text-muted-foreground font-mono">
-                              {driver.phoneNumber || "+91 98421 XXXXX"} ·{" "}
-                              {driver.depot || "Meyyanur"}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          {isResting ? (
-                            <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[9px] rounded">
-                              Resting
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[9px] rounded">
-                              ● Available
-                            </Badge>
-                          )}
-                          {isSelected && (
-                            <Check className="size-4 text-primary shrink-0" />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* STEP 4: SELECT CONDUCTOR */}
-            {wizardStep === 4 && (
-              <div className="space-y-4 py-3">
-                <div className="border-b border-border/40 pb-2">
-                  <h4 className="text-xs font-bold text-foreground">
-                    Step 4: Assign a Conductor
-                  </h4>
-                  <p className="text-[11px] text-muted-foreground">
-                    Select a ticket auditor / conductor for passenger ticketing
-                    operations.
-                  </p>
-                </div>
-
-                <div className="grid gap-2.5 max-h-64 overflow-y-auto pr-1">
-                  {conductorsList.map((conductor) => {
-                    const isSelected = conductor.id === selectedConductorId;
-                    return (
-                      <div
-                        key={conductor.id}
-                        onClick={() => setSelectedConductorId(conductor.id)}
-                        className={cn(
-                          "p-3 rounded-lg border text-xs flex items-center justify-between cursor-pointer transition-all",
-                          isSelected
-                            ? "border-primary bg-primary/10"
-                            : "border-border/70 hover:border-primary/50 bg-background/50",
-                        )}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div className="size-8 rounded-full bg-secondary grid place-items-center font-bold text-foreground text-xs">
-                            {conductor.name.charAt(0)}
-                          </div>
-                          <div>
-                            <div className="font-bold text-foreground">
-                              {conductor.name}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground font-mono">
-                              {conductor.phoneNumber || "+91 94432 XXXXX"} ·{" "}
-                              {conductor.depot || "Meyyanur"}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[9px] rounded">
-                            ● Available
-                          </Badge>
-                          {isSelected && (
-                            <Check className="size-4 text-primary shrink-0" />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* STEP 5: DEPARTURE TIME */}
-            {wizardStep === 5 && (
-              <div className="space-y-4 py-3">
-                <div className="border-b border-border/40 pb-2">
-                  <h4 className="text-xs font-bold text-foreground">
-                    Step 5: Set Timetable & Departure Time
-                  </h4>
-                  <p className="text-[11px] text-muted-foreground">
-                    Choose the departure time. Arrival is calculated based on
-                    corridor speed.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold">
-                      Scheduled Departure Time
-                    </Label>
-                    <Input
-                      type="time"
-                      value={departureTime}
-                      onChange={(e) => setDepartureTime(e.target.value)}
-                      className="bg-background/60 font-mono text-sm h-10 rounded-lg"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold">
-                      Service Date
-                    </Label>
-                    <Input
-                      type="text"
-                      value={serviceDate}
-                      onChange={(e) => setServiceDate(e.target.value)}
-                      className="bg-background/60 font-mono text-sm h-10 rounded-lg"
-                    />
-                  </div>
-                </div>
-
-                {/* Live Timetable Preview Card */}
-                <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-2">
-                  <div className="text-xs font-bold text-foreground flex items-center justify-between">
-                    <span>Timetable Summary Preview</span>
-                    <Badge variant="outline" className="text-[10px] font-mono">
-                      ~{estimatedDuration} mins trip
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between font-mono text-sm pt-1">
-                    <div>
-                      <div className="text-[10px] text-muted-foreground uppercase">
-                        Depart Origin
-                      </div>
-                      <div className="font-bold text-foreground">
-                        {departureTime}
-                      </div>
-                    </div>
-                    <ArrowRight className="size-4 text-primary" />
-                    <div>
-                      <div className="text-[10px] text-muted-foreground uppercase">
-                        Arrive Terminus
-                      </div>
-                      <div className="font-bold text-foreground">
-                        {estimatedArrivalTime}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 6: CONFLICT CHECK */}
-            {wizardStep === 6 && (
-              <div className="space-y-4 py-3">
-                <div className="border-b border-border/40 pb-2">
-                  <h4 className="text-xs font-bold text-foreground">
-                    Step 6: Automated Conflict & Compliance Check
-                  </h4>
-                  <p className="text-[11px] text-muted-foreground">
-                    Reviewing driver rest compliance, vehicle maintenance
-                    status, and overlapping runs.
-                  </p>
-                </div>
-
-                {conflictWarnings.length > 0 ? (
-                  <div className="p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 space-y-2">
-                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-bold text-xs">
-                      <AlertTriangle className="size-4" /> Potential Scheduling
-                      Conflicts Detected
-                    </div>
-                    <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
-                      {conflictWarnings.map((w, idx) => (
-                        <li key={idx}>{w}</li>
+              {/* Step 2: Route */}
+              {wizardStep === 2 && (
+                <div className="space-y-3">
+                  <Label className="text-xs font-bold text-foreground">2. Select Route Corridor</Label>
+                  <Select value={selectedRouteId} onValueChange={setSelectedRouteId}>
+                    <SelectTrigger className="h-9 text-xs rounded-md">
+                      <SelectValue placeholder="Choose Route" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {routesList.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.code}: {r.name} ({r.lengthKm} km)
+                        </SelectItem>
                       ))}
-                    </ul>
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 space-y-1.5">
-                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
-                      <ShieldCheck className="size-4" /> Zero Conflicts Detected
+                    </SelectContent>
+                  </Select>
+                  {selectedRoute && (
+                    <div className="rounded-md border border-border/80 bg-muted/20 p-3 text-xs space-y-1">
+                      <p className="font-semibold text-foreground">{selectedRoute.name}</p>
+                      <p className="text-muted-foreground">
+                        Standard Duration: {selectedRoute.durationMin} minutes | Distance: {selectedRoute.lengthKm} km
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Driver rest requirements fully satisfied under Motor
-                      Vehicles Act (Section 91). Bus is available with no
-                      conflicting duty overlaps.
-                    </p>
-                  </div>
-                )}
+                  )}
+                </div>
+              )}
 
-                {/* Selected Assignment Summary */}
-                <div className="p-3.5 rounded-lg border border-border bg-background/50 text-xs space-y-2">
-                  <div className="font-bold text-foreground">
-                    Run Configuration:
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-[11px]">
-                    <div>
-                      <span className="text-muted-foreground">Bus: </span>
-                      <strong className="text-foreground">
-                        {selectedBus?.registrationNumber}
-                      </strong>
+              {/* Step 3: Timings */}
+              {wizardStep === 3 && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-foreground">Departure Time</Label>
+                      <Input
+                        type="time"
+                        value={departureTime}
+                        onChange={(e) => setDepartureTime(e.target.value)}
+                        className="h-9 text-xs rounded-md"
+                      />
                     </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-foreground">Calculated Arrival</Label>
+                      <Input
+                        type="time"
+                        disabled
+                        value={formatMinutesToTimeString(calculatedEndTimeMinutes)}
+                        className="h-9 text-xs rounded-md bg-muted/40 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-foreground">Travel Direction</Label>
+                    <Select value={scheduleDirection} onValueChange={setScheduleDirection}>
+                      <SelectTrigger className="h-9 text-xs rounded-md">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="OUTBOUND">Outbound ({selectedRoute?.origin || "Start"} → {selectedRoute?.destination || "End"})</SelectItem>
+                        <SelectItem value="INBOUND">Inbound ({selectedRoute?.destination || "End"} → {selectedRoute?.origin || "Start"})</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4: Bus Assignment */}
+              {wizardStep === 4 && (
+                <div className="space-y-3">
+                  <Label className="text-xs font-bold text-foreground">4. Assign Bus</Label>
+                  <Select value={selectedBusId} onValueChange={setSelectedBusId}>
+                    <SelectTrigger className="h-9 text-xs rounded-md">
+                      <SelectValue placeholder="Select Available Bus" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {busesList.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.registrationNumber} ({b.fleetNumber || "Bus"}) - {b.depot} ({b.status})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Only buses currently available in depot are recommended.
+                  </p>
+                </div>
+              )}
+
+              {/* Step 5: Driver Assignment */}
+              {wizardStep === 5 && (
+                <div className="space-y-3">
+                  <Label className="text-xs font-bold text-foreground">5. Assign Driver</Label>
+                  <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
+                    <SelectTrigger className="h-9 text-xs rounded-md">
+                      <SelectValue placeholder="Select Available Driver" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {driversList.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.name} ({d.employeeId || "Driver"}) - {d.depot} ({d.status})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    The system verifies that the driver has satisfied mandatory rest periods before assignment.
+                  </p>
+                </div>
+              )}
+
+              {/* Step 6: Conductor Assignment */}
+              {wizardStep === 6 && (
+                <div className="space-y-3">
+                  <Label className="text-xs font-bold text-foreground">6. Assign Conductor</Label>
+                  <Select value={selectedConductorId} onValueChange={setSelectedConductorId}>
+                    <SelectTrigger className="h-9 text-xs rounded-md">
+                      <SelectValue placeholder="Select Available Conductor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {conductorsList.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name} ({c.employeeId || "Conductor"}) - {c.depot} ({c.status})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Step 7: Review & Publish */}
+              {wizardStep === 7 && (
+                <div className="rounded-lg border border-border/80 bg-muted/20 p-4 space-y-3">
+                  <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                    Operational Trip Summary
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
                       <span className="text-muted-foreground">Route: </span>
-                      <strong className="text-foreground">
-                        Route {selectedRoute?.code} ({selectedRoute?.name})
-                      </strong>
+                      <span className="font-semibold text-foreground">{selectedRoute?.code}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Date: </span>
+                      <span className="font-semibold text-foreground">{serviceDate}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Timings: </span>
+                      <span className="font-semibold text-foreground font-mono">
+                        {departureTime} - {formatMinutesToTimeString(calculatedEndTimeMinutes)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Direction: </span>
+                      <span className="font-semibold text-foreground">{scheduleDirection}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Bus: </span>
+                      <span className="font-semibold text-foreground">
+                        {busesList.find((b) => b.id === selectedBusId)?.registrationNumber || "Unassigned"}
+                      </span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Driver: </span>
-                      <strong className="text-foreground">
-                        {selectedDriver?.name}
-                      </strong>
+                      <span className="font-semibold text-foreground">
+                        {driversList.find((d) => d.id === selectedDriverId)?.name || "Unassigned"}
+                      </span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Conductor: </span>
-                      <strong className="text-foreground">
-                        {selectedConductor?.name}
-                      </strong>
+                      <span className="font-semibold text-foreground">
+                        {conductorsList.find((c) => c.id === selectedConductorId)?.name || "Unassigned"}
+                      </span>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* STEP 7: CONFIRM & PUBLISH */}
-            {wizardStep === 7 && (
-              <div className="space-y-4 py-3 text-center">
-                <div className="size-12 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 grid place-items-center mx-auto">
-                  <CheckCircle2 className="size-6" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-foreground">
-                    Ready to Publish Schedule
-                  </h4>
-                  <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                    Click confirm to lock in this departure. It will immediately
-                    appear on the daily dispatch board.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl border border-border bg-background/60 text-xs text-left space-y-2 font-mono">
-                  <div className="flex justify-between py-1 border-b border-border/50">
-                    <span className="text-muted-foreground font-sans">
-                      Departure Time
-                    </span>
-                    <strong className="text-foreground">
-                      {departureTime} ({serviceDate})
-                    </strong>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-border/50">
-                    <span className="text-muted-foreground font-sans">
-                      Corridor
-                    </span>
-                    <strong className="text-foreground">
-                      Route {selectedRoute?.code} ({selectedRoute?.name})
-                    </strong>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-border/50">
-                    <span className="text-muted-foreground font-sans">
-                      Bus Plate
-                    </span>
-                    <strong className="text-foreground">
-                      {selectedBus?.registrationNumber}
-                    </strong>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-border/50">
-                    <span className="text-muted-foreground font-sans">
-                      Driver Staff
-                    </span>
-                    <strong className="text-foreground">
-                      {selectedDriver?.name}
-                    </strong>
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-muted-foreground font-sans">
-                      Conductor Staff
-                    </span>
-                    <strong className="text-foreground">
-                      {selectedConductor?.name}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Wizard Navigation Footer */}
-            <DialogFooter className="border-t border-border/60 pt-3 flex items-center justify-between sm:justify-between">
+            <DialogFooter className="flex items-center justify-between border-t border-border/60 pt-3">
               <div>
                 {wizardStep > 1 && (
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() =>
-                      setWizardStep((prev) => Math.max(1, prev - 1))
-                    }
-                    className="text-xs rounded-lg gap-1"
+                    onClick={() => setWizardStep((s) => s - 1)}
+                    className="text-xs rounded-md"
                   >
-                    <ChevronLeft className="size-3.5" /> Back
+                    Back
                   </Button>
                 )}
               </div>
-
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => setIsWizardOpen(false)}
-                  className="text-xs rounded-lg"
+                  className="text-xs rounded-md"
                 >
                   Cancel
                 </Button>
-
                 {wizardStep < 7 ? (
                   <Button
                     type="button"
                     size="sm"
-                    onClick={() =>
-                      setWizardStep((prev) => Math.min(7, prev + 1))
-                    }
-                    className="bg-primary text-primary-foreground font-semibold text-xs rounded-lg gap-1"
+                    onClick={() => setWizardStep((s) => s + 1)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md"
                   >
-                    Next Step <ChevronRight className="size-3.5" />
+                    Next Step
                   </Button>
                 ) : (
                   <Button
                     type="button"
                     size="sm"
+                    onClick={handleCompleteWizard}
                     disabled={wizardSubmitting}
-                    onClick={handlePublishSchedule}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg gap-1"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-md"
                   >
-                    <Check className="size-3.5" />
-                    {wizardSubmitting
-                      ? "Publishing..."
-                      : "Confirm & Publish Run"}
+                    {wizardSubmitting ? "Publishing..." : "Confirm & Publish Schedule"}
                   </Button>
                 )}
               </div>
@@ -1558,46 +1250,116 @@ function TripsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* FREQUENCY TIMETABLE GENERATOR MODAL */}
-        <Dialog open={isGenOpen} onOpenChange={setIsGenOpen}>
-          <DialogContent className="sm:max-w-md bg-card border-border rounded-xl">
+        {/* 5. MODAL: QUICK ASSIGN BUS & CREW */}
+        <Dialog open={!!quickAssignTrip} onOpenChange={(open) => !open && setQuickAssignTrip(null)}>
+          <DialogContent className="sm:max-w-md rounded-lg">
             <DialogHeader>
-              <DialogTitle className="text-base font-bold flex items-center gap-2">
-                <CalendarClock className="size-4 text-primary" /> Auto-Fill
-                Regular Frequency
+              <DialogTitle className="text-base font-bold text-foreground">
+                Assign Resources: {quickAssignTrip?.tripCode}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Quickly generate recurring daily departures at fixed intervals
-                (e.g., every 15 or 30 minutes).
+                {quickAssignTrip?.origin} → {quickAssignTrip?.destination} (
+                {quickAssignTrip ? formatMinutesToTimeString(quickAssignTrip.startTime) : ""} -{" "}
+                {quickAssignTrip ? formatMinutesToTimeString(quickAssignTrip.endTime) : ""})
               </DialogDescription>
             </DialogHeader>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                generateTripsMutation.mutate({
-                  routeId: genRouteId,
-                  serviceDate,
-                  startTime: parseTimeToMinutes(genStartTime),
-                  endTime: parseTimeToMinutes(genEndTime),
-                  frequency: Number(genFrequency),
-                  direction: genDirection,
-                });
-              }}
-              className="space-y-4 py-2"
-            >
+            <div className="space-y-4 py-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">
-                  Select Route Corridor
-                </Label>
+                <Label className="text-xs font-semibold">Bus</Label>
+                <Select value={quickBusId} onValueChange={setQuickBusId}>
+                  <SelectTrigger className="h-8.5 text-xs rounded-md">
+                    <SelectValue placeholder="Select Bus" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {busesList.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.registrationNumber} ({b.fleetNumber || "Bus"}) - {b.status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Driver</Label>
+                <Select value={quickDriverId} onValueChange={setQuickDriverId}>
+                  <SelectTrigger className="h-8.5 text-xs rounded-md">
+                    <SelectValue placeholder="Select Driver" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {driversList.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name} ({d.employeeId || "Driver"}) - {d.status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Conductor</Label>
+                <Select value={quickConductorId} onValueChange={setQuickConductorId}>
+                  <SelectTrigger className="h-8.5 text-xs rounded-md">
+                    <SelectValue placeholder="Select Conductor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {conductorsList.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} ({c.employeeId || "Conductor"}) - {c.status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickAssignTrip(null)}
+                className="text-xs rounded-md"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSaveQuickAssign}
+                disabled={quickSaving}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md"
+              >
+                {quickSaving ? "Saving..." : "Save Assignment"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* 6. MODAL: FREQUENCY GENERATOR */}
+        <Dialog open={isGenOpen} onOpenChange={setIsGenOpen}>
+          <DialogContent className="sm:max-w-md rounded-lg">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold text-foreground">
+                Generate Corridor Frequency
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Automatically populate multiple scheduled departures across an operating window.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3.5 py-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Route</Label>
                 <Select value={genRouteId} onValueChange={setGenRouteId}>
-                  <SelectTrigger className="text-xs bg-background/60 rounded-lg">
-                    <SelectValue />
+                  <SelectTrigger className="h-8.5 text-xs rounded-md">
+                    <SelectValue placeholder="Select Route" />
                   </SelectTrigger>
                   <SelectContent>
                     {routesList.map((r) => (
                       <SelectItem key={r.id} value={r.id}>
-                        Route {r.code}: {r.name}
+                        {r.code}: {r.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1606,50 +1368,45 @@ function TripsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">
-                    First Departure
-                  </Label>
+                  <Label className="text-xs font-semibold">Start Time</Label>
                   <Input
                     type="time"
                     value={genStartTime}
                     onChange={(e) => setGenStartTime(e.target.value)}
-                    className="text-xs bg-background/60 font-mono rounded-lg"
-                    required
+                    className="h-8.5 text-xs rounded-md"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">
-                    Last Departure
-                  </Label>
+                  <Label className="text-xs font-semibold">End Time</Label>
                   <Input
                     type="time"
                     value={genEndTime}
                     onChange={(e) => setGenEndTime(e.target.value)}
-                    className="text-xs bg-background/60 font-mono rounded-lg"
-                    required
+                    className="h-8.5 text-xs rounded-md"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">
-                    Frequency (Mins)
-                  </Label>
-                  <Input
-                    type="number"
-                    min="5"
-                    max="180"
-                    value={genFrequency}
-                    onChange={(e) => setGenFrequency(e.target.value)}
-                    className="text-xs bg-background/60 font-mono rounded-lg"
-                    required
-                  />
+                  <Label className="text-xs font-semibold">Interval (Minutes)</Label>
+                  <Select value={genFrequency} onValueChange={setGenFrequency}>
+                    <SelectTrigger className="h-8.5 text-xs rounded-md">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">Every 15 mins</SelectItem>
+                      <SelectItem value="20">Every 20 mins</SelectItem>
+                      <SelectItem value="30">Every 30 mins</SelectItem>
+                      <SelectItem value="45">Every 45 mins</SelectItem>
+                      <SelectItem value="60">Every 60 mins</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Direction</Label>
                   <Select value={genDirection} onValueChange={setGenDirection}>
-                    <SelectTrigger className="text-xs bg-background/60 rounded-lg">
+                    <SelectTrigger className="h-8.5 text-xs rounded-md">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1659,29 +1416,28 @@ function TripsPage() {
                   </Select>
                 </div>
               </div>
+            </div>
 
-              <DialogFooter className="pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsGenOpen(false)}
-                  className="text-xs rounded-lg"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={generateTripsMutation.isPending}
-                  className="bg-primary text-primary-foreground font-semibold text-xs rounded-lg"
-                >
-                  {generateTripsMutation.isPending
-                    ? "Generating..."
-                    : "Generate Trips"}
-                </Button>
-              </DialogFooter>
-            </form>
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsGenOpen(false)}
+                className="text-xs rounded-md"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleGenerateTrips}
+                disabled={genSubmitting}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md"
+              >
+                {genSubmitting ? "Generating..." : "Generate Trips"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
