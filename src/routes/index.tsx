@@ -57,36 +57,36 @@ function Dashboard() {
 
   // 1. Fetch Buses
   const { data: busesList = [] } = useQuery({
-    queryKey: ["buses-dashboard"],
+    queryKey: ["buses-dashboard", currentTenant.id],
     queryFn: () => getBuses(),
   });
 
   // 2. Fetch Drivers & Conductors
   const { data: driversList = [] } = useQuery({
-    queryKey: ["drivers-dashboard"],
+    queryKey: ["drivers-dashboard", currentTenant.id],
     queryFn: () => getDrivers(),
   });
 
   const { data: conductorsList = [] } = useQuery({
-    queryKey: ["conductors-dashboard"],
+    queryKey: ["conductors-dashboard", currentTenant.id],
     queryFn: () => getConductors(),
   });
 
   // 3. Fetch Routes
   const { data: routesList = [] } = useQuery({
-    queryKey: ["routes-dashboard"],
+    queryKey: ["routes-dashboard", currentTenant.id],
     queryFn: () => getRoutes(),
   });
 
   // 4. Fetch Trips
   const { data: tripsList = [] } = useQuery({
-    queryKey: ["trips-dashboard", TODAY_DATE],
+    queryKey: ["trips-dashboard", currentTenant.id, TODAY_DATE],
     queryFn: () => getTrips({ serviceDate: TODAY_DATE }),
   });
 
   // 5. Fetch Duties (resolve bus and staff assignments)
   const { data: dutiesList = [] } = useQuery({
-    queryKey: ["duties-dashboard", TODAY_DATE],
+    queryKey: ["duties-dashboard", currentTenant.id, TODAY_DATE],
     queryFn: () => getDuties({ serviceDate: TODAY_DATE }),
   });
 

@@ -24,7 +24,7 @@ export interface TenantInfo {
 }
 
 export const CHENNAI_MTC_TENANT_ID = "69000000-0000-4000-8000-000000000069";
-export const SALEM_TENANT_ID = "6fcb73df-750e-4fe5-b0cb-456b119dcd64";
+export const SALEM_TENANT_ID = "c4ab681d-7b82-4674-bb8a-14ef96de6d23";
 
 export const INITIAL_TENANTS: TenantInfo[] = [
   {
@@ -94,7 +94,7 @@ export const INITIAL_TENANTS: TenantInfo[] = [
     activeDepot: "Central / Broadway Depot",
     fleetCount: 50,
     fleetSize: 50,
-    routesCount: 12,
+    routesCount: 80,
     status: "active",
   },
   {
@@ -109,55 +109,27 @@ export const INITIAL_TENANTS: TenantInfo[] = [
         name: "Meyyanur Central Depot",
         code: "SLM-MEY-01",
         capacity: 48,
-        activeBuses: 42,
+        activeBuses: 24,
       },
       {
         id: "depot-slm-02",
         name: "Salem Junction Depot",
         code: "SLM-JNC-02",
         capacity: 35,
-        activeBuses: 30,
+        activeBuses: 20,
       },
       {
         id: "depot-slm-03",
         name: "Suramangalam Depot",
         code: "SLM-SUR-03",
         capacity: 30,
-        activeBuses: 26,
+        activeBuses: 18,
       },
     ],
     activeDepot: "Meyyanur Central Depot",
-    fleetCount: 48,
-    fleetSize: 48,
+    fleetCount: 24,
+    fleetSize: 24,
     routesCount: 8,
-    status: "active",
-  },
-  {
-    id: "cbe-750e-4fe5-b0cb-456b119dcd65",
-    name: "Coimbatore City Transit",
-    slug: "cbe-transit",
-    code: "TN-CCT-CBE",
-    region: "Coimbatore, Tamil Nadu",
-    depots: [
-      {
-        id: "depot-cbe-01",
-        name: "Gandhipuram Depot",
-        code: "CBE-GND-01",
-        capacity: 55,
-        activeBuses: 48,
-      },
-      {
-        id: "depot-cbe-02",
-        name: "Ukkadam Depot",
-        code: "CBE-UKD-02",
-        capacity: 40,
-        activeBuses: 35,
-      },
-    ],
-    activeDepot: "Gandhipuram Depot",
-    fleetCount: 55,
-    fleetSize: 55,
-    routesCount: 12,
     status: "active",
   },
 ];

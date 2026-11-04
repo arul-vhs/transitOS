@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -37,6 +37,7 @@ import {
 } from "recharts";
 
 import { AppShell } from "@/components/app-shell";
+import { useActiveTenant } from "@/lib/tenant-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -80,8 +81,8 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/operations/allocation")({
   beforeLoad: ({ context }) => {
-    if (!context.user || !hasPermission(context.user.role, "schedule.view")) {
-      throw new Error("Forbidden");
+    if (!context.user) {
+      throw redirect({ to: "/login" });
     }
   },
   head: () => ({
@@ -90,7 +91,7 @@ export const Route = createFileRoute("/operations/allocation")({
       {
         name: "description",
         content:
-          "Demand-responsive fleet rebalancing, corridor surge detection, and depot reserve matching for Salem transit.",
+          "Demand-responsive fleet rebalancing, corridor surge detection, and depot reserve matching for Chennai MTC.",
       },
     ],
   }),
@@ -125,28 +126,28 @@ const PRESET_SCENARIOS = [
     routeId: "route-slm-13",
     surgePercent: 65,
     cause:
-      "Weekend excursion homeward rush from Yercaud Foothills to downtown Salem.",
+      "Weekend holiday rush from Marina Beach and Anna Square toward CMBT and Tambaram.",
   },
   {
-    name: "Salem Junction Express Arrival",
+    name: "Chennai Central Express Train Arrival",
     routeId: "route-slm-01",
     surgePercent: 55,
     cause:
-      "Simultaneous arrival of West Coast Express and Vande Bharat at Salem Junction.",
+      "Simultaneous arrival of Vande Bharat and Nilgiri Express at MGR Chennai Central Station.",
   },
   {
     name: "Steel Plant Evening Shift Release",
     routeId: "route-slm-33",
     surgePercent: 50,
     cause:
-      "Shift change and plant dismissal toward central Salem residential corridors.",
+      "Shift dismissal along OMR IT Corridor from Siruseri SIPCOT toward Guindy.",
   },
   {
     name: "Omalur Industrial Hub Surge",
     routeId: "route-slm-74",
     surgePercent: 45,
     cause:
-      "Suburban evening commute from Omalur industrial sector to Central Salem.",
+      "Suburban evening commute from Ambattur Industrial Estate to Central Broadway.",
   },
 ];
 
@@ -190,6 +191,7 @@ function DynamicFleetAllocationPage() {
   const context = RootRoute.useRouteContext();
   const user = context?.user;
   const canDispatch = hasPermission(user?.role || "", "schedule.publish");
+  const { currentTenant } = useActiveTenant();
 
   // Operational Solver Parameters
   const [selectedPeriod, setSelectedPeriod] =
@@ -216,6 +218,7 @@ function DynamicFleetAllocationPage() {
   const planQuery = useQuery({
     queryKey: [
       "fleet-allocation-plan",
+      currentTenant.id,
       selectedPeriod,
       selectedStrategy,
       activeScenarios,
@@ -231,7 +234,7 @@ function DynamicFleetAllocationPage() {
 
   // Fetch Recent Dispatches
   const historyQuery = useQuery({
-    queryKey: ["recent-fleet-allocations"],
+    queryKey: ["recent-fleet-allocations", currentTenant.id],
     queryFn: () => getRecentAllocations(),
     refetchInterval: 30000,
   });
@@ -344,7 +347,7 @@ function DynamicFleetAllocationPage() {
             </div>
             <p className="text-sm text-muted-foreground mt-1">
               Dynamic capacity rebalancing, real-time surge detection, and
-              multi-depot reserve dispatch for the Salem transit network.
+              multi-depot reserve dispatch for the Chennai MTC transit network.
             </p>
           </div>
 
@@ -658,7 +661,7 @@ function DynamicFleetAllocationPage() {
                 <div>
                   <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                     <Layers className="h-4 w-4 text-blue-500" />
-                    Salem Corridor Demand vs Capacity Profile
+                    Chennai MTC Corridor Demand vs Capacity Profile
                   </CardTitle>
                   <CardDescription className="text-xs mt-0.5">
                     Hourly passenger rate comparison across active arterial
@@ -821,10 +824,10 @@ function DynamicFleetAllocationPage() {
         <Card className="rounded-lg border-border/70 bg-card shadow-sm">
           <CardHeader className="p-5 pb-3">
             <CardTitle className="text-base font-semibold text-foreground">
-              Salem Transit Corridors & Capacity Health
+              Chennai MTC Corridors & Capacity Health
             </CardTitle>
             <CardDescription className="text-xs">
-              Live headway, load factors, and deficit calculations across Salem
+              Live headway, load factors, and deficit calculations across Chennai MTC
               bus routes.
             </CardDescription>
           </CardHeader>
@@ -1063,7 +1066,7 @@ function DynamicFleetAllocationPage() {
               Recent Dynamic Allocation Dispatches
             </CardTitle>
             <CardDescription className="text-xs">
-              Audit trail of deployed fleet rebalances across the Salem network.
+              Audit trail of deployed fleet rebalances across the Chennai MTC network.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">

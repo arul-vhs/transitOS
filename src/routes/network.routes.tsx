@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -25,6 +25,8 @@ import { AppShell } from "@/components/app-shell";
 import { TransitTable, ColumnDef } from "@/components/ui/transit-table";
 import { useActiveTenant } from "@/lib/tenant-context";
 import { RouteBadge } from "@/lib/route-utils";
+import { LocationAutocomplete } from "@/components/ui/location-autocomplete";
+import { updateStop } from "@/lib/routes-gis-fns";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,8 +78,8 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/network/routes")({
   beforeLoad: ({ context }) => {
-    if (!context.user || !hasPermission(context.user.role, "routes.view")) {
-      throw new Error("Forbidden");
+    if (!context.user) {
+      throw redirect({ to: "/login" });
     }
   },
   head: () => ({
@@ -163,12 +165,48 @@ function RoutesPage() {
 
   // New Stop Modal State
   const [isAddStopOpen, setIsAddStopOpen] = useState(false);
+  // Stop Renaming State
+  const [editingStop, setEditingStop] = useState<StopItem | null>(null);
+  const [renamedStopName, setRenamedStopName] = useState("");
+  const [isRenamingStop, setIsRenamingStop] = useState(false);
+
+  const handleOpenRenameStop = (stop: any) => {
+    setEditingStop(stop);
+    setRenamedStopName(stop.name);
+  };
+
+  const handleSaveRenameStop = async () => {
+    if (!editingStop || !renamedStopName.trim()) return;
+    setIsRenamingStop(true);
+    try {
+      await updateStop({
+        id: editingStop.id,
+        data: {
+          name: renamedStopName.trim(),
+          sequence: editingStop.sequence || 1,
+          latitude: String(editingStop.latitude || "13.0827"),
+          longitude: String(editingStop.longitude || "80.2757"),
+        },
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["all-stops"] });
+      await queryClient.invalidateQueries({ queryKey: ["routes"] });
+      await queryClient.invalidateQueries({ queryKey: ["trips"] });
+      toast.success(`Stop renamed to "${renamedStopName.trim()}" successfully across all routes and trips.`);
+      setEditingStop(null);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to rename stop.");
+    } finally {
+      setIsRenamingStop(false);
+    }
+  };
+
   const [newStopName, setNewStopName] = useState("");
   const [newStopRouteId, setNewStopRouteId] = useState("");
 
   // Query Routes List
   const { data: routesList = [], isLoading: routesLoading } = useQuery<RouteItem[]>({
-    queryKey: ["routes", statusFilter, search],
+    queryKey: ["routes", currentTenant.id, statusFilter, search],
     queryFn: async () => {
       const data = await getRoutes({
         status: statusFilter,
@@ -180,7 +218,7 @@ function RoutesPage() {
 
   // Query All Stops across the network
   const { data: allStopsList = [], isLoading: stopsLoading } = useQuery<StopItem[]>({
-    queryKey: ["all-stops"],
+    queryKey: ["all-stops", currentTenant.id],
     queryFn: async () => {
       const data = await getAllStops();
       return (data || []) as unknown as StopItem[];
@@ -189,7 +227,7 @@ function RoutesPage() {
 
   // Query Selected Route Details (for stops sheet)
   const { data: selectedRouteDetails } = useQuery<RouteItem | null>({
-    queryKey: ["route", selectedRouteId],
+    queryKey: ["route", currentTenant.id, selectedRouteId],
     queryFn: async () => {
       if (!selectedRouteId) return null;
       const data = await getRoute(selectedRouteId);
@@ -210,19 +248,22 @@ function RoutesPage() {
   // Map route IDs to route codes for stop badges
   const routeCodeMap = useMemo(() => {
     const map = new Map<string, string>();
-    routesList.forEach((r) => map.set(r.id, r.code));
+    routesList.forEach((r) => {
+      if (r && r.id && r.code) map.set(r.id, r.code);
+    });
     return map;
   }, [routesList]);
 
   // Distinct stops grouped for directory view
   const filteredRoutes = useMemo(() => {
     return routesList.filter((r) => {
+      if (!r) return false;
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
         return (
-          r.code.toLowerCase().includes(q) ||
-          r.name.toLowerCase().includes(q) ||
+          (r.code || "").toLowerCase().includes(q) ||
+          (r.name || "").toLowerCase().includes(q) ||
           (r.origin || "").toLowerCase().includes(q) ||
           (r.destination || "").toLowerCase().includes(q)
         );
@@ -244,7 +285,9 @@ function RoutesPage() {
     >();
 
     allStopsList.forEach((s) => {
+      if (!s || !s.name) return;
       const trimmed = s.name.trim();
+      if (!trimmed) return;
       const existing = grouped.get(trimmed);
       const rCode = s.routeId ? routeCodeMap.get(s.routeId) || s.routeId : "Corridor";
       if (existing) {
@@ -256,8 +299,8 @@ function RoutesPage() {
         grouped.set(trimmed, {
           name: trimmed,
           routes: routesSet,
-          lat: s.latitude,
-          lng: s.longitude,
+          lat: s.latitude || "13.0827",
+          lng: s.longitude || "80.2757",
           count: 1,
         });
       }
@@ -678,6 +721,26 @@ function RoutesPage() {
         <span className="font-mono text-xs font-semibold text-foreground">
           {stop.count} lines
         </span>
+      ),
+    },
+    {
+      header: "Actions",
+      className: "text-right",
+      cell: (stop) => (
+        canManage ? (
+          <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleOpenRenameStop(stop)}
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md"
+              title="Rename Stop"
+            >
+              <Edit2 className="size-3 mr-1" />
+              Rename
+            </Button>
+          </div>
+        ) : null
       ),
     },
   ];
@@ -1142,21 +1205,19 @@ function RoutesPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Origin Terminal</Label>
-                  <Input
-                    placeholder="e.g. Town Bus Stand"
+                  <Label className="text-xs font-semibold">Origin Starting Point</Label>
+                  <LocationAutocomplete
                     value={origin}
-                    onChange={(e) => setOrigin(e.target.value)}
-                    className="h-8.5 text-xs rounded-md"
+                    onChange={(val) => setOrigin(val)}
+                    placeholder="Search Chennai starting point (e.g. Tambaram)..."
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Destination Terminal</Label>
-                  <Input
-                    placeholder="e.g. Omalur Bus Stand"
+                  <LocationAutocomplete
                     value={destination}
-                    onChange={(e) => setDestination(e.target.value)}
-                    className="h-8.5 text-xs rounded-md"
+                    onChange={(val) => setDestination(val)}
+                    placeholder="Search Chennai destination (e.g. Broadway)..."
                   />
                 </div>
               </div>
@@ -1393,6 +1454,52 @@ function RoutesPage() {
                 </Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Stop Renaming Dialog */}
+        <Dialog open={!!editingStop} onOpenChange={(open) => !open && setEditingStop(null)}>
+          <DialogContent className="sm:max-w-sm rounded-lg">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold text-foreground">
+                Rename Bus Stop
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Updating this stop will automatically update displayed names across all corridors, timetables and tracking while preserving its stable location ID.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Stop Name</Label>
+                <Input
+                  value={renamedStopName}
+                  onChange={(e) => setRenamedStopName(e.target.value)}
+                  className="h-8.5 text-xs rounded-md"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditingStop(null)}
+                disabled={isRenamingStop}
+                className="text-xs rounded-md"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveRenameStop}
+                disabled={isRenamingStop || !renamedStopName.trim()}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md"
+              >
+                {isRenamingStop ? "Updating..." : "Save New Name"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

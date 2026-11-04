@@ -28,6 +28,7 @@ import {
 import { useState, type ReactNode } from "react";
 import { useTheme } from "@/components/theme-provider";
 import { useActiveTenant } from "@/lib/tenant-context";
+import { GlobalSearchBar } from "@/components/global-search-bar";
 
 import {
   Sheet,
@@ -66,7 +67,7 @@ const NAV: NavGroup[] = [
       { label: "Routes & Corridors", to: "/network/routes", icon: RouteIcon },
       { label: "Route Planner", to: "/network/planner", icon: Compass },
       { label: "Bus Fleet", to: "/fleet/buses", icon: Bus },
-      { label: "Staff & Crew", to: "/crew/drivers", icon: Users },
+      { label: "Bus Crew", to: "/crew/drivers", icon: Users },
       { label: "Schedules & Timetable", to: "/operations/trips", icon: CalendarClock },
       { label: "Smart Fleet Allocation", to: "/operations/allocation", icon: Workflow },
       { label: "Simulation Deck", to: "/simulation", icon: Play },
@@ -430,6 +431,12 @@ export function AppShell({
                   {subtitle}
                 </p>
               ) : null}
+            </div>
+
+            
+            {/* Persistent Global Search */}
+            <div className="hidden sm:flex items-center flex-1 max-w-sm ml-2">
+              <GlobalSearchBar />
             </div>
 
             {/* Header Right Actions */}

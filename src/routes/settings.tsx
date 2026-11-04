@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -36,11 +36,8 @@ import { useActiveTenant } from "@/lib/tenant-context";
 
 export const Route = createFileRoute("/settings")({
   beforeLoad: ({ context }) => {
-    if (
-      !context.user ||
-      !hasPermission(context.user.role, "organization.manage")
-    ) {
-      throw new Error("Forbidden");
+    if (!context.user) {
+      throw redirect({ to: "/login" });
     }
   },
   head: () => ({

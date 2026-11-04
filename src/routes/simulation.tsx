@@ -42,7 +42,7 @@ export const Route = createFileRoute("/simulation")({
       {
         name: "description",
         content:
-          "Interactive day-in-the-life simulation of Salem City transit operations, fleet movement, and AI auto-recovery.",
+          "Interactive day-in-the-life simulation of Chennai MTC transit operations, fleet movement, and AI auto-recovery.",
       },
     ],
   }),
@@ -750,6 +750,12 @@ function SimulationPage() {
     "controls" | "walkthrough" | "telemetry"
   >("controls");
 
+  // Sync simulation fleet on tenant switch
+  useEffect(() => {
+    setFleet(isChennai ? CHENNAI_INITIAL_FLEET : INITIAL_FLEET);
+    setSelectedBusId(isChennai ? "b-mtc-1" : "b3");
+  }, [isChennai]);
+
   // Radio Dispatch / Event Ticker Logs
   const [eventLogs, setEventLogs] = useState<
     Array<{
@@ -762,7 +768,7 @@ function SimulationPage() {
     {
       id: "1",
       time: "08:15 AM",
-      text: "Dispatch check: 6 vehicles active on Salem corridors, 1 standby bus at Meyyanur Depot.",
+      text: "Dispatch check: 6 vehicles active on Chennai MTC corridors, 1 standby bus at Central Depot.",
       type: "info",
     },
     {
@@ -1243,7 +1249,7 @@ function SimulationPage() {
   return (
     <AppShell
       title="Corridor Simulation Deck"
-      subtitle="Interactive test of Salem City corridors, vehicle movements, and standby bus replacements."
+      subtitle="Interactive test of Chennai MTC corridors, vehicle movements, and standby bus replacements."
       actions={
         <div className="flex items-center gap-2">
           <Badge
@@ -1370,7 +1376,7 @@ function SimulationPage() {
                 <div className="flex items-center gap-2">
                   <span className="size-2.5 rounded-full bg-emerald-500 animate-ping"></span>
                   <span className="text-xs font-bold text-foreground">
-                    Salem City Corridors (Live Fleet Map)
+                    Chennai MTC Corridors (Live Fleet Map)
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
@@ -1862,7 +1868,7 @@ function SimulationPage() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed pl-9">
-                  The operations desk tracks buses moving across Salem
+                  The operations desk tracks buses moving across Chennai MTC
                   corridors, alerting dispatchers if a bus falls behind schedule
                   by more than 5 minutes.
                 </p>

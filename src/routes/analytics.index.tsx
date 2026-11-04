@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -83,8 +83,8 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/analytics/")({
   beforeLoad: ({ context }) => {
-    if (!context.user || !hasPermission(context.user.role, "analytics.view")) {
-      throw new Error("Forbidden");
+    if (!context.user) {
+      throw redirect({ to: "/login" });
     }
   },
   head: () => ({
@@ -318,27 +318,27 @@ function AnalyticsDashboardPage() {
     data: metrics = {} as ServiceMetricsData,
     isLoading: metricsLoading,
   } = useQuery({
-    queryKey: ["service-metrics", serviceDate],
+    queryKey: ["service-metrics", activeTenant.id, serviceDate],
     queryFn: () => getServiceMetrics({ serviceDate }),
   });
 
   const { data: planVsActualList = [], isLoading: pvaLoading } = useQuery({
-    queryKey: ["plan-vs-actual-unified", serviceDate],
+    queryKey: ["plan-vs-actual-unified", activeTenant.id, serviceDate],
     queryFn: () => getPlanVsActual({ serviceDate }),
   });
 
   const { data: routeStats = [], isLoading: routesLoading } = useQuery({
-    queryKey: ["route-analytics-unified", serviceDate],
+    queryKey: ["route-analytics-unified", activeTenant.id, serviceDate],
     queryFn: () => getRouteAnalytics({ serviceDate }),
   });
 
   const { data: fleetStats = [], isLoading: fleetLoading } = useQuery({
-    queryKey: ["fleet-analytics-unified"],
+    queryKey: ["fleet-analytics-unified", activeTenant.id],
     queryFn: () => getFleetAnalytics(),
   });
 
   const { data: crewStats = [], isLoading: crewLoading } = useQuery({
-    queryKey: ["crew-analytics-unified"],
+    queryKey: ["crew-analytics-unified", activeTenant.id],
     queryFn: () => getCrewAnalytics(),
   });
 

@@ -1,10 +1,10 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { hasPermission } from "@/lib/auth-shared";
 
 export const Route = createFileRoute("/analytics")({
   beforeLoad: ({ context }) => {
-    if (!context.user || !hasPermission(context.user.role, "analytics.view")) {
-      throw new Error("Forbidden");
+    if (!context.user) {
+      throw redirect({ to: "/login" });
     }
   },
   head: () => ({

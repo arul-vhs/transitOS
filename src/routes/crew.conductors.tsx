@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -52,8 +52,8 @@ import {
 
 export const Route = createFileRoute("/crew/conductors")({
   beforeLoad: ({ context }) => {
-    if (!context.user || !hasPermission(context.user.role, "crew.view")) {
-      throw new Error("Forbidden");
+    if (!context.user) {
+      throw redirect({ to: "/login" });
     }
   },
   head: () => ({
@@ -116,7 +116,7 @@ function ConductorsPage() {
 
   // Query Conductors
   const { data: conductorsList = [], isLoading } = useQuery<ConductorItem[]>({
-    queryKey: ["conductors", statusFilter, depotFilter, search],
+    queryKey: ["conductors", currentTenant.id, statusFilter, depotFilter, search],
     queryFn: () =>
       getConductors({
         status: statusFilter,

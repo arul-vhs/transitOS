@@ -568,3 +568,36 @@ const _markIssueManuallyResolved = createServerFn({ method: "POST" })
 export const markIssueManuallyResolved = async (params: any) => {
   return await _markIssueManuallyResolved(toServerFnArgs(params)!);
 };
+
+const _assignTripResources = createServerFn({ method: "POST" })
+  .validator(
+    (params: {
+      tripId: string;
+      busId?: string | null;
+      driverId?: string | null;
+      conductorId?: string | null;
+      serviceDate?: string;
+    }) => params,
+  )
+  .handler(async ({ data }) => {
+    const { assignTripResourcesImpl } = await import(
+      "../server/scheduling-ops"
+    );
+    return await assignTripResourcesImpl(data);
+  });
+
+export const assignTripResources = async (params: {
+  tripId: string;
+  busId?: string | null;
+  driverId?: string | null;
+  conductorId?: string | null;
+  serviceDate?: string;
+} | { data: {
+  tripId: string;
+  busId?: string | null;
+  driverId?: string | null;
+  conductorId?: string | null;
+  serviceDate?: string;
+}}) => {
+  return await _assignTripResources(toServerFnArgs(params)!);
+};

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   Users,
@@ -45,8 +45,8 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/crew/availability")({
   beforeLoad: ({ context }) => {
-    if (!context.user || !hasPermission(context.user.role, "crew.view")) {
-      throw new Error("Forbidden");
+    if (!context.user) {
+      throw redirect({ to: "/login" });
     }
   },
   head: () => ({

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo, useRef, useEffect } from "react";
 import {
@@ -86,12 +86,18 @@ import {
   SolutionOption,
 } from "@/lib/scheduling-fns";
 import { cn, formatMinutesToTime } from "@/lib/utils";
+import {
+  getTodayIndianDate,
+  formatToIndianDate,
+  formatMinutesTo12Hour,
+  formatDurationHuman,
+} from "@/lib/date-time-utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/operations/today")({
   beforeLoad: ({ context }) => {
-    if (!context.user || !hasPermission(context.user.role, "schedule.view")) {
-      throw new Error("Forbidden");
+    if (!context.user) {
+      throw redirect({ to: "/login" });
     }
   },
   head: () => ({
@@ -107,7 +113,7 @@ export const Route = createFileRoute("/operations/today")({
   component: OperationsTodayPage,
 });
 
-const DEFAULT_SERVICE_DATE = "25 Aug 2026";
+const DEFAULT_SERVICE_DATE = getTodayIndianDate();
 
 interface LiveTrackingAssignment {
   id: string;
@@ -144,15 +150,16 @@ interface LiveTrackingAssignment {
 }
 
 const TILE_LAYERS = {
-  voyager: {
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+  standard: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution:
-      '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap contributors',
+      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+    subdomains: ["a", "b", "c"],
   },
   dark: {
-    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
     attribution:
-      '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap contributors',
+      'Tiles &copy; <a href="https://www.esri.com" target="_blank" rel="noreferrer">Esri</a>, HERE, Garmin, &copy; OpenStreetMap contributors',
   },
 };
 
@@ -222,6 +229,7 @@ function OperationsTodayPage() {
   } = useQuery({
     queryKey: [
       "live-bus-tracking",
+      currentTenant.id,
       serviceDate,
       mapDepotFilter,
       mapRouteFilter,
@@ -276,7 +284,7 @@ function OperationsTodayPage() {
     isRefetching: refetchingAssignments,
     refetch: refetchAssignments,
   } = useQuery({
-    queryKey: ["live-tracking-assignments", serviceDate],
+    queryKey: ["live-tracking-assignments", currentTenant.id, serviceDate],
     queryFn: () => getLiveTrackingAssignments({ serviceDate }),
     refetchInterval: 15000,
   });
@@ -305,7 +313,7 @@ function OperationsTodayPage() {
     isLoading: loadingIssues,
     refetch: refetchIssues,
   } = useQuery({
-    queryKey: ["operational-issues", serviceDate],
+    queryKey: ["operational-issues", currentTenant.id, serviceDate],
     queryFn: () => getOperationalIssues({ serviceDate }),
     refetchInterval: 15000,
   });
@@ -332,6 +340,7 @@ function OperationsTodayPage() {
   } = useQuery({
     queryKey: [
       "recommend-conductor",
+      currentTenant.id,
       selectedTripForConductor?.tripId,
       serviceDate,
     ],
@@ -560,9 +569,10 @@ function OperationsTodayPage() {
 
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
-      const tileConfig = resolvedTheme === "dark" ? TILE_LAYERS.dark : TILE_LAYERS.voyager;
+      const tileConfig = resolvedTheme === "dark" ? TILE_LAYERS.dark : TILE_LAYERS.standard;
       activeTileLayerRef.current = L.tileLayer(tileConfig.url, {
         attribution: tileConfig.attribution,
+        subdomains: (tileConfig as any).subdomains || ["a", "b", "c"],
         maxZoom: 19,
       }).addTo(map);
 
@@ -586,9 +596,10 @@ function OperationsTodayPage() {
     if (activeTileLayerRef.current) {
       mapInstanceRef.current.removeLayer(activeTileLayerRef.current);
     }
-    const tileConfig = resolvedTheme === "dark" ? TILE_LAYERS.dark : TILE_LAYERS.voyager;
+    const tileConfig = resolvedTheme === "dark" ? TILE_LAYERS.dark : TILE_LAYERS.standard;
     activeTileLayerRef.current = L.tileLayer(tileConfig.url, {
       attribution: tileConfig.attribution,
+      subdomains: (tileConfig as any).subdomains || ["a", "b", "c"],
       maxZoom: 19,
     }).addTo(mapInstanceRef.current);
   }, [resolvedTheme, L]);
@@ -1017,8 +1028,8 @@ function OperationsTodayPage() {
           <div className="flex items-center gap-1.5 font-mono text-xs font-bold text-foreground">
             <Clock className="size-3 text-muted-foreground" />
             <span>
-              {formatMinutesToTime(item.startTime)} -{" "}
-              {formatMinutesToTime(item.endTime)}
+              {formatMinutesTo12Hour(item.startTime)} -{" "}
+              {formatMinutesTo12Hour(item.endTime)}
             </span>
           </div>
           <span className="text-[10px] text-muted-foreground">
@@ -1326,11 +1337,11 @@ function OperationsTodayPage() {
                         <span>{selectedTrackedBus.tripCode}</span>
                         <span>
                           {selectedTrackedBus.scheduledDeparture
-                            ? formatMinutesToTime(selectedTrackedBus.scheduledDeparture)
+                            ? formatMinutesTo12Hour(selectedTrackedBus.scheduledDeparture)
                             : "--"}
                           {" - "}
                           {selectedTrackedBus.scheduledArrival
-                            ? formatMinutesToTime(selectedTrackedBus.scheduledArrival)
+                            ? formatMinutesTo12Hour(selectedTrackedBus.scheduledArrival)
                             : "--"}
                         </span>
                       </div>
@@ -2019,7 +2030,7 @@ function OperationsTodayPage() {
                   Recommend Conductor for Trip {selectedTripForConductor.tripCode}
                 </SheetTitle>
                 <SheetDescription className="text-xs text-muted-foreground">
-                  Departure at {formatMinutesToTime(selectedTripForConductor.startTime)} ({selectedTripForConductor.origin} to {selectedTripForConductor.destination})
+                  Departure at {formatMinutesTo12Hour(selectedTripForConductor.startTime)} ({selectedTripForConductor.origin} to {selectedTripForConductor.destination})
                 </SheetDescription>
               </SheetHeader>
 
@@ -2285,7 +2296,7 @@ function OperationsTodayPage() {
                   <SelectItem value="none">Auto-Detect from Vehicle</SelectItem>
                   {assignments.slice(0, 30).map((a) => (
                     <SelectItem key={a.tripId} value={a.tripId}>
-                      Trip {a.tripCode} (Route {a.routeCode} - {formatMinutesToTime(a.startTime)})
+                      Trip {a.tripCode} (Route {a.routeCode} - {formatMinutesTo12Hour(a.startTime)})
                     </SelectItem>
                   ))}
                 </SelectContent>

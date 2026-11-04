@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -7,6 +7,7 @@ import {
   Search,
   Plus,
   Edit2,
+  Trash2,
   Wrench,
   CheckCircle2,
   ArrowRight,
@@ -52,12 +53,13 @@ import {
   createBus,
   updateBus,
   updateBusStatus,
+  deleteBus,
 } from "@/lib/fleet-crew";
 
 export const Route = createFileRoute("/fleet/buses")({
   beforeLoad: ({ context }) => {
-    if (!context.user || !hasPermission(context.user.role, "fleet.view")) {
-      throw new Error("Forbidden");
+    if (!context.user) {
+      throw redirect({ to: "/login" });
     }
   },
   head: () => ({
@@ -112,20 +114,41 @@ function BusesPage() {
   const [depotFilter, setDepotFilter] = useState("all");
 
   // Dialog states
+  const [busToDelete, setBusToDelete] = useState<BusItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!busToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteBus(busToDelete.id);
+      await queryClient.invalidateQueries({ queryKey: ["buses"] });
+      await queryClient.invalidateQueries({ queryKey: ["buses-for-scheduling"] });
+      toast.success(`Bus ${busToDelete.registrationNumber} deleted successfully.`);
+      setBusToDelete(null);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete bus.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBusId, setEditingBusId] = useState<string | null>(null);
+
+  const defaultDepot = currentTenant?.depots?.[0]?.name || "Central / Broadway Depot";
 
   // Form values
   const [regNum, setRegNum] = useState("");
   const [fleetNum, setFleetNum] = useState("");
   const [busType, setBusType] = useState("Ashok Leyland 210 HP BS-VI Viking");
   const [capacity, setCapacity] = useState("48");
-  const [depot, setDepot] = useState("Meyyanur Depot");
+  const [depot, setDepot] = useState(defaultDepot);
   const [status, setStatus] = useState("available");
 
   // Query Buses
   const { data: busesList = [], isLoading } = useQuery<BusItem[]>({
-    queryKey: ["buses", statusFilter, depotFilter, search],
+    queryKey: ["buses", currentTenant.id, statusFilter, depotFilter, search],
     queryFn: () =>
       getBuses({
         status: statusFilter,
@@ -178,7 +201,7 @@ function BusesPage() {
     setFleetNum("");
     setBusType("Ashok Leyland 210 HP BS-VI Viking");
     setCapacity("48");
-    setDepot("Meyyanur Depot");
+    setDepot(defaultDepot);
     setStatus("available");
   };
 
@@ -330,6 +353,15 @@ function BusesPage() {
               <Edit2 className="size-3.5 mr-1" />
               Edit
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setBusToDelete(bus)}
+              className="h-7 px-2 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-md"
+            >
+              <Trash2 className="size-3.5 mr-1" />
+              Delete
+            </Button>
           </div>
         ) : null
       ),
@@ -476,11 +508,11 @@ function BusesPage() {
                 <SelectValue placeholder="Depot" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Depots</SelectItem>
-                <SelectItem value="Meyyanur Depot">Meyyanur Depot</SelectItem>
-                <SelectItem value="Johnsonpet Depot">Johnsonpet Depot</SelectItem>
-                <SelectItem value="Hasthampatti Depot">Hasthampatti Depot</SelectItem>
-                <SelectItem value="Steel Plant Depot">Steel Plant Depot</SelectItem>
+                {depotOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -636,10 +668,11 @@ function BusesPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Meyyanur Depot">Meyyanur Depot</SelectItem>
-                      <SelectItem value="Johnsonpet Depot">Johnsonpet Depot</SelectItem>
-                      <SelectItem value="Hasthampatti Depot">Hasthampatti Depot</SelectItem>
-                      <SelectItem value="Steel Plant Depot">Steel Plant Depot</SelectItem>
+                      {(currentTenant?.depots || []).map((d: any) => (
+                        <SelectItem key={d.name} value={d.name}>
+                          {d.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -693,6 +726,41 @@ function BusesPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Delete Bus Confirmation Dialog */}
+      <Dialog open={!!busToDelete} onOpenChange={(open) => !open && setBusToDelete(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Bus Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete bus <strong className="font-mono text-foreground">{busToDelete?.registrationNumber}</strong> ({busToDelete?.busType || "Standard Bus"}) from <span className="font-medium">{busToDelete?.depot}</span>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-xs text-muted-foreground bg-muted/40 p-3 rounded-md border border-border">
+            The system validates that this bus has no active or scheduled trips. If active duties exist, deletion is blocked until reassigned.
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBusToDelete(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="gap-1.5"
+            >
+              {isDeleting ? "Verifying..." : "Confirm Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
+
   );
 }

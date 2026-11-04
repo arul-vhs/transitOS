@@ -1,6 +1,6 @@
-import { eq, and, or, like, sql } from "drizzle-orm";
+import { eq, and, or, like, sql, ne } from "drizzle-orm";
 import { db } from "./db";
-import { buses, crew, auditLogs } from "./db/schema";
+import { buses, crew, auditLogs, duties, dutyTrips, trips, routes } from "./db/schema";
 import { requireAuth, requirePermission } from "./auth";
 import { withTenant } from "./db";
 import { FALLBACK_BUSES, FALLBACK_CREW } from "./db/fallback-data";
@@ -22,6 +22,8 @@ export async function getBusesImpl(filters?: {
 
     if (filters?.status && filters.status !== "all") {
       conditions.push(eq(buses.status, filters.status));
+    } else {
+      conditions.push(ne(buses.status, "archived"));
     }
 
     if (filters?.depot && filters.depot !== "all") {
@@ -49,6 +51,8 @@ export async function getBusesImpl(filters?: {
     let result = FALLBACK_BUSES.filter((b) => b.tenantId === currentUser.tenantId);
     if (filters?.status && filters.status !== "all") {
       result = result.filter((b) => b.status === filters.status);
+    } else {
+      result = result.filter((b) => b.status !== "archived");
     }
     if (filters?.depot && filters.depot !== "all") {
       result = result.filter((b) => b.depot === filters.depot);
@@ -240,6 +244,69 @@ export async function updateBusImpl(
   return updatedBus;
 }
 
+
+export async function deleteBusImpl(id: string) {
+  const currentUser = await requireAuth();
+  await requirePermission(currentUser.role, "fleet.manage");
+
+  const bus = await db.query.buses.findFirst({
+    where: and(eq(buses.id, id), eq(buses.tenantId, currentUser.tenantId)),
+  });
+  if (!bus) throw new Error("Bus not found");
+
+  // Check active or scheduled trip assignments
+  const activeAssignments = await db
+    .select({
+      dutyCode: duties.dutyCode,
+      tripCode: trips.tripCode,
+      serviceDate: duties.serviceDate,
+    })
+    .from(duties)
+    .innerJoin(dutyTrips, eq(dutyTrips.dutyId, duties.id))
+    .innerJoin(trips, eq(dutyTrips.tripId, trips.id))
+    .where(
+      and(
+        eq(duties.tenantId, currentUser.tenantId),
+        eq(duties.busId, id),
+        or(
+          eq(duties.status, "assigned"),
+          eq(duties.status, "published"),
+          eq(trips.status, "scheduled"),
+        ),
+      ),
+    );
+
+  if (activeAssignments.length > 0) {
+    const tripNames = activeAssignments
+      .slice(0, 3)
+      .map((a) => `${a.tripCode} (${a.serviceDate})`)
+      .join(", ");
+    throw new Error(
+      `Cannot delete bus ${bus.registrationNumber}: It is assigned to active trip(s): ${tripNames}. Reassign or unassign these trips before deleting this bus.`,
+    );
+  }
+
+  // Soft-delete: update status to 'archived' so historical audit records remain intact
+  await db
+    .update(buses)
+    .set({ status: "archived", updatedAt: new Date() })
+    .where(and(eq(buses.id, id), eq(buses.tenantId, currentUser.tenantId)));
+
+  // Audit log
+  await db.insert(auditLogs).values({
+    tenantId: currentUser.tenantId,
+    userId: currentUser.id,
+    email: currentUser.email,
+    action: "BUS_DELETED",
+    details: `Archived/deleted bus ${bus.registrationNumber} (${bus.fleetNumber || ""}) from depot ${bus.depot}`,
+  });
+
+  return {
+    success: true,
+    message: `Bus ${bus.registrationNumber} was deleted successfully.`,
+  };
+}
+
 export async function updateBusStatusImpl(id: string, status: string) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "fleet.manage");
@@ -307,8 +374,7 @@ async function getCrewByRole(
       .from(crew)
       .where(and(...conditions))
       .orderBy(crew.employeeId);
-    if (dbCrew.length > 0) return dbCrew;
-    throw new Error("No database crew for tenant, using fallback dataset");
+    return dbCrew;
   } catch (err) {
     let result = FALLBACK_CREW.filter((c) => c.role === role && c.tenantId === currentUser.tenantId);
     if (filters?.status && filters.status !== "all") {
@@ -328,6 +394,190 @@ async function getCrewByRole(
     }
     return result as any;
   }
+}
+
+export async function getCrewRosterImpl(filters?: {
+  role?: string;
+  status?: string;
+  depot?: string;
+  search?: string;
+}) {
+  const currentUser = await requireAuth();
+  await requirePermission(currentUser.role, "crew.view");
+
+  try {
+    let conditions = [eq(crew.tenantId, currentUser.tenantId)];
+
+    if (filters?.role && filters.role !== "all") {
+      conditions.push(eq(crew.role, filters.role));
+    }
+
+    if (filters?.status && filters.status !== "all") {
+      conditions.push(eq(crew.status, filters.status));
+    }
+
+    if (filters?.depot && filters.depot !== "all") {
+      conditions.push(eq(crew.depot, filters.depot));
+    }
+
+    if (filters?.search) {
+      const searchPattern = `%${filters.search}%`;
+      conditions.push(
+        or(
+          like(crew.name, searchPattern),
+          like(crew.employeeId, searchPattern),
+          like(crew.depot, searchPattern),
+        )!,
+      );
+    }
+
+    const members = await db
+      .select()
+      .from(crew)
+      .where(and(...conditions))
+      .orderBy(crew.role, crew.employeeId);
+
+    // Get active duties to link current trip assignments
+    const activeDuties = await db
+      .select({
+        dutyId: duties.id,
+        dutyCode: duties.dutyCode,
+        driverId: duties.driverId,
+        conductorId: duties.conductorId,
+        tripId: trips.id,
+        tripCode: trips.tripCode,
+        routeCode: routes.code,
+        origin: trips.origin,
+        destination: trips.destination,
+        startTime: trips.startTime,
+      })
+      .from(duties)
+      .leftJoin(dutyTrips, eq(duties.id, dutyTrips.dutyId))
+      .leftJoin(trips, eq(dutyTrips.tripId, trips.id))
+      .leftJoin(routes, eq(trips.routeId, routes.id))
+      .where(eq(duties.tenantId, currentUser.tenantId));
+
+    const driverDutyMap = new Map<string, any>();
+    const conductorDutyMap = new Map<string, any>();
+
+    for (const d of activeDuties) {
+      if (d.driverId && !driverDutyMap.has(d.driverId)) {
+        driverDutyMap.set(d.driverId, d);
+      }
+      if (d.conductorId && !conductorDutyMap.has(d.conductorId)) {
+        conductorDutyMap.set(d.conductorId, d);
+      }
+    }
+
+    return members.map((m) => {
+      const assignment =
+        m.role === "driver"
+          ? driverDutyMap.get(m.id)
+          : conductorDutyMap.get(m.id);
+
+      return {
+        ...m,
+        assignedTrip:
+          assignment && assignment.tripCode
+            ? {
+                tripId: assignment.tripId,
+                tripCode: assignment.tripCode,
+                routeCode: assignment.routeCode || "MTC",
+                origin: assignment.origin,
+                destination: assignment.destination,
+                departureTime: assignment.startTime,
+                dutyCode: assignment.dutyCode,
+              }
+            : null,
+      };
+    });
+  } catch (err: any) {
+    console.error("Error in getCrewRosterImpl:", err);
+    throw new Error(`Failed to load crew roster: ${err.message}`);
+  }
+}
+
+export async function bulkImportCrewImpl(
+  membersData: Array<{
+    employeeId: string;
+    name: string;
+    role: "driver" | "conductor";
+    depot: string;
+    status?: string;
+    licenseCategory?: string;
+  }>,
+) {
+  const currentUser = await requireAuth();
+  await requirePermission(currentUser.role, "crew.manage");
+
+  if (!membersData || membersData.length === 0) {
+    throw new Error("No crew records provided for import.");
+  }
+
+  // Fetch existing employee IDs for this tenant to prevent duplicates
+  const existingCrew = await db
+    .select({ employeeId: crew.employeeId })
+    .from(crew)
+    .where(eq(crew.tenantId, currentUser.tenantId));
+
+  const existingSet = new Set(
+    existingCrew.map((c) => c.employeeId.toLowerCase()),
+  );
+  const toInsert: any[] = [];
+  const skipped: string[] = [];
+
+  for (const m of membersData) {
+    const empId = (m.employeeId || "").trim();
+    const name = (m.name || "").trim();
+    const depot = (m.depot || "").trim() || "Central / Broadway Depot";
+    const role = m.role === "conductor" ? "conductor" : "driver";
+    const status = m.status || "available";
+
+    if (!empId || !name) {
+      skipped.push(`${empId || "UNKNOWN"}: Missing employee ID or name`);
+      continue;
+    }
+
+    if (existingSet.has(empId.toLowerCase())) {
+      skipped.push(`${empId}: Duplicate employee ID already registered`);
+      continue;
+    }
+
+    existingSet.add(empId.toLowerCase());
+    toInsert.push({
+      tenantId: currentUser.tenantId,
+      employeeId: empId,
+      name,
+      role,
+      depot,
+      status,
+      licenseCategory:
+        role === "driver"
+          ? m.licenseCategory || "Heavy Passenger Vehicle (HPV) / PSV Badge"
+          : null,
+      availableFrom: 330,
+      restUntil: 330,
+    });
+  }
+
+  if (toInsert.length > 0) {
+    await db.insert(crew).values(toInsert);
+
+    await db.insert(auditLogs).values({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      email: currentUser.email,
+      action: "CREW_BULK_IMPORTED",
+      details: `Bulk imported ${toInsert.length} crew members (${skipped.length} skipped)`,
+    });
+  }
+
+  return {
+    success: true,
+    insertedCount: toInsert.length,
+    skippedCount: skipped.length,
+    skippedReasons: skipped,
+  };
 }
 
 export async function getDriversImpl(filters?: {

@@ -1,4 +1,5 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link, redirect } from "@tanstack/react-router";
+import { Route as RootRoute } from "@/routes/__root";
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { useActiveTenant } from "@/lib/tenant-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,8 +51,8 @@ import {
 
 export const Route = createFileRoute("/network/planner")({
   beforeLoad: ({ context }) => {
-    if (!context.user || !hasPermission(context.user.role, "routes.manage")) {
-      throw new Error("Forbidden");
+    if (!context.user) {
+      throw redirect({ to: "/login" });
     }
   },
   head: () => ({
@@ -75,6 +77,10 @@ interface LocalStop {
 function RoutePlannerPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const context = RootRoute.useRouteContext();
+  const user = context?.user;
+  const canManage = hasPermission(user?.role || "", "routes.manage");
+  const { currentTenant } = useActiveTenant();
 
   // Form states
   const [code, setCode] = useState("");
@@ -172,9 +178,15 @@ function RoutePlannerPage() {
     if (!L || !mapRef.current) return;
 
     if (!mapInstanceRef.current) {
-      const map = L.map(mapRef.current).setView([11.6673, 78.1424], 13);
+      const defaultCenter: [number, number] = currentTenant.id.startsWith("69000000")
+        ? [13.045, 80.24]
+        : [11.6673, 78.1424];
+      const defaultZoom = currentTenant.id.startsWith("69000000") ? 12 : 13;
+
+      const map = L.map(mapRef.current).setView(defaultCenter, defaultZoom);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors",
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+        subdomains: ["a", "b", "c"],
       }).addTo(map);
 
       mapInstanceRef.current = map;
@@ -663,10 +675,16 @@ function RoutePlannerPage() {
             </Button>
             <Button
               className="flex-1"
-              disabled={drawnCoords.length < 2 || saveRouteMutation.isPending}
-              onClick={() => saveRouteMutation.mutate()}
+              disabled={!canManage || drawnCoords.length < 2 || saveRouteMutation.isPending}
+              onClick={() => {
+                if (!canManage) {
+                  toast.error("You need route management permissions to save corridors.");
+                  return;
+                }
+                saveRouteMutation.mutate();
+              }}
             >
-              <Save className="size-4 mr-1.5" /> Save Corridor
+              <Save className="size-4 mr-1.5" /> {canManage ? "Save Corridor" : "Save (Restricted)"}
             </Button>
           </div>
         </div>

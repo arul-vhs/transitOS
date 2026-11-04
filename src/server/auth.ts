@@ -24,7 +24,7 @@ export interface SessionPayload {
 }
 
 export const CHENNAI_MTC_TENANT_ID = "69000000-0000-4000-8000-000000000069";
-export const SALEM_TENANT_ID = "6fcb73df-750e-4fe5-b0cb-456b119dcd64";
+export const SALEM_TENANT_ID = "c4ab681d-7b82-4674-bb8a-14ef96de6d23";
 export const REAL_TENANT_ID = CHENNAI_MTC_TENANT_ID;
 
 export const OLD_USER_ID_MAP: Record<string, string> = {
@@ -93,7 +93,7 @@ export const DEMO_ACCOUNTS: Record<
     depotName: "Central / Broadway Depot",
   },
   "planner@mtcchennai.demo": {
-    id: "69ceced7c-eb42-4cd3-9e25-ab8515ed03a1",
+    id: "69ceced7-eb42-4cd3-9e25-ab8515ed03a1",
     email: "planner@mtcchennai.demo",
     name: "Route Planner (MTC)",
     role: "ROUTE_PLANNER",
@@ -183,12 +183,15 @@ export async function getCurrentUser() {
   const session = getSessionFromRequest();
   if (!session) return null;
 
-  const cleanTenantId =
+  let cleanTenantId =
     !session.tenantId ||
     session.tenantId === "ten-salem-transport" ||
     session.tenantId.length < 30
       ? CHENNAI_MTC_TENANT_ID
       : session.tenantId;
+  if (cleanTenantId === "6fcb73df-750e-4fe5-b0cb-456b119dcd64") {
+    cleanTenantId = SALEM_TENANT_ID;
+  }
 
   const cleanUserId = OLD_USER_ID_MAP[session.userId] || session.userId;
 
@@ -207,18 +210,34 @@ export async function getCurrentUser() {
         return null;
       }
 
+      // Check if session switched to a different tenant
+      let resolvedTenantId = user.tenantId;
+      let resolvedTenantName = user.tenant.name;
+      let resolvedTenantSlug = user.tenant.slug;
+
+      if (cleanTenantId && cleanTenantId !== user.tenantId) {
+        const switchedTenant = await db.query.tenants.findFirst({
+          where: eq(tenants.id, cleanTenantId),
+        });
+        if (switchedTenant) {
+          resolvedTenantId = switchedTenant.id;
+          resolvedTenantName = switchedTenant.name;
+          resolvedTenantSlug = switchedTenant.slug;
+        }
+      }
+
       return {
         id: user.id,
         email: user.email,
         name: user.name,
         role: user.role,
-        tenantId: user.tenantId,
-        tenantName: user.tenant.name,
-        tenantSlug: user.tenant.slug,
+        tenantId: resolvedTenantId,
+        tenantName: resolvedTenantName,
+        tenantSlug: resolvedTenantSlug,
         depotName:
-          user.tenantId === CHENNAI_MTC_TENANT_ID
+          resolvedTenantId === CHENNAI_MTC_TENANT_ID
             ? "Central / Broadway Depot"
-            : "Meyyanur Depot",
+            : "Meyyanur Central Depot",
       };
     }
   } catch (err) {
@@ -434,7 +453,7 @@ export async function switchTenantFnImpl(targetTenantId: string) {
     updatedSession = {
       userId: isMTC
         ? "69c3c165-8fcd-4490-b126-c286ffa64700"
-        : "59c3c165-8fcd-4490-b126-c286ffa64700",
+        : "3b610ba1-f3da-4f63-88a3-bc0edee3334d",
       tenantId: targetTenantId,
       role: "ORGANIZATION_ADMIN",
       email: isMTC ? "admin@mtcchennai.demo" : "admin@salemtransport.demo",

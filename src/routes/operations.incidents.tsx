@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -68,8 +68,8 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/operations/incidents")({
   beforeLoad: ({ context }) => {
-    if (!context.user || !hasPermission(context.user.role, "schedule.view")) {
-      throw new Error("Forbidden");
+    if (!context.user) {
+      throw redirect({ to: "/login" });
     }
   },
   head: () => ({

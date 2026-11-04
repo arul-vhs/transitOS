@@ -75,22 +75,24 @@ interface StopItem {
 }
 
 const TILE_LAYERS = {
-  voyager: {
-    name: "Voyager (Standard Transit)",
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    attribution:
-      '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap contributors',
-  },
-  dark: {
-    name: "Dark Matter (High Contrast)",
-    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    attribution:
-      '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap contributors',
-  },
   osm: {
     name: "OpenStreetMap",
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution: "&copy; OpenStreetMap contributors",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+    subdomains: ["a", "b", "c"],
+  },
+  dark: {
+    name: "Dark Canvas",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    attribution:
+      'Tiles &copy; <a href="https://www.esri.com" target="_blank" rel="noreferrer">Esri</a>, HERE, Garmin, &copy; OpenStreetMap contributors',
+  },
+  street: {
+    name: "Esri Street",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+    attribution:
+      'Tiles &copy; <a href="https://www.esri.com" target="_blank" rel="noreferrer">Esri</a>, DeLorme, NAVTEQ',
   },
 };
 
@@ -121,8 +123,8 @@ function TransitNetworkMapPage() {
   const [selectedStopName, setSelectedStopName] = useState<string | null>(null);
   const [routeSearch, setRouteSearch] = useState("");
   const [stopSearch, setStopSearch] = useState("");
-  const [tileStyle, setTileStyle] = useState<"voyager" | "dark" | "osm">(
-    resolvedTheme === "dark" ? "dark" : "voyager",
+  const [tileStyle, setTileStyle] = useState<"osm" | "dark" | "street">(
+    resolvedTheme === "dark" ? "dark" : "osm",
   );
   const [showStops, setShowStops] = useState(true);
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
@@ -146,10 +148,10 @@ function TransitNetworkMapPage() {
 
   // Sync theme with default tile style if not explicitly toggled
   useEffect(() => {
-    if (resolvedTheme === "dark" && tileStyle === "voyager") {
+    if (resolvedTheme === "dark" && tileStyle === "osm") {
       setTileStyle("dark");
     } else if (resolvedTheme === "light" && tileStyle === "dark") {
-      setTileStyle("voyager");
+      setTileStyle("osm");
     }
   }, [resolvedTheme]);
 
@@ -186,8 +188,12 @@ function TransitNetworkMapPage() {
       stopsLayerGroupRef.current = L.layerGroup().addTo(map);
 
       mapInstanceRef.current = map;
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 200);
     } else {
       mapInstanceRef.current.setView(defaultCenter, defaultZoom);
+      mapInstanceRef.current.invalidateSize();
     }
 
     return () => {
@@ -197,6 +203,24 @@ function TransitNetworkMapPage() {
       }
     };
   }, [L, defaultCenter, defaultZoom]);
+
+  // Invalidate map size on drawer toggle or window resize
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    const timer = setTimeout(() => {
+      mapInstanceRef.current?.invalidateSize();
+    }, 200);
+
+    const handleResize = () => {
+      mapInstanceRef.current?.invalidateSize();
+    };
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [sidePanelOpen, L]);
 
   // Update Tile Layer
   useEffect(() => {
@@ -282,16 +306,36 @@ function TransitNetworkMapPage() {
       const isDimmed = selectedRouteId !== null && !isSelected;
 
       const coords: [number, number][] = [];
-      if (
-        route.geometryGeojson &&
-        route.geometryGeojson.coordinates &&
-        Array.isArray(route.geometryGeojson.coordinates)
-      ) {
-        route.geometryGeojson.coordinates.forEach((pt: [number, number]) => {
-          // pt is [lng, lat]
-          coords.push([pt[1], pt[0]]);
-        });
-      } else {
+      const geom = (route.geometryGeojson as any)?.geometry || (route.geometryGeojson as any);
+      if (geom) {
+        if (geom.type === "LineString" && Array.isArray(geom.coordinates)) {
+          geom.coordinates.forEach((pt: any) => {
+            if (Array.isArray(pt) && pt.length >= 2) {
+              const lng = Number(pt[0]);
+              const lat = Number(pt[1]);
+              if (!isNaN(lat) && !isNaN(lng)) {
+                coords.push([lat, lng]);
+              }
+            }
+          });
+        } else if (geom.type === "MultiLineString" && Array.isArray(geom.coordinates)) {
+          geom.coordinates.forEach((line: any) => {
+            if (Array.isArray(line)) {
+              line.forEach((pt: any) => {
+                if (Array.isArray(pt) && pt.length >= 2) {
+                  const lng = Number(pt[0]);
+                  const lat = Number(pt[1]);
+                  if (!isNaN(lat) && !isNaN(lng)) {
+                    coords.push([lat, lng]);
+                  }
+                }
+              });
+            }
+          });
+        }
+      }
+
+      if (coords.length === 0) {
         // Fallback: derive from stops
         const routeStops = allStopsList
           .filter((s) => s.routeId === route.id)
@@ -502,37 +546,37 @@ function TransitNetworkMapPage() {
             {/* Tile Style Selector */}
             <div className="flex items-center bg-background/95 backdrop-blur-md border border-border rounded-md p-0.5 shadow-sm">
               <button
-                onClick={() => setTileStyle("voyager")}
-                className={cn(
-                  "px-2.5 py-1 text-xs font-medium rounded cursor-pointer transition-colors",
-                  tileStyle === "voyager"
-                    ? "bg-primary text-primary-foreground font-semibold"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Transit
-              </button>
-              <button
-                onClick={() => setTileStyle("dark")}
-                className={cn(
-                  "px-2.5 py-1 text-xs font-medium rounded cursor-pointer transition-colors",
-                  tileStyle === "dark"
-                    ? "bg-primary text-primary-foreground font-semibold"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Dark
-              </button>
-              <button
                 onClick={() => setTileStyle("osm")}
                 className={cn(
-                  "px-2.5 py-1 text-xs font-medium rounded cursor-pointer transition-colors",
+                  "px-2.5 py-1 text-xs font-medium rounded-md cursor-pointer transition-colors",
                   tileStyle === "osm"
                     ? "bg-primary text-primary-foreground font-semibold"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                Street
+                Standard
+              </button>
+              <button
+                onClick={() => setTileStyle("dark")}
+                className={cn(
+                  "px-2.5 py-1 text-xs font-medium rounded-md cursor-pointer transition-colors",
+                  tileStyle === "dark"
+                    ? "bg-primary text-primary-foreground font-semibold"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Dark Canvas
+              </button>
+              <button
+                onClick={() => setTileStyle("street")}
+                className={cn(
+                  "px-2.5 py-1 text-xs font-medium rounded-md cursor-pointer transition-colors",
+                  tileStyle === "street"
+                    ? "bg-primary text-primary-foreground font-semibold"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Street Map
               </button>
             </div>
 

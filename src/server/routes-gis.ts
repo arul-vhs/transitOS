@@ -1,6 +1,6 @@
 import { eq, and, or, like, asc } from "drizzle-orm";
 import { db } from "./db";
-import { routes, stops, auditLogs } from "./db/schema";
+import { routes, stops, trips, auditLogs } from "./db/schema";
 import { requireAuth, requirePermission } from "./auth";
 import { FALLBACK_ROUTES, FALLBACK_STOPS } from "./db/fallback-data";
 
@@ -542,16 +542,75 @@ export async function updateStopImpl(
   if (isNaN(lngNum) || lngNum < -180 || lngNum > 180)
     throw new Error("Longitude must be between -180 and 180");
 
+  const oldName = stopRecord.name;
+  const newName = data.name.trim();
+
   const [updatedStop] = await db
     .update(stops)
     .set({
-      name: data.name,
+      name: newName,
       sequence: data.sequence,
       latitude: data.latitude,
       longitude: data.longitude,
     })
     .where(and(eq(stops.id, id), eq(stops.tenantId, currentUser.tenantId)))
     .returning();
+
+  if (oldName !== newName) {
+    try {
+      await db
+        .update(stops)
+        .set({ name: newName })
+        .where(
+          and(
+            eq(stops.tenantId, currentUser.tenantId),
+            eq(stops.name, oldName),
+          ),
+        );
+
+      await db
+        .update(routes)
+        .set({ origin: newName })
+        .where(
+          and(
+            eq(routes.tenantId, currentUser.tenantId),
+            eq(routes.origin, oldName),
+          ),
+        );
+
+      await db
+        .update(routes)
+        .set({ destination: newName })
+        .where(
+          and(
+            eq(routes.tenantId, currentUser.tenantId),
+            eq(routes.destination, oldName),
+          ),
+        );
+
+      await db
+        .update(trips)
+        .set({ origin: newName })
+        .where(
+          and(
+            eq(trips.tenantId, currentUser.tenantId),
+            eq(trips.origin, oldName),
+          ),
+        );
+
+      await db
+        .update(trips)
+        .set({ destination: newName })
+        .where(
+          and(
+            eq(trips.tenantId, currentUser.tenantId),
+            eq(trips.destination, oldName),
+          ),
+        );
+    } catch (propagationErr) {
+      console.warn("Failed to propagate stop rename across related tables:", propagationErr);
+    }
+  }
 
   // Audit log
   await db.insert(auditLogs).values({

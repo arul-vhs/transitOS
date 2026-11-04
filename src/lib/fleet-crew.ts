@@ -139,6 +139,17 @@ export const updateBusStatus = async (
   return await _updateBusStatus(toServerFnArgs(payload)!);
 };
 
+const _deleteBus = createServerFn({ method: "POST" })
+  .validator((id: string) => id)
+  .handler(async ({ data }) => {
+    const { deleteBusImpl } = await import("../server/fleet-crew");
+    return await deleteBusImpl(data);
+  });
+
+export const deleteBus = async (id: string | { data: string }) => {
+  return await _deleteBus(toServerFnArgs(id)!);
+};
+
 // 2. Crew
 const _getDrivers = createServerFn({ method: "GET" })
   .validator(
@@ -312,4 +323,86 @@ const _getCrewAvailability = createServerFn({ method: "GET" }).handler(
 
 export const getCrewAvailability = async () => {
   return await _getCrewAvailability();
+};
+
+const _getCrewRoster = createServerFn({ method: "GET" })
+  .validator(
+    (
+      filters?: {
+        role?: string;
+        status?: string;
+        depot?: string;
+        search?: string;
+      } | void,
+    ) => filters,
+  )
+  .handler(async ({ data }) => {
+    const { getCrewRosterImpl } = await import("../server/fleet-crew");
+    return await getCrewRosterImpl(data || undefined);
+  });
+
+export const getCrewRoster = async (
+  payload?:
+    | {
+        role?: string;
+        status?: string;
+        depot?: string;
+        search?: string;
+      }
+    | {
+        data?: {
+          role?: string;
+          status?: string;
+          depot?: string;
+          search?: string;
+        };
+      },
+) => {
+  return await _getCrewRoster(toServerFnArgs(payload));
+};
+
+const _bulkImportCrew = createServerFn({ method: "POST" })
+  .validator(
+    (payload: {
+      members: Array<{
+        employeeId: string;
+        name: string;
+        role: "driver" | "conductor";
+        depot: string;
+        status?: string;
+        licenseCategory?: string;
+      }>;
+    }) => payload,
+  )
+  .handler(async ({ data }) => {
+    const { bulkImportCrewImpl } = await import("../server/fleet-crew");
+    return await bulkImportCrewImpl(data.members);
+  });
+
+export const bulkImportCrew = async (
+  payload:
+    | {
+        members: Array<{
+          employeeId: string;
+          name: string;
+          role: "driver" | "conductor";
+          depot: string;
+          status?: string;
+          licenseCategory?: string;
+        }>;
+      }
+    | {
+        data: {
+          members: Array<{
+            employeeId: string;
+            name: string;
+            role: "driver" | "conductor";
+            depot: string;
+            status?: string;
+            licenseCategory?: string;
+          }>;
+        };
+      },
+) => {
+  return await _bulkImportCrew(toServerFnArgs(payload)!);
 };
