@@ -13,6 +13,7 @@ const _getAllocationPlan = createServerFn({ method: "POST" })
       periodId?: TimePeriodId;
       customSurges?: SurgeScenarioInput[];
       serviceDate?: string;
+      tenantId?: string;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -23,6 +24,7 @@ const _getAllocationPlan = createServerFn({ method: "POST" })
       data.periodId,
       data.customSurges,
       data.serviceDate,
+      data.tenantId,
     );
   });
 
@@ -31,24 +33,29 @@ export const getAllocationPlan = async (data?: {
   periodId?: TimePeriodId;
   customSurges?: SurgeScenarioInput[];
   serviceDate?: string;
+  tenantId?: string;
 }) => {
   return await _getAllocationPlan(toServerFnArgs(data || {})!);
 };
 
 const _getCorridorDemandProfiles = createServerFn({ method: "POST" })
   .validator(
-    (data: { periodId?: TimePeriodId; customSurges?: SurgeScenarioInput[] }) =>
-      data,
+    (data: {
+      periodId?: TimePeriodId;
+      customSurges?: SurgeScenarioInput[];
+      tenantId?: string;
+    }) => data,
   )
   .handler(async ({ data }) => {
     const { buildCorridorProfiles } =
       await import("../server/allocation/demand-engine");
-    return buildCorridorProfiles(data.periodId, data.customSurges);
+    return buildCorridorProfiles(data.periodId, data.customSurges, data.tenantId);
   });
 
 export const getCorridorDemandProfiles = async (data?: {
   periodId?: TimePeriodId;
   customSurges?: SurgeScenarioInput[];
+  tenantId?: string;
 }) => {
   return await _getCorridorDemandProfiles(toServerFnArgs(data || {})!);
 };
@@ -76,6 +83,7 @@ const _dispatchFleetAllocation = createServerFn({ method: "POST" })
       loadFactorBefore: number;
       loadFactorAfter: number;
       notes?: string;
+      tenantId?: string;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -88,16 +96,16 @@ export const dispatchFleetAllocation = async (data: any) => {
   return await _dispatchFleetAllocation(toServerFnArgs(data)!);
 };
 
-const _getRecentAllocations = createServerFn({ method: "GET" }).handler(
-  async () => {
+const _getRecentAllocations = createServerFn({ method: "POST" })
+  .validator((data?: { tenantId?: string }) => data)
+  .handler(async ({ data }) => {
     const { getRecentAllocationsImpl } =
       await import("../server/allocation/demand-engine");
-    return await getRecentAllocationsImpl();
-  },
-);
+    return await getRecentAllocationsImpl(data);
+  });
 
-export const getRecentAllocations = async () => {
-  return await _getRecentAllocations();
+export const getRecentAllocations = async (data?: { tenantId?: string }) => {
+  return await _getRecentAllocations(toServerFnArgs(data || {})!);
 };
 
 const _getTimePeriods = createServerFn({ method: "GET" }).handler(async () => {

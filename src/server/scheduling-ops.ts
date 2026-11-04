@@ -175,31 +175,139 @@ export async function getTripsImpl(filters?: {
       });
     }
 
-    const [tenantTripCount] = await db
-      .select({ count: count() })
+    // If no trips found for this specific calendar date, check if this tenant has scheduled template trips in the database across other dates
+    let templateConditions = [eq(trips.tenantId, currentUser.tenantId)];
+    if (filters?.routeId && filters.routeId !== "all") {
+      templateConditions.push(eq(trips.routeId, filters.routeId));
+    }
+    if (filters?.status && filters.status !== "all") {
+      templateConditions.push(eq(trips.status, filters.status));
+    }
+    if (filters?.direction && filters.direction !== "all") {
+      templateConditions.push(eq(trips.direction, filters.direction));
+    }
+
+    const templateDbTrips = await db
+      .select({
+        id: trips.id,
+        tripCode: trips.tripCode,
+        direction: trips.direction,
+        startTime: trips.startTime,
+        endTime: trips.endTime,
+        durationMin: trips.durationMin,
+        distanceKm: trips.distanceKm,
+        origin: trips.origin,
+        destination: trips.destination,
+        status: trips.status,
+        serviceDate: trips.serviceDate,
+        routeId: trips.routeId,
+        routeName: routes.name,
+        routeCode: routes.code,
+      })
       .from(trips)
-      .where(eq(trips.tenantId, currentUser.tenantId));
-    if (tenantTripCount && tenantTripCount.count > 0) {
-      return [];
+      .innerJoin(routes, eq(trips.routeId, routes.id))
+      .where(and(...templateConditions))
+      .orderBy(trips.startTime);
+
+    if (templateDbTrips.length > 0) {
+      const tripIds = templateDbTrips.map((t) => t.id);
+      const linkedDutyTrips = await db
+        .select({
+          dutyId: dutyTrips.dutyId,
+          tripId: dutyTrips.tripId,
+        })
+        .from(dutyTrips)
+        .where(
+          and(
+            eq(dutyTrips.tenantId, currentUser.tenantId),
+            inArray(dutyTrips.tripId, tripIds),
+          ),
+        );
+
+      const dutyIds = [...new Set(linkedDutyTrips.map((l) => l.dutyId))];
+      const dutyMap = new Map<string, any>();
+      if (dutyIds.length > 0) {
+        const dbDuties = await db
+          .select()
+          .from(duties)
+          .where(inArray(duties.id, dutyIds));
+        dbDuties.forEach((d) => dutyMap.set(d.id, d));
+      }
+
+      const dbBuses = await db
+        .select({
+          id: buses.id,
+          registrationNumber: buses.registrationNumber,
+          fleetNumber: buses.fleetNumber,
+        })
+        .from(buses)
+        .where(eq(buses.tenantId, currentUser.tenantId));
+      const busMap = new Map<string, any>();
+      dbBuses.forEach((b) => busMap.set(b.id, b));
+
+      const dbCrew = await db
+        .select({
+          id: crew.id,
+          name: crew.name,
+          role: crew.role,
+          employeeId: crew.employeeId,
+        })
+        .from(crew)
+        .where(eq(crew.tenantId, currentUser.tenantId));
+      const crewMap = new Map<string, any>();
+      dbCrew.forEach((c) => crewMap.set(c.id, c));
+
+      const tripToDutyMap = new Map<string, any>();
+      linkedDutyTrips.forEach((ldt) => {
+        const d = dutyMap.get(ldt.dutyId);
+        if (d) tripToDutyMap.set(ldt.tripId, d);
+      });
+
+      const targetDate =
+        filters?.serviceDate && filters.serviceDate !== "all"
+          ? filters.serviceDate
+          : templateDbTrips[0]?.serviceDate || "25 Aug 2026";
+
+      return templateDbTrips.map((t) => {
+        const duty = tripToDutyMap.get(t.id);
+        const bus = duty?.busId ? busMap.get(duty.busId) : null;
+        const driver = duty?.driverId ? crewMap.get(duty.driverId) : null;
+        const conductor = duty?.conductorId ? crewMap.get(duty.conductorId) : null;
+
+        return {
+          ...t,
+          serviceDate: targetDate,
+          dutyId: duty?.id || null,
+          dutyCode: duty?.dutyCode || null,
+          busId: duty?.busId || null,
+          busRegNumber: bus
+            ? `${bus.registrationNumber} (${bus.fleetNumber || "Bus"})`
+            : null,
+          driverId: duty?.driverId || null,
+          driverName: driver ? driver.name : null,
+          conductorId: duty?.conductorId || null,
+          conductorName: conductor ? conductor.name : null,
+        };
+      });
     }
 
     throw new Error("No database trips for tenant, using fallback dataset");
   } catch (err) {
     let result = FALLBACK_TRIPS.filter((t) => t.tenantId === currentUser.tenantId).map((t) => ({
       id: t.id,
-      tripCode: t.tripNumber,
+      tripCode: t.tripNumber || t.tripCode,
       direction: t.direction,
-      startTime: t.startMinutes,
-      endTime: t.endMinutes,
-      durationMin: t.endMinutes - t.startMinutes,
-      distanceKm: t.route?.distanceKm || "15.0",
-      origin: t.route?.origin || "Salem Central",
-      destination: t.route?.destination || "Omalur",
+      startTime: t.startTime ?? t.startMinutes,
+      endTime: t.endTime ?? t.endMinutes,
+      durationMin: t.durationMin ?? ((t.endMinutes ?? 0) - (t.startMinutes ?? 0)),
+      distanceKm: t.distanceKm || t.route?.distanceKm || "15.0",
+      origin: t.origin || t.route?.origin || "Salem Central",
+      destination: t.destination || t.route?.destination || "Omalur",
       status: t.status,
-      serviceDate: filters?.serviceDate || "2026-08-25",
+      serviceDate: filters?.serviceDate && filters.serviceDate !== "all" ? filters.serviceDate : "25 Aug 2026",
       routeId: t.routeId,
-      routeName: t.route?.name || "Route 13: Salem to Omalur",
-      routeCode: t.route?.code || "13",
+      routeName: (t as any).routeName || t.route?.name || "Route Corridor",
+      routeCode: (t as any).routeCode || t.route?.code || "1",
     }));
 
     if (filters?.routeId && filters.routeId !== "all") {
@@ -460,6 +568,100 @@ export async function getDutiesImpl(filters?: {
       .where(and(...conditions))
       .orderBy(duties.dutyCode);
     if (rawDuties.length === 0) {
+      let templateConditions = [eq(duties.tenantId, currentUser.tenantId)];
+      if (filters?.status && filters.status !== "all") {
+        templateConditions.push(eq(duties.status, filters.status));
+      }
+
+      const templateDuties = await db
+        .select()
+        .from(duties)
+        .where(and(...templateConditions))
+        .orderBy(duties.dutyCode);
+
+      if (templateDuties.length > 0) {
+        const targetDate =
+          filters?.serviceDate || templateDuties[0]?.serviceDate || "25 Aug 2026";
+        return await Promise.all(
+          templateDuties.map(async (d) => {
+            const tripsList = await db
+              .select({
+                id: trips.id,
+                tripCode: trips.tripCode,
+                startTime: trips.startTime,
+                endTime: trips.endTime,
+                routeCode: routes.code,
+                routeName: routes.name,
+                sequence: dutyTrips.sequence,
+                handoverRequired: dutyTrips.handoverRequired,
+              })
+              .from(dutyTrips)
+              .innerJoin(trips, eq(dutyTrips.tripId, trips.id))
+              .innerJoin(routes, eq(trips.routeId, routes.id))
+              .where(
+                and(
+                  eq(dutyTrips.dutyId, d.id),
+                  eq(dutyTrips.tenantId, currentUser.tenantId),
+                ),
+              )
+              .orderBy(asc(dutyTrips.sequence));
+
+            const crewSegmentsList = await db
+              .select({
+                id: dutyCrewSegments.id,
+                driverId: dutyCrewSegments.driverId,
+                driverName: crew.name,
+                conductorId: dutyCrewSegments.conductorId,
+                startTime: dutyCrewSegments.startTime,
+                endTime: dutyCrewSegments.endTime,
+                sequence: dutyCrewSegments.sequence,
+              })
+              .from(dutyCrewSegments)
+              .leftJoin(crew, eq(dutyCrewSegments.driverId, crew.id))
+              .where(
+                and(
+                  eq(dutyCrewSegments.dutyId, d.id),
+                  eq(dutyCrewSegments.tenantId, currentUser.tenantId),
+                ),
+              )
+              .orderBy(asc(dutyCrewSegments.sequence));
+
+            let baseDriverName = "Unassigned";
+            let baseConductorName = "Unassigned";
+            if (d.driverId) {
+              const dr = await db.query.crew.findFirst({
+                where: eq(crew.id, d.driverId),
+              });
+              if (dr) baseDriverName = dr.name;
+            }
+            if (d.conductorId) {
+              const cn = await db.query.crew.findFirst({
+                where: eq(crew.id, d.conductorId),
+              });
+              if (cn) baseConductorName = cn.name;
+            }
+
+            let busRegNumber = "Unassigned";
+            if (d.busId) {
+              const b = await db.query.buses.findFirst({
+                where: eq(buses.id, d.busId),
+              });
+              if (b) busRegNumber = b.registrationNumber;
+            }
+
+            return {
+              ...d,
+              serviceDate: targetDate,
+              busRegNumber,
+              driverName: baseDriverName,
+              conductorName: baseConductorName,
+              trips: tripsList,
+              crewSegments: crewSegmentsList,
+            };
+          }),
+        );
+      }
+
       throw new Error("No database duties for tenant, using fallback dataset");
     }
 
@@ -546,8 +748,8 @@ export async function getDutiesImpl(filters?: {
     let result = FALLBACK_DUTIES.filter((d) => d.tenantId === currentUser.tenantId).map((d) => ({
       id: d.id,
       tenantId: d.tenantId,
-      dutyCode: d.dutyNumber,
-      serviceDate: filters?.serviceDate || "2026-08-25",
+      dutyCode: d.dutyNumber || d.dutyCode,
+      serviceDate: filters?.serviceDate || "25 Aug 2026",
       busId: d.busId,
       driverId: d.driverId,
       conductorId: d.conductorId,
@@ -558,16 +760,16 @@ export async function getDutiesImpl(filters?: {
       status: d.status,
       complianceRestOk: d.isRestCompliant,
       driverWeeklyDrivingMinutes: 1800,
-      busRegNumber: d.bus?.registrationNumber || "TN-30-N-0412",
-      driverName: d.driver?.name || "K. Selvam (DRV-01)",
-      conductorName: d.conductor?.name || "R. Murugan (CND-01)",
+      busRegNumber: d.bus?.registrationNumber || (d.tenantId === "69000000-0000-4000-8000-000000000069" ? "TN-01-N-1001" : "TN-30-N-0412"),
+      driverName: d.driver?.name || (d.tenantId === "69000000-0000-4000-8000-000000000069" ? "S. Anbalagan (DRV-01)" : "K. Selvam (DRV-01)"),
+      conductorName: d.conductor?.name || (d.tenantId === "69000000-0000-4000-8000-000000000069" ? "P. Arumugam (CND-01)" : "R. Murugan (CND-01)"),
       trips: (d.trips || []).map((t: any, idx: number) => ({
         id: t.id,
-        tripCode: t.tripNumber,
-        startTime: t.startMinutes,
-        endTime: t.endMinutes,
-        routeCode: t.route?.code || "13",
-        routeName: t.route?.name || "Salem Central to Omalur",
+        tripCode: t.tripNumber || t.tripCode,
+        startTime: t.startTime ?? t.startMinutes,
+        endTime: t.endTime ?? t.endMinutes,
+        routeCode: t.routeCode || t.route?.code || "1",
+        routeName: t.routeName || t.route?.name || "Route Corridor",
         sequence: idx + 1,
         handoverRequired: false,
       })),
@@ -1866,8 +2068,8 @@ export async function getLiveTrackingAssignmentsImpl(filters?: {
       status: t.status,
       serviceDate: targetDate,
       routeId: t.routeId,
-      routeName: t.route?.name || t.routeName || "Corridor Route",
-      routeCode: t.route?.code || t.routeCode || "MTC",
+      routeName: t.route?.name || (t as any).routeName || "Corridor Route",
+      routeCode: t.route?.code || (t as any).routeCode || "MTC",
     }));
 
     const tenantDuties = FALLBACK_DUTIES.filter(

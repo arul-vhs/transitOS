@@ -44,15 +44,25 @@ async function main() {
   await db.execute(sql`TRUNCATE TABLE users CASCADE;`);
   await db.execute(sql`TRUNCATE TABLE tenants CASCADE;`);
 
-  // 2. Seed Tenant: Salem Transport Corporation
-  console.log("Seeding tenant: Salem Transport Corporation...");
+  // 2. Seed Tenants: Salem Transport Corporation & Chennai MTC
+  console.log("Seeding tenants...");
   const [tenant] = await db
     .insert(tenants)
     .values({
+      id: "c4ab681d-7b82-4674-bb8a-14ef96de6d23",
       name: "Salem Transport Corporation",
       slug: "salem-transport",
     })
     .returning();
+
+  await db
+    .insert(tenants)
+    .values({
+      id: "69000000-0000-4000-8000-000000000069",
+      name: "Chennai Metropolitan Transport Corporation",
+      slug: "chennai-mtc",
+    })
+    .onConflictDoNothing();
 
   const tenantId = tenant!.id;
 

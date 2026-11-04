@@ -120,7 +120,7 @@ const STRATEGY_OPTIONS: {
   },
 ];
 
-const PRESET_SCENARIOS = [
+const CHENNAI_PRESETS = [
   {
     name: "OMR IT Tech Park Evening Departure Surge",
     routeId: "route-mtc-570",
@@ -148,6 +148,37 @@ const PRESET_SCENARIOS = [
     surgePercent: 45,
     cause:
       "Heavy retail and pedestrian transfer between T. Nagar Bus Terminus and Broadway.",
+  },
+];
+
+const SALEM_PRESETS = [
+  {
+    name: "Salem Junction Railway Outflow Surge",
+    routeId: "route-slm-01",
+    surgePercent: 55,
+    cause:
+      "Outflow from incoming superfast express trains transferring towards Meyyanur Central.",
+  },
+  {
+    name: "Yercaud Foothills Morning Tourist Surge",
+    routeId: "route-slm-13",
+    surgePercent: 60,
+    cause:
+      "Heavy morning passenger influx boarding towards Yercaud foothills from Town Bus Stand.",
+  },
+  {
+    name: "Steel Plant Township Shift Turnover",
+    routeId: "route-slm-33",
+    surgePercent: 50,
+    cause:
+      "Factory workforce turnover heading to Salem Steel Plant industrial township.",
+  },
+  {
+    name: "Omalur Regional Arterial Rush",
+    routeId: "route-slm-74",
+    surgePercent: 45,
+    cause:
+      "Regional commuter traffic along Salem-Bangalore highway towards Omalur town.",
   },
 ];
 
@@ -193,6 +224,12 @@ function DynamicFleetAllocationPage() {
   const canDispatch = hasPermission(user?.role || "", "schedule.publish");
   const { currentTenant } = useActiveTenant();
 
+  const isSalem =
+    currentTenant.slug === "salem-transport" ||
+    currentTenant.name.toLowerCase().includes("salem");
+  const presetScenarios = isSalem ? SALEM_PRESETS : CHENNAI_PRESETS;
+  const defaultRoute = isSalem ? "route-slm-01" : "route-mtc-570";
+
   // Operational Solver Parameters
   const [selectedPeriod, setSelectedPeriod] =
     useState<TimePeriodId>("EVENING_PEAK");
@@ -200,15 +237,31 @@ function DynamicFleetAllocationPage() {
     useState<AllocationStrategy>("BALANCED_SLA");
   const [activeScenarios, setActiveScenarios] = useState<SurgeScenarioInput[]>([
     {
-      routeId: "route-mtc-570",
+      routeId: defaultRoute,
       surgePercent: 45,
-      cause: "OMR IT Corridor evening commuter peak",
+      cause: isSalem
+        ? "Salem Junction corridor evening commuter outflow"
+        : "OMR IT Corridor evening commuter peak",
     },
   ]);
 
   // Simulation custom input
-  const [customRouteId, setCustomRouteId] = useState<string>("route-mtc-570");
+  const [customRouteId, setCustomRouteId] = useState<string>(defaultRoute);
   const [customSurgePercent, setCustomSurgePercent] = useState<number>(35);
+
+  // Sync state when tenant changes
+  useEffect(() => {
+    setCustomRouteId(defaultRoute);
+    setActiveScenarios([
+      {
+        routeId: defaultRoute,
+        surgePercent: 45,
+        cause: isSalem
+          ? "Salem Junction corridor evening commuter outflow"
+          : "OMR IT Corridor evening commuter peak",
+      },
+    ]);
+  }, [currentTenant.id, isSalem]);
 
   // Dispatch confirmation dialog
   const [confirmingRec, setConfirmingRec] =
@@ -228,6 +281,7 @@ function DynamicFleetAllocationPage() {
         periodId: selectedPeriod,
         strategy: selectedStrategy,
         customSurges: activeScenarios,
+        tenantId: currentTenant.id,
       }),
     refetchOnWindowFocus: false,
   });
@@ -235,7 +289,7 @@ function DynamicFleetAllocationPage() {
   // Fetch Recent Dispatches
   const historyQuery = useQuery({
     queryKey: ["recent-fleet-allocations", currentTenant.id],
-    queryFn: () => getRecentAllocations(),
+    queryFn: () => getRecentAllocations({ tenantId: currentTenant.id }),
     refetchInterval: 30000,
   });
 
@@ -263,6 +317,7 @@ function DynamicFleetAllocationPage() {
         loadFactorBefore: rec.loadFactorBefore,
         loadFactorAfter: rec.loadFactorAfter,
         notes: rec.reason,
+        tenantId: currentTenant.id,
       }),
     onSuccess: (res, rec) => {
       toast.success(
@@ -347,7 +402,7 @@ function DynamicFleetAllocationPage() {
             </div>
             <p className="text-sm text-muted-foreground mt-1">
               Dynamic passenger demand sensing, corridor surge detection, and
-              multi-depot reserve fleet dispatch for Chennai MTC corridors.
+              multi-depot reserve fleet dispatch for {currentTenant.name} corridors.
             </p>
           </div>
 
@@ -567,7 +622,7 @@ function DynamicFleetAllocationPage() {
                 Operational Presets:
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                {PRESET_SCENARIOS.map((preset) => {
+                {presetScenarios.map((preset) => {
                   const isActive = activeScenarios.some(
                     (s) =>
                       s.routeId === preset.routeId &&
@@ -661,7 +716,7 @@ function DynamicFleetAllocationPage() {
                 <div>
                   <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                     <Layers className="h-4 w-4 text-blue-500" />
-                    Chennai MTC Corridor Demand vs Capacity Profile
+                    {currentTenant.name} Corridor Demand vs Capacity Profile
                   </CardTitle>
                   <CardDescription className="text-xs mt-0.5">
                     Hourly passenger rate comparison across active arterial
@@ -825,11 +880,10 @@ function DynamicFleetAllocationPage() {
         <Card className="rounded-lg border-border/70 bg-card shadow-sm">
           <CardHeader className="p-5 pb-3">
             <CardTitle className="text-base font-semibold text-foreground">
-              Chennai MTC Corridors & Capacity Health
+              {currentTenant.name} Corridors & Capacity Health
             </CardTitle>
             <CardDescription className="text-xs">
-              Live headway, load factors, and deficit calculations across Chennai MTC
-              bus routes.
+              Live headway, load factors, and deficit calculations across {currentTenant.name} bus routes.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">

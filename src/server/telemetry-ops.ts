@@ -9,6 +9,7 @@ import {
   CHENNAI_MTC_BUSES,
   CHENNAI_MTC_CREW,
 } from "./data/chennai-mtc-dataset";
+import { FALLBACK_ROUTES } from "./db/fallback-data";
 import { formatRouteNumber, formatRouteName } from "../lib/route-utils";
 
 export interface VehicleTelemetryInput {
@@ -216,7 +217,7 @@ export async function getLiveBusTrackingImpl(filters?: {
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-  // 2. Map route coordinates from GTFS dataset
+  // 2. Map route coordinates from GTFS and regional fallback datasets
   const routeGeomMap = new Map<string, MTCRouteCoordinates>();
   CHENNAI_MTC_ROUTES.forEach((r) => {
     routeGeomMap.set(r.code, {
@@ -226,6 +227,21 @@ export async function getLiveBusTrackingImpl(filters?: {
       path: r.pathCoordinates, // [lng, lat]
       stops: r.stops,
     });
+  });
+
+  FALLBACK_ROUTES.forEach((r) => {
+    const coords =
+      (r.geometryGeojson as any)?.coordinates ||
+      (r.polyline as any)?.coordinates;
+    if (coords && Array.isArray(coords) && coords.length > 0) {
+      routeGeomMap.set(r.code, {
+        code: r.code,
+        name: r.name,
+        color: r.color || "#2563EB",
+        path: coords, // [lng, lat]
+        stops: [],
+      });
+    }
   });
 
   const trackedBuses: LiveTrackedBus[] = [];
@@ -345,8 +361,38 @@ export async function getLiveBusTrackingImpl(filters?: {
           }
         }
       }
-    } else if (geom && geom.path && geom.path.length > 1) {
+    } else {
       // Simulate live bus movement along assigned corridor
+      const isSalemTenant =
+        currentUser.tenantId === "c4ab681d-7b82-4674-bb8a-14ef96de6d23" ||
+        currentUser.tenantId === "6fcb73df-750e-4fe5-b0cb-456b119dcd64";
+      const activeGeom =
+        geom && geom.path && geom.path.length > 1
+          ? geom
+          : {
+              code: routeCode,
+              name: routeName,
+              color: "#2563EB",
+              path: isSalemTenant
+                ? [
+                    [78.1591, 11.6528],
+                    [78.155, 11.658],
+                    [78.1565, 11.6668],
+                    [78.1437, 11.6705],
+                    [78.117, 11.6718],
+                    [78.1132, 11.6714],
+                  ]
+                : [
+                    [80.2785, 13.0827],
+                    [80.2707, 13.0805],
+                    [80.2612, 13.0714],
+                    [80.2458, 13.0592],
+                    [80.2312, 13.0456],
+                    [80.2215, 13.0289],
+                  ],
+              stops: [],
+            };
+
       const nowMs = Date.now();
       const seed = a.busRegNumber.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
       const speedFactor = 0.000035;
@@ -354,12 +400,12 @@ export async function getLiveBusTrackingImpl(filters?: {
       const isReturn = a.direction === "RETURN" || a.direction === "DOWN";
       const progress = isReturn ? 1.0 - rawProgress : rawProgress;
 
-      const totalSegments = geom.path.length - 1;
+      const totalSegments = activeGeom.path.length - 1;
       const exactPos = Math.max(0, Math.min(totalSegments, progress * totalSegments));
       const segmentIndex = Math.min(Math.floor(exactPos), totalSegments - 1);
       const fraction = exactPos - segmentIndex;
-      const p1 = geom.path[segmentIndex] || [80.24, 13.045];
-      const p2 = geom.path[segmentIndex + 1] || p1;
+      const p1 = (activeGeom.path[segmentIndex] || [80.24, 13.045]) as [number, number];
+      const p2 = (activeGeom.path[segmentIndex + 1] || p1) as [number, number];
 
       const currentLng = p1[0] + (p2[0] - p1[0]) * fraction;
       const currentLat = p1[1] + (p2[1] - p1[1]) * fraction;
@@ -377,11 +423,11 @@ export async function getLiveBusTrackingImpl(filters?: {
       source = "SIMULATED_AVL";
 
       // Stop proximity
-      if (geom.stops && geom.stops.length > 0) {
+      if (activeGeom.stops && activeGeom.stops.length > 0) {
         let closestDist = Infinity;
         let closestStopIndex = 0;
 
-        geom.stops.forEach((s, idx) => {
+        activeGeom.stops.forEach((s, idx) => {
           const stopDetail = CHENNAI_MTC_STOPS[s.stopId];
           if (stopDetail) {
             const dist = haversineDistanceKm(latitude!, longitude!, stopDetail.lat, stopDetail.lng);
@@ -394,9 +440,9 @@ export async function getLiveBusTrackingImpl(filters?: {
 
         const nextIdx = isReturn
           ? Math.max(0, closestStopIndex - 1)
-          : Math.min(geom.stops.length - 1, closestStopIndex + 1);
+          : Math.min(activeGeom.stops.length - 1, closestStopIndex + 1);
 
-        const nextStopObj = geom.stops[nextIdx] || geom.stops[closestStopIndex];
+        const nextStopObj = activeGeom.stops[nextIdx] || activeGeom.stops[closestStopIndex];
         if (nextStopObj) {
           const stopInfo = CHENNAI_MTC_STOPS[nextStopObj.stopId];
           nextStopName = stopInfo?.name || nextStopObj.stopId;
@@ -422,8 +468,6 @@ export async function getLiveBusTrackingImpl(filters?: {
         speedKmH = Math.max(22, Math.round(30 + Math.sin(seed + nowMs / 10000) * 8));
         statusReason = "Operating on timetable schedule (+/- 1 min headway).";
       }
-    } else {
-      statusReason = "Vehicle untracked: AVL device offline or waiting for driver check-in.";
     }
 
     // Apply Filters
@@ -453,7 +497,7 @@ export async function getLiveBusTrackingImpl(filters?: {
       }
       if (
         filters.statusFilter === "untracked" &&
-        gpsStatus !== "UNTRACKED" &&
+        (gpsStatus as string) !== "UNTRACKED" &&
         gpsStatus !== "OFFLINE"
       ) {
         continue;

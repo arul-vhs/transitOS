@@ -4,7 +4,7 @@
  */
 
 export const CHENNAI_MTC_TENANT_ID = "69000000-0000-4000-8000-000000000069";
-export const SALEM_TENANT_ID = "6fcb73df-750e-4fe5-b0cb-456b119dcd64";
+export const SALEM_TENANT_ID = "c4ab681d-7b82-4674-bb8a-14ef96de6d23";
 
 export interface MTCStop {
   id: string;

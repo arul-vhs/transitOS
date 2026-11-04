@@ -95,6 +95,8 @@ export interface FallbackTrip {
   status: string;
   serviceDate: string;
   route?: FallbackRoute;
+  routeCode?: string;
+  routeName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -125,9 +127,21 @@ export interface FallbackDuty {
 }
 
 // 1. Salem Fallback Records (Normalized from extracted-data.json)
+const normalizeSalemTenant = (tid?: string) => {
+  if (
+    !tid ||
+    tid === "6fcb73df-750e-4fe5-b0cb-456b119dcd64" ||
+    tid === "a1ce3be6-1fcb-445a-a9cf-b5eb4cb09edf" ||
+    tid === "ten-salem-transport"
+  ) {
+    return SALEM_TENANT_ID;
+  }
+  return tid;
+};
+
 const salemBuses: FallbackBus[] = (rawData.buses || []).map((b: any) => ({
   id: b.id,
-  tenantId: b.tenant_id || SALEM_TENANT_ID,
+  tenantId: normalizeSalemTenant(b.tenant_id),
   registrationNumber: b.registration_number,
   fleetNumber: b.fleet_number || b.registration_number,
   depot: b.depot || "Meyyanur Depot",
@@ -141,7 +155,7 @@ const salemBuses: FallbackBus[] = (rawData.buses || []).map((b: any) => ({
 
 const salemCrew: FallbackCrew[] = (rawData.crew || []).map((c: any) => ({
   id: c.id,
-  tenantId: c.tenant_id || SALEM_TENANT_ID,
+  tenantId: normalizeSalemTenant(c.tenant_id),
   employeeId: c.employee_id,
   name: c.name,
   role: c.role || "driver",
@@ -163,7 +177,7 @@ const salemStops: FallbackStop[] = (rawData.stops || []).map((s: any) => {
   const seq = s.sequence ?? s.sequence_order ?? 1;
   return {
     id: s.id,
-    tenantId: s.tenant_id || SALEM_TENANT_ID,
+    tenantId: normalizeSalemTenant(s.tenant_id),
     routeId: s.route_id,
     name: s.name,
     code: s.code || s.name,
@@ -182,7 +196,7 @@ const salemRoutes: FallbackRoute[] = (rawData.routes || []).map((r: any) => {
 
   return {
     id: r.id,
-    tenantId: r.tenant_id || SALEM_TENANT_ID,
+    tenantId: normalizeSalemTenant(r.tenant_id),
     code: r.code,
     name: r.name,
     origin: r.origin || "Origin Terminal",
@@ -212,7 +226,7 @@ const salemTrips: FallbackTrip[] = (rawData.trips || []).map((t: any) => {
 
   return {
     id: t.id,
-    tenantId: t.tenant_id || SALEM_TENANT_ID,
+    tenantId: normalizeSalemTenant(t.tenant_id),
     routeId: t.route_id,
     tripCode,
     tripNumber: tripCode,
@@ -229,6 +243,8 @@ const salemTrips: FallbackTrip[] = (rawData.trips || []).map((t: any) => {
     status: t.status || "scheduled",
     serviceDate: t.service_date || "25 Aug 2026",
     route,
+    routeCode: route?.code || t.route_code || "1",
+    routeName: route?.name || t.route_name || "Salem Route",
     createdAt: t.created_at || new Date().toISOString(),
     updatedAt: t.updated_at || new Date().toISOString(),
   };
@@ -252,7 +268,7 @@ const salemDuties: FallbackDuty[] = (rawData.duties || []).map((d: any) => {
 
   return {
     id: d.id,
-    tenantId: d.tenant_id || SALEM_TENANT_ID,
+    tenantId: normalizeSalemTenant(d.tenant_id),
     dutyCode,
     dutyNumber: dutyCode,
     dutyType: d.duty_type || "LINKED",
@@ -355,6 +371,8 @@ const mtcTrips: FallbackTrip[] = CHENNAI_MTC_TRIPS.map((t) => {
     status: t.status,
     serviceDate: t.serviceDate,
     route,
+    routeCode: route?.code || t.routeCode,
+    routeName: route?.name || t.routeName,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

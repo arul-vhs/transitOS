@@ -123,8 +123,8 @@ const HOURLY_DEMAND_CURVE = [
   { hour: "22:00", plannedSeats: 400, actualPax: 280 },
 ];
 
-// Corridor baseline passenger demand records
-const CORRIDOR_DEMAND_DATA = [
+// Corridor baseline passenger demand records for Salem Transport
+const SALEM_CORRIDOR_DEMAND = [
   {
     routeId: "route-slm-01",
     code: "1",
@@ -205,8 +205,90 @@ const CORRIDOR_DEMAND_DATA = [
   },
 ];
 
-// Major stop boarding footfall ranking
-const STOP_FOOTFALL_DATA = [
+// Corridor baseline passenger demand records for Chennai MTC
+const CHENNAI_CORRIDOR_DEMAND = [
+  {
+    routeId: "route-mtc-570",
+    code: "570",
+    name: "CMBT Koyambedu - Kelambakkam (OMR IT Expressway)",
+    type: "Urban IT Trunk",
+    plannedCapacity: 6800,
+    actualPax: 7450,
+    peakLoadFactor: 109.5,
+    peakWindow: "08:00 - 10:30",
+    headwayMin: 8,
+    status: "Overcrowded / Surge",
+    reliefDispatched: false,
+  },
+  {
+    routeId: "route-mtc-21g",
+    code: "21G",
+    name: "Broadway Terminus - Tambaram West",
+    type: "Arterial Trunk",
+    plannedCapacity: 5400,
+    actualPax: 5100,
+    peakLoadFactor: 94.4,
+    peakWindow: "08:30 - 10:00",
+    headwayMin: 10,
+    status: "Overcrowded / Surge",
+    reliefDispatched: false,
+  },
+  {
+    routeId: "route-mtc-102",
+    code: "102",
+    name: "Broadway Terminus - Kelambakkam (ECR Coastal)",
+    type: "Coastal Trunk",
+    plannedCapacity: 3800,
+    actualPax: 3100,
+    peakLoadFactor: 81.5,
+    peakWindow: "17:00 - 19:30",
+    headwayMin: 15,
+    status: "High Demand",
+    reliefDispatched: false,
+  },
+  {
+    routeId: "route-mtc-5c",
+    code: "5C",
+    name: "Broadway Terminus - T. Nagar Bus Stand",
+    type: "Commercial Arterial",
+    plannedCapacity: 4200,
+    actualPax: 3250,
+    peakLoadFactor: 77.3,
+    peakWindow: "10:00 - 12:00",
+    headwayMin: 12,
+    status: "High Demand",
+    reliefDispatched: false,
+  },
+  {
+    routeId: "route-mtc-27d",
+    code: "27D",
+    name: "Villivakkam - Fore Shore Estate",
+    type: "Cross-City Line",
+    plannedCapacity: 3100,
+    actualPax: 2420,
+    peakLoadFactor: 78.0,
+    peakWindow: "08:00 - 09:30",
+    headwayMin: 15,
+    status: "Normal",
+    reliefDispatched: false,
+  },
+  {
+    routeId: "route-mtc-19b",
+    code: "19B",
+    name: "Saidapet - Siruseri SIPCOT Tech Park",
+    type: "IT Corridor Feeder",
+    plannedCapacity: 4900,
+    actualPax: 4280,
+    peakLoadFactor: 87.3,
+    peakWindow: "17:30 - 20:00",
+    headwayMin: 10,
+    status: "Overcrowded / Surge",
+    reliefDispatched: false,
+  },
+];
+
+// Major stop boarding footfall ranking for Salem Transport
+const SALEM_STOP_FOOTFALL = [
   {
     stopName: "Town Bus Stand Central",
     paxCount: 5420,
@@ -242,6 +324,46 @@ const STOP_FOOTFALL_DATA = [
     paxCount: 1480,
     sharePct: 8.0,
     trend: "-1.2%",
+  },
+];
+
+// Major stop boarding footfall ranking for Chennai MTC
+const CHENNAI_STOP_FOOTFALL = [
+  {
+    stopName: "CMBT Koyambedu Central Bus Terminal",
+    paxCount: 14200,
+    sharePct: 31.5,
+    trend: "+6.4%",
+  },
+  {
+    stopName: "MGR Chennai Central Station Feeder",
+    paxCount: 11800,
+    sharePct: 26.2,
+    trend: "+8.1%",
+  },
+  {
+    stopName: "Broadway Bus Terminus (Parrys)",
+    paxCount: 8400,
+    sharePct: 18.6,
+    trend: "+3.2%",
+  },
+  {
+    stopName: "T. Nagar Bus Terminus Shopping Hub",
+    paxCount: 7200,
+    sharePct: 16.0,
+    trend: "+5.1%",
+  },
+  {
+    stopName: "Guindy Metro & Railway Interchange",
+    paxCount: 5600,
+    sharePct: 12.4,
+    trend: "+9.2%",
+  },
+  {
+    stopName: "Siruseri IT Park SIPCOT Gate",
+    paxCount: 4900,
+    sharePct: 10.8,
+    trend: "+11.5%",
   },
 ];
 
@@ -306,6 +428,17 @@ function AnalyticsDashboardPage() {
   // Multi-Tenant context
   const { activeTenant, activeDepot } = useActiveTenant();
 
+  const isSalem =
+    activeTenant.slug === "salem-transport" ||
+    activeTenant.name.toLowerCase().includes("salem");
+
+  const tenantCorridors = isSalem ? SALEM_CORRIDOR_DEMAND : CHENNAI_CORRIDOR_DEMAND;
+  const tenantFootfall = isSalem ? SALEM_STOP_FOOTFALL : CHENNAI_STOP_FOOTFALL;
+  const surgeTargetCode = isSalem ? "1" : "570";
+  const standbyDepots = isSalem
+    ? "Meyyanur Central and Salem Junction Depots"
+    : "Central / Broadway and Adyar Depots";
+
   // Filter & Search states
   const [serviceDate, setServiceDate] = useState("25 Aug 2026");
   const [activeTab, setActiveTab] = useState("demand");
@@ -313,8 +446,14 @@ function AnalyticsDashboardPage() {
   const [pvaSearch, setPvaSearch] = useState("");
 
   // Demand surge dispatch state
-  const [corridorDemand, setCorridorDemand] = useState(CORRIDOR_DEMAND_DATA);
+  const [corridorDemand, setCorridorDemand] = useState(tenantCorridors);
   const [reliefDispatchedCount, setReliefDispatchedCount] = useState(0);
+
+  // Sync state when tenant switches
+  useEffect(() => {
+    setCorridorDemand(tenantCorridors);
+    setReliefDispatchedCount(0);
+  }, [activeTenant.id, isSalem]);
 
   // Queries
   const {
@@ -371,16 +510,29 @@ function AnalyticsDashboardPage() {
   // Relief bus dispatch action connecting to real fleet allocation
   const handleDeployRelief = async (routeCode: string) => {
     try {
+      const isSalemRoute = isSalem;
       await dispatchFleetAllocation({
         recommendationId: `analytics-relief-${routeCode}-${Date.now()}`,
-        targetRouteId: `route-mtc-${routeCode.toLowerCase()}`,
+        targetRouteId: isSalemRoute
+          ? `route-slm-${routeCode.toLowerCase()}`
+          : `route-mtc-${routeCode.toLowerCase()}`,
         targetRouteCode: routeCode,
-        busId: `bus-chn-res-${routeCode.toLowerCase()}`,
-        busRegistration: `TN-01-N-${Math.floor(8000 + Math.random() * 1999)}`,
-        driverId: `crew-drv-${routeCode.toLowerCase()}`,
-        conductorId: `crew-cnd-${routeCode.toLowerCase()}`,
+        busId: isSalemRoute
+          ? `bus-slm-res-${routeCode.toLowerCase()}`
+          : `bus-chn-res-${routeCode.toLowerCase()}`,
+        busRegistration: isSalemRoute
+          ? `TN-30-N-${Math.floor(2000 + Math.random() * 1999)}`
+          : `TN-01-N-${Math.floor(8000 + Math.random() * 1999)}`,
+        driverId: isSalemRoute
+          ? `crew-drv-slm-${routeCode.toLowerCase()}`
+          : `crew-drv-${routeCode.toLowerCase()}`,
+        conductorId: isSalemRoute
+          ? `crew-cnd-slm-${routeCode.toLowerCase()}`
+          : `crew-cnd-${routeCode.toLowerCase()}`,
         sourceType: "DEPOT_RESERVE",
-        sourceDepot: "Central / Broadway Depot",
+        sourceDepot: isSalemRoute
+          ? "Meyyanur Central Depot"
+          : "Central / Broadway Depot",
         strategy: "BALANCED_SLA",
         deadheadKm: 4.8,
         deadheadMinutes: 14,
@@ -390,7 +542,8 @@ function AnalyticsDashboardPage() {
         waitTimeAfterMin: 4.0,
         loadFactorBefore: 1.25,
         loadFactorAfter: 0.88,
-        notes: `Relief bus deployed from Analytics Demand monitor to stabilize passenger surge on Route ${routeCode}.`,
+        notes: `Relief bus deployed from Analytics Demand monitor to stabilize passenger surge on Route ${routeCode} (${activeTenant.name}).`,
+        tenantId: activeTenant.id,
       });
       queryClient.invalidateQueries({ queryKey: ["fleet-allocation-plan"] });
       queryClient.invalidateQueries({ queryKey: ["recent-fleet-allocations"] });
@@ -761,7 +914,7 @@ function AnalyticsDashboardPage() {
                     </h4>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                       Corridor passenger load factors exceed the 85% comfort ceiling.
-                      Standby reserve buses at Central and Adyar Depots are ready for relief dispatch.
+                      Standby reserve buses at {standbyDepots} are ready for relief dispatch.
                     </p>
                   </div>
                 </div>
@@ -769,10 +922,10 @@ function AnalyticsDashboardPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <Button
                     size="sm"
-                    onClick={() => handleDeployRelief("570")}
+                    onClick={() => handleDeployRelief(surgeTargetCode)}
                     className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-md gap-1.5"
                   >
-                    <Zap className="size-3.5" /> Deploy Relief to Route 570
+                    <Zap className="size-3.5" /> Deploy Relief to Route {surgeTargetCode}
                   </Button>
                 </div>
               </div>
@@ -1040,7 +1193,7 @@ function AnalyticsDashboardPage() {
                 </div>
 
                 <div className="space-y-3">
-                  {STOP_FOOTFALL_DATA.map((stop, idx) => (
+                  {tenantFootfall.map((stop, idx) => (
                     <div key={stop.stopName} className="space-y-1">
                       <div className="flex items-center justify-between text-xs">
                         <span className="font-semibold text-foreground flex items-center gap-1.5">
@@ -1234,7 +1387,7 @@ function AnalyticsDashboardPage() {
                   </h3>
                   <p className="text-xs text-muted-foreground">
                     Historical completion rates, delay statistics, and
-                    reliability scores across all designated Salem corridors.
+                    reliability scores across all designated {activeTenant.name} corridors.
                   </p>
                 </div>
                 <Button
@@ -1283,69 +1436,131 @@ function AnalyticsDashboardPage() {
                   <TableBody className="text-xs font-mono">
                     {(Array.isArray(routeStats) && routeStats.length > 0
                       ? routeStats
-                      : [
-                          {
-                            routeCode: "1",
-                            routeName: "Town Bus Stand - Salem Junction",
-                            tripsScheduled: 36,
-                            tripsCompleted: 36,
-                            tripsCancelled: 0,
-                            completionRate: 100,
-                            onTimeRate: 94,
-                            averageDelay: 2,
-                          },
-                          {
-                            routeCode: "13",
-                            routeName: "Town Bus Stand - Yercaud Foothills",
-                            tripsScheduled: 24,
-                            tripsCompleted: 24,
-                            tripsCancelled: 0,
-                            completionRate: 100,
-                            onTimeRate: 96,
-                            averageDelay: 1,
-                          },
-                          {
-                            routeCode: "4",
-                            routeName:
-                              "Town Bus Stand - Kondalampatti Roundana",
-                            tripsScheduled: 28,
-                            tripsCompleted: 28,
-                            tripsCancelled: 0,
-                            completionRate: 100,
-                            onTimeRate: 93,
-                            averageDelay: 2,
-                          },
-                          {
-                            routeCode: "33",
-                            routeName: "MGR Central - Steel Plant Township",
-                            tripsScheduled: 42,
-                            tripsCompleted: 41,
-                            tripsCancelled: 1,
-                            completionRate: 98,
-                            onTimeRate: 91,
-                            averageDelay: 4,
-                          },
-                          {
-                            routeCode: "8",
-                            routeName: "MGR Central - Ammapet Colony",
-                            tripsScheduled: 26,
-                            tripsCompleted: 26,
-                            tripsCancelled: 0,
-                            completionRate: 100,
-                            onTimeRate: 96,
-                            averageDelay: 1,
-                          },
-                          {
-                            routeCode: "74",
-                            routeName: "Town Bus Stand - Omalur Town",
-                            tripsScheduled: 32,
-                            tripsCompleted: 32,
-                            tripsCancelled: 0,
-                            completionRate: 100,
-                            onTimeRate: 94,
-                            averageDelay: 2,
-                          },
-                        ]
+                      : isSalem
+                        ? [
+                            {
+                              routeCode: "1",
+                              routeName: "Town Bus Stand - Salem Junction",
+                              tripsScheduled: 36,
+                              tripsCompleted: 36,
+                              tripsCancelled: 0,
+                              completionRate: 100,
+                              onTimeRate: 94,
+                              averageDelay: 2,
+                            },
+                            {
+                              routeCode: "13",
+                              routeName: "Town Bus Stand - Yercaud Foothills",
+                              tripsScheduled: 24,
+                              tripsCompleted: 24,
+                              tripsCancelled: 0,
+                              completionRate: 100,
+                              onTimeRate: 96,
+                              averageDelay: 1,
+                            },
+                            {
+                              routeCode: "4",
+                              routeName: "Town Bus Stand - Kondalampatti Roundana",
+                              tripsScheduled: 28,
+                              tripsCompleted: 28,
+                              tripsCancelled: 0,
+                              completionRate: 100,
+                              onTimeRate: 93,
+                              averageDelay: 2,
+                            },
+                            {
+                              routeCode: "33",
+                              routeName: "MGR Central - Steel Plant Township",
+                              tripsScheduled: 42,
+                              tripsCompleted: 41,
+                              tripsCancelled: 1,
+                              completionRate: 98,
+                              onTimeRate: 91,
+                              averageDelay: 4,
+                            },
+                            {
+                              routeCode: "8",
+                              routeName: "MGR Central - Ammapet Colony",
+                              tripsScheduled: 26,
+                              tripsCompleted: 26,
+                              tripsCancelled: 0,
+                              completionRate: 100,
+                              onTimeRate: 96,
+                              averageDelay: 1,
+                            },
+                            {
+                              routeCode: "74",
+                              routeName: "Town Bus Stand - Omalur Town",
+                              tripsScheduled: 32,
+                              tripsCompleted: 32,
+                              tripsCancelled: 0,
+                              completionRate: 100,
+                              onTimeRate: 94,
+                              averageDelay: 2,
+                            },
+                          ]
+                        : [
+                            {
+                              routeCode: "570",
+                              routeName: "CMBT Koyambedu - Kelambakkam (OMR)",
+                              tripsScheduled: 48,
+                              tripsCompleted: 47,
+                              tripsCancelled: 1,
+                              completionRate: 98,
+                              onTimeRate: 92,
+                              averageDelay: 3,
+                            },
+                            {
+                              routeCode: "21G",
+                              routeName: "Broadway - Tambaram West",
+                              tripsScheduled: 40,
+                              tripsCompleted: 40,
+                              tripsCancelled: 0,
+                              completionRate: 100,
+                              onTimeRate: 95,
+                              averageDelay: 2,
+                            },
+                            {
+                              routeCode: "102",
+                              routeName: "Broadway - Kelambakkam (ECR)",
+                              tripsScheduled: 32,
+                              tripsCompleted: 32,
+                              tripsCancelled: 0,
+                              completionRate: 100,
+                              onTimeRate: 94,
+                              averageDelay: 2,
+                            },
+                            {
+                              routeCode: "5C",
+                              routeName: "Broadway - T. Nagar Bus Stand",
+                              tripsScheduled: 36,
+                              tripsCompleted: 36,
+                              tripsCancelled: 0,
+                              completionRate: 100,
+                              onTimeRate: 96,
+                              averageDelay: 1,
+                            },
+                            {
+                              routeCode: "27D",
+                              routeName: "Villivakkam - Fore Shore Estate",
+                              tripsScheduled: 28,
+                              tripsCompleted: 28,
+                              tripsCancelled: 0,
+                              completionRate: 100,
+                              onTimeRate: 95,
+                              averageDelay: 2,
+                            },
+                            {
+                              routeCode: "19B",
+                              routeName: "Saidapet - Siruseri SIPCOT",
+                              tripsScheduled: 38,
+                              tripsCompleted: 37,
+                              tripsCancelled: 1,
+                              completionRate: 97,
+                              onTimeRate: 91,
+                              averageDelay: 4,
+                            },
+                          ]
                     ).map((route: RouteAnalyticsItem) => (
                       <TableRow key={route.routeCode}>
                         <TableCell className="font-bold text-foreground">

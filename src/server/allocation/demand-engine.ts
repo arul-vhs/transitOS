@@ -642,18 +642,33 @@ function classifyShortageSeverity(
   return "SURPLUS";
 }
 
+export function isSalemTenantId(tenantId?: string): boolean {
+  if (!tenantId) return false;
+  return (
+    tenantId === "c4ab681d-7b82-4674-bb8a-14ef96de6d23" ||
+    tenantId === "6fcb73df-750e-4fe5-b0cb-456b119dcd64" ||
+    tenantId === "a1ce3be6-1fcb-445a-a9cf-b5eb4cb09edf" ||
+    tenantId === "ten-salem-transport" ||
+    tenantId === "salem-transport"
+  );
+}
+
 /**
  * Builds corridor demand profiles, integrating optional live scenario injections.
  */
 export function buildCorridorProfiles(
   periodId: TimePeriodId = "EVENING_PEAK",
   customSurges: SurgeScenarioInput[] = [],
+  tenantId?: string,
 ): RouteDemandProfile[] {
   const periodFactor =
     PERIOD_DEMAND_FACTORS[periodId] || PERIOD_DEMAND_FACTORS.EVENING_PEAK;
 
-  const hasSalemOnly = customSurges.length > 0 && customSurges.every((s) => s.routeId.startsWith("route-slm-"));
-  const activeRoutes = hasSalemOnly ? BASE_SALEM_ROUTES : BASE_CHENNAI_ROUTES;
+  const isSalem =
+    isSalemTenantId(tenantId) ||
+    (customSurges.length > 0 &&
+      customSurges.every((s) => s.routeId.startsWith("route-slm-")));
+  const activeRoutes = isSalem ? BASE_SALEM_ROUTES : BASE_CHENNAI_ROUTES;
 
   return activeRoutes.map((base) => {
     let multiplier = periodFactor[base.routeId] ?? 1.0;
@@ -719,10 +734,10 @@ export function buildCorridorProfiles(
 /**
  * Retrieves standby supply fleet candidates.
  */
-export function getSupplyFleetCandidates(hasSalemOnly: boolean = false): SupplyCandidate[] {
-  return hasSalemOnly
+export function getSupplyFleetCandidates(isSalem: boolean = false): SupplyCandidate[] {
+  return isSalem
     ? [...DEFAULT_SUPPLY_FLEET]
-    : [...DEFAULT_CHENNAI_SUPPLY_FLEET, ...DEFAULT_SUPPLY_FLEET];
+    : [...DEFAULT_CHENNAI_SUPPLY_FLEET];
 }
 
 /**
@@ -733,10 +748,14 @@ export async function generateFleetAllocationPlan(
   periodId: TimePeriodId = "EVENING_PEAK",
   customSurges: SurgeScenarioInput[] = [],
   serviceDate: string = new Date().toISOString().slice(0, 10),
+  tenantId?: string,
 ): Promise<AllocationPlan> {
-  const hasSalemOnly = customSurges.length > 0 && customSurges.every((s) => s.routeId.startsWith("route-slm-"));
-  const routes = buildCorridorProfiles(periodId, customSurges);
-  const supplies = getSupplyFleetCandidates(hasSalemOnly);
+  const isSalem =
+    isSalemTenantId(tenantId) ||
+    (customSurges.length > 0 &&
+      customSurges.every((s) => s.routeId.startsWith("route-slm-")));
+  const routes = buildCorridorProfiles(periodId, customSurges, tenantId);
+  const supplies = getSupplyFleetCandidates(isSalem);
 
   return solveFleetAllocation(
     routes,
@@ -772,9 +791,12 @@ export async function dispatchAllocationImpl(data: {
   loadFactorAfter: number;
   dispatchedByUserId?: string;
   notes?: string;
+  tenantId?: string;
 }) {
-  const defaultTenantId = "6fcb73df-750e-4fe5-b0cb-456b119dcd64";
-  const validTenant = defaultTenantId;
+  const isSalem = isSalemTenantId(data.tenantId) || data.targetRouteId.startsWith("route-slm-");
+  const validTenant = isSalem
+    ? "c4ab681d-7b82-4674-bb8a-14ef96de6d23"
+    : "69000000-0000-4000-8000-000000000069";
   const validUser = cleanUuid(data.dispatchedByUserId);
 
   try {
@@ -790,7 +812,7 @@ export async function dispatchAllocationImpl(data: {
         driverId: cleanUuid(data.driverId),
         conductorId: cleanUuid(data.conductorId),
         sourceType: data.sourceType,
-        sourceDepot: data.sourceDepot || "Johnsonpet Depot",
+        sourceDepot: data.sourceDepot || (isSalem ? "Meyyanur Central Depot" : "Central / Broadway Depot"),
         allocationStrategy: data.strategy,
         deadheadKm: String(data.deadheadKm),
         deadheadMinutes: data.deadheadMinutes,
@@ -855,8 +877,21 @@ export async function dispatchAllocationImpl(data: {
 /**
  * Fetches recent allocation dispatch history from the database.
  */
-export async function getRecentAllocationsImpl() {
+export async function getRecentAllocationsImpl(filters?: { tenantId?: string }) {
   try {
+    if (filters?.tenantId) {
+      const isSalem = isSalemTenantId(filters.tenantId);
+      const targetTid = isSalem
+        ? "c4ab681d-7b82-4674-bb8a-14ef96de6d23"
+        : "69000000-0000-4000-8000-000000000069";
+      const records = await db
+        .select()
+        .from(fleetAllocations)
+        .where(eq(fleetAllocations.tenantId, targetTid))
+        .orderBy(desc(fleetAllocations.createdAt))
+        .limit(15);
+      return records;
+    }
     const records = await db
       .select()
       .from(fleetAllocations)
