@@ -104,6 +104,7 @@ function BusesPage() {
   const context = RootRoute.useRouteContext();
   const user = context?.user;
   const canManage = hasPermission(user?.role || "", "fleet.manage");
+  const { currentTenant } = useActiveTenant();
 
   // Filters state
   const [search, setSearch] = useState("");
@@ -337,7 +338,7 @@ function BusesPage() {
 
   const depotOptions = [
     { label: "All Depots", value: "all" },
-    ...currentTenant.depots.map((d) => ({
+    ...(currentTenant?.depots || []).map((d: any) => ({
       label: d.name,
       value: d.name,
     })),
@@ -400,7 +401,7 @@ function BusesPage() {
             <p className="text-3xl font-extrabold tracking-tight mt-1 text-foreground">
               {totalBuses}
             </p>
-            <p className="text-[11px] text-muted-foreground truncate">{currentTenant.name}</p>
+            <p className="text-[11px] text-muted-foreground truncate">{currentTenant?.name || "Transit Fleet"}</p>
           </div>
 
           <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col justify-between shadow-xs">

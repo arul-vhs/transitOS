@@ -415,3 +415,83 @@ export const resolveAssignmentConflict = async (
 ) => {
   return await _resolveAssignmentConflict(toServerFnArgs(params)!);
 };
+
+// ----------------------------------------------------
+// Intelligent Admin-Driven Conflict & Issue Resolution Server Functions
+// ----------------------------------------------------
+
+export type {
+  ProblemCategory,
+  ConflictLifecycleStatus,
+  SolutionOption,
+  ConflictDiagnostic,
+  OperationalIssue,
+} from "../server/scheduling-ops";
+
+const _reportOperationalProblem = createServerFn({ method: "POST" })
+  .validator(
+    (params: {
+      tripId?: string;
+      busId?: string;
+      driverId?: string;
+      conductorId?: string;
+      category: any;
+      description: string;
+      serviceDate?: string;
+    }) => params,
+  )
+  .handler(async ({ data }) => {
+    const { reportOperationalProblemImpl } = await import(
+      "../server/scheduling-ops"
+    );
+    return await reportOperationalProblemImpl(data);
+  });
+
+export const reportOperationalProblem = async (params: any) => {
+  return await _reportOperationalProblem(toServerFnArgs(params)!);
+};
+
+const _getOperationalIssues = createServerFn({ method: "GET" })
+  .validator((params?: { serviceDate?: string }) => params)
+  .handler(async ({ data }) => {
+    const { getOperationalIssuesImpl } = await import(
+      "../server/scheduling-ops"
+    );
+    return await getOperationalIssuesImpl(data);
+  });
+
+export const getOperationalIssues = async (params?: any) => {
+  return await _getOperationalIssues(toServerFnArgs(params));
+};
+
+const _approveIssueRecommendation = createServerFn({ method: "POST" })
+  .validator(
+    (params: {
+      issueId: string;
+      solutionId?: string;
+      dispatchNotes?: string;
+    }) => params,
+  )
+  .handler(async ({ data }) => {
+    const { approveIssueRecommendationImpl } = await import(
+      "../server/scheduling-ops"
+    );
+    return await approveIssueRecommendationImpl(data);
+  });
+
+export const approveIssueRecommendation = async (params: any) => {
+  return await _approveIssueRecommendation(toServerFnArgs(params)!);
+};
+
+const _rejectIssueRecommendation = createServerFn({ method: "POST" })
+  .validator((params: { issueId: string; reason?: string }) => params)
+  .handler(async ({ data }) => {
+    const { rejectIssueRecommendationImpl } = await import(
+      "../server/scheduling-ops"
+    );
+    return await rejectIssueRecommendationImpl(data);
+  });
+
+export const rejectIssueRecommendation = async (params: any) => {
+  return await _rejectIssueRecommendation(toServerFnArgs(params)!);
+};

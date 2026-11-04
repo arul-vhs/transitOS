@@ -718,7 +718,7 @@ function getInterpolatedPosition(
   progress: number,
 ): [number, number] {
   if (!coords || coords.length === 0) return [11.6673, 78.1424];
-  if (coords.length === 1) return [coords[0][0], coords[0][1]];
+  if (coords.length === 1 && coords[0]) return [coords[0][0] || 11.6673, coords[0][1] || 78.1424];
 
   const totalSegments = coords.length - 1;
   const clampedProgress = Math.min(1.0, Math.max(0.0, progress));
@@ -726,21 +726,25 @@ function getInterpolatedPosition(
   const index = Math.floor(scaledProgress);
   const frac = scaledProgress - index;
 
-  const p1 = coords[Math.min(index, coords.length - 1)];
-  const p2 = coords[Math.min(index + 1, coords.length - 1)];
+  const p1 = coords[Math.min(index, coords.length - 1)] || [11.6673, 78.1424];
+  const p2 = coords[Math.min(index + 1, coords.length - 1)] || p1;
 
-  const lat = p1[0] + (p2[0] - p1[0]) * frac;
-  const lng = p1[1] + (p2[1] - p1[1]) * frac;
+  const lat = (p1[0] ?? 11.6673) + ((p2[0] ?? 11.6673) - (p1[0] ?? 11.6673)) * frac;
+  const lng = (p1[1] ?? 78.1424) + ((p2[1] ?? 78.1424) - (p1[1] ?? 78.1424)) * frac;
   return [lat, lng];
 }
 
 function SimulationPage() {
+  const { currentTenant } = useActiveTenant();
+  const isChennai = currentTenant?.id?.startsWith("69000000") || false;
+  const activeCorridors = isChennai ? CHENNAI_CORRIDORS : SALEM_CORRIDORS;
+
   // Master Clock: in minutes from midnight (e.g. 510 = 08:30 AM)
   const [currentMinutes, setCurrentMinutes] = useState(510);
   const [isPlaying, setIsPlaying] = useState(true);
   const [simSpeed, setSimSpeed] = useState<number>(5); // 1x, 5x, 15x, 60x
-  const [fleet, setFleet] = useState<SimBus[]>(INITIAL_FLEET);
-  const [selectedBusId, setSelectedBusId] = useState<string>("b3"); // Bus SLM-MY-104 selected by default
+  const [fleet, setFleet] = useState<SimBus[]>(isChennai ? CHENNAI_INITIAL_FLEET : INITIAL_FLEET);
+  const [selectedBusId, setSelectedBusId] = useState<string>(isChennai ? "b-mtc-1" : "b3");
   const [activeScenario, setActiveScenario] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
     "controls" | "walkthrough" | "telemetry"

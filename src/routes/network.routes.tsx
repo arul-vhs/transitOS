@@ -214,6 +214,22 @@ function RoutesPage() {
   }, [routesList]);
 
   // Distinct stops grouped for directory view
+  const filteredRoutes = useMemo(() => {
+    return routesList.filter((r) => {
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        return (
+          r.code.toLowerCase().includes(q) ||
+          r.name.toLowerCase().includes(q) ||
+          (r.origin || "").toLowerCase().includes(q) ||
+          (r.destination || "").toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [routesList, statusFilter, search]);
+
   const stopsDirectory = useMemo(() => {
     const grouped = new Map<
       string,
@@ -398,14 +414,14 @@ function RoutesPage() {
     setRouteStops(updated);
 
     // Auto-populate origin and destination from stops
-    if (updated.length === 1) {
+    if (updated.length === 1 && updated[0]) {
       setOrigin(updated[0].name);
     }
-    if (updated.length >= 2) {
+    if (updated.length >= 2 && updated[0] && updated[updated.length - 1]) {
       setOrigin(updated[0].name);
-      setDestination(updated[updated.length - 1].name);
+      setDestination(updated[updated.length - 1]!.name);
       if (!name || name.includes("⇄")) {
-        setName(`${updated[0].name} ⇄ ${updated[updated.length - 1].name}`);
+        setName(`${updated[0].name} ⇄ ${updated[updated.length - 1]!.name}`);
       }
     }
 
@@ -419,11 +435,11 @@ function RoutesPage() {
       .map((s, i) => ({ ...s, sequence: i + 1 }));
     setRouteStops(updated);
 
-    if (updated.length > 0) {
+    if (updated.length > 0 && updated[0] && updated[updated.length - 1]) {
       setOrigin(updated[0].name);
-      setDestination(updated[updated.length - 1].name);
+      setDestination(updated[updated.length - 1]!.name);
       if (name.includes("⇄")) {
-        setName(`${updated[0].name} ⇄ ${updated[updated.length - 1].name}`);
+        setName(`${updated[0].name} ⇄ ${updated[updated.length - 1]!.name}`);
       }
     }
   };

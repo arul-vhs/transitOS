@@ -103,6 +103,7 @@ function DriversPage() {
   const context = RootRoute.useRouteContext();
   const user = context?.user;
   const canManage = hasPermission(user?.role || "", "crew.manage");
+  const { currentTenant } = useActiveTenant();
 
   // Filters state
   const [search, setSearch] = useState("");
@@ -329,7 +330,7 @@ function DriversPage() {
 
   const depotOptions = [
     { label: "All Depots", value: "all" },
-    ...currentTenant.depots.map((d) => ({
+    ...(currentTenant?.depots || []).map((d: any) => ({
       label: d.name,
       value: d.name,
     })),
@@ -404,7 +405,7 @@ function DriversPage() {
             <p className="text-3xl font-extrabold tracking-tight mt-1 text-foreground">
               {totalDrivers}
             </p>
-            <p className="text-[11px] text-muted-foreground truncate">{currentTenant.name}</p>
+            <p className="text-[11px] text-muted-foreground truncate">{currentTenant?.name || "Transit Crew"}</p>
           </div>
 
           <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col justify-between shadow-xs">

@@ -19,6 +19,7 @@ import {
   Sparkles,
   Calendar,
   X,
+  UserCheck,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -728,7 +729,7 @@ function TripsPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleOpenAssignModal(trip.id)}
+              onClick={() => handleOpenQuickAssign(trip)}
               className="h-7 px-2 text-xs text-primary hover:text-primary rounded-md font-medium"
             >
               <UserCheck className="size-3.5 mr-1" />
