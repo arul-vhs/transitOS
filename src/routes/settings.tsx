@@ -13,6 +13,7 @@ import {
   ArrowRight,
   MapPin,
   Bus,
+  Trash2,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -32,7 +33,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
-import { useActiveTenant } from "@/lib/tenant-context";
+import { useActiveTenant, SALEM_TENANT_ID, CHENNAI_MTC_TENANT_ID } from "@/lib/tenant-context";
 
 export const Route = createFileRoute("/settings")({
   beforeLoad: ({ context }) => {
@@ -66,6 +67,7 @@ function SettingsPage() {
     setActiveTenantId,
     setActiveDepotId,
     registerTenant,
+    removeTenant,
   } = useActiveTenant();
 
   // Register New Tenant Modal State
@@ -76,6 +78,11 @@ function SettingsPage() {
   const [newCorpDepotName, setNewCorpDepotName] = useState("");
   const [newCorpDepotCode, setNewCorpDepotCode] = useState("");
   const [newCorpFleet, setNewCorpFleet] = useState("32");
+  const [isRegistering, setIsRegistering] = useState(false);
+
+  // Delete Tenant Dialog State
+  const [corpToDelete, setCorpToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isDeletingCorp, setIsDeletingCorp] = useState(false);
 
   // Organization state
   const [orgName, setOrgName] = useState("Salem Transport Corporation");
@@ -102,38 +109,59 @@ function SettingsPage() {
     }, 400);
   };
 
-  const handleRegisterCorporation = (e: React.FormEvent) => {
+  const handleRegisterCorporation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCorpName.trim() || !newCorpCode.trim()) {
       toast.error("Please enter a corporation name and short code.");
       return;
     }
-    const created = registerTenant({
-      name: newCorpName.trim(),
-      code: newCorpCode.trim().toUpperCase(),
-      region: newCorpRegion.trim() || "Tamil Nadu Transit Division",
-      fleetSize: parseInt(newCorpFleet, 10) || 28,
-      routesCount: 8,
-      depots: [
-        {
-          id: `depot-${Date.now()}`,
-          name: newCorpDepotName.trim() || `${newCorpName.trim()} Main Depot`,
-          code:
-            newCorpDepotCode.trim().toUpperCase() ||
-            `${newCorpCode.trim()}-MAIN-01`,
-          capacity: 45,
-          activeBuses: Math.floor((parseInt(newCorpFleet, 10) || 28) * 0.8),
-        },
-      ],
-    });
-    toast.success(`Corporation ${created.name} registered and activated.`);
-    setShowNewTenantModal(false);
-    setNewCorpName("");
-    setNewCorpCode("");
-    setNewCorpRegion("");
-    setNewCorpDepotName("");
-    setNewCorpDepotCode("");
-    setNewCorpFleet("32");
+    setIsRegistering(true);
+    try {
+      const created = await registerTenant({
+        name: newCorpName.trim(),
+        code: newCorpCode.trim().toUpperCase(),
+        region: newCorpRegion.trim() || "Tamil Nadu Transit Division",
+        fleetSize: parseInt(newCorpFleet, 10) || 28,
+        routesCount: 8,
+        depots: [
+          {
+            id: `depot-${Date.now()}`,
+            name: newCorpDepotName.trim() || `${newCorpName.trim()} Main Depot`,
+            code:
+              newCorpDepotCode.trim().toUpperCase() ||
+              `${newCorpCode.trim()}-MAIN-01`,
+            capacity: 45,
+            activeBuses: Math.floor((parseInt(newCorpFleet, 10) || 28) * 0.8),
+          },
+        ],
+      });
+      toast.success(`Corporation ${created.name} registered and activated with starter fleet & corridors.`);
+      setShowNewTenantModal(false);
+      setNewCorpName("");
+      setNewCorpCode("");
+      setNewCorpRegion("");
+      setNewCorpDepotName("");
+      setNewCorpDepotCode("");
+      setNewCorpFleet("32");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to register corporation.");
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  const confirmDeleteCorporation = async () => {
+    if (!corpToDelete) return;
+    setIsDeletingCorp(true);
+    try {
+      await removeTenant(corpToDelete.id);
+      toast.success(`Corporation "${corpToDelete.name}" removed successfully.`);
+      setCorpToDelete(null);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to remove corporation.");
+    } finally {
+      setIsDeletingCorp(false);
+    }
   };
 
   return (
@@ -408,22 +436,49 @@ function SettingsPage() {
 
                     <div className="mt-4 pt-3 border-t border-border/60">
                       {isActive ? (
-                        <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
-                          <Check className="size-4" />
-                          <span>Currently Selected Division</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
+                            <Check className="size-4" />
+                            <span>Currently Selected Division</span>
+                          </div>
+                          {corp.id !== SALEM_TENANT_ID && corp.id !== CHENNAI_MTC_TENANT_ID && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setCorpToDelete({ id: corp.id, name: corp.name })}
+                              className="h-7 px-2 text-muted-foreground hover:text-rose-600 rounded-md cursor-pointer text-xs"
+                              title="Remove Corporation"
+                            >
+                              <Trash2 className="size-3.5 mr-1" />
+                              <span>Remove</span>
+                            </Button>
+                          )}
                         </div>
                       ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setActiveTenantId(corp.id);
-                            toast.success(`Switched to ${corp.name}`);
-                          }}
-                          className="w-full text-xs rounded-md"
-                        >
-                          Switch to Division
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setActiveTenantId(corp.id);
+                              toast.success(`Switched to ${corp.name}`);
+                            }}
+                            className="flex-1 text-xs rounded-md"
+                          >
+                            Switch to Division
+                          </Button>
+                          {corp.id !== SALEM_TENANT_ID && corp.id !== CHENNAI_MTC_TENANT_ID && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setCorpToDelete({ id: corp.id, name: corp.name })}
+                              className="h-8 px-2 text-muted-foreground hover:text-rose-600 rounded-md cursor-pointer"
+                              title="Remove Corporation"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -612,12 +667,55 @@ function SettingsPage() {
                 <Button
                   type="submit"
                   size="sm"
+                  disabled={isRegistering}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-md"
                 >
-                  Register Division
+                  {isRegistering ? "Registering..." : "Register Division"}
                 </Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Corporation Confirmation Dialog */}
+        <Dialog
+          open={!!corpToDelete}
+          onOpenChange={(open) => !open && setCorpToDelete(null)}
+        >
+          <DialogContent className="sm:max-w-md rounded-lg">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold text-foreground">
+                Remove Transport Corporation
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Are you sure you want to remove{" "}
+                <span className="font-semibold text-foreground">
+                  {corpToDelete?.name}
+                </span>
+                ? This will permanently delete its associated buses, crew rosters, and route corridors.
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter className="pt-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCorpToDelete(null)}
+                size="sm"
+                className="text-xs rounded-md"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={confirmDeleteCorporation}
+                disabled={isDeletingCorp}
+                size="sm"
+                className="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-md"
+              >
+                {isDeletingCorp ? "Removing..." : "Confirm Removal"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

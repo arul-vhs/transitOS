@@ -68,6 +68,7 @@ const NAV: NavGroup[] = [
       { label: "Route Planner", to: "/network/planner", icon: Compass },
       { label: "Bus Fleet", to: "/fleet/buses", icon: Bus },
       { label: "Bus Crew", to: "/crew/drivers", icon: Users },
+      { label: "Crew Shift & SOS Portal", to: "/crew/portal", icon: ShieldCheck },
       { label: "Schedules & Timetable", to: "/operations/trips", icon: CalendarClock },
       { label: "Passenger Demand & Allocation", to: "/operations/allocation", icon: Workflow },
       { label: "Simulation Deck", to: "/simulation", icon: Play },
@@ -96,6 +97,7 @@ function isNavVisible(role: string, to: string): boolean {
     case "/analytics":
     case "/fleet/buses":
     case "/crew/drivers":
+    case "/crew/portal":
     case "/network/routes":
     case "/network/planner":
     case "/operations/allocation":

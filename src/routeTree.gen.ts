@@ -26,6 +26,7 @@ import { Route as AnalyticsRoutesRouteImport } from './routes/analytics.routes'
 import { Route as CrewAvailabilityRouteImport } from './routes/crew.availability'
 import { Route as CrewConductorsRouteImport } from './routes/crew.conductors'
 import { Route as CrewDriversRouteImport } from './routes/crew.drivers'
+import { Route as CrewPortalRouteImport } from './routes/crew.portal'
 import { Route as FleetBusesRouteImport } from './routes/fleet.buses'
 import { Route as FleetMaintenanceRouteImport } from './routes/fleet.maintenance'
 import { Route as NetworkMapRouteImport } from './routes/network.map'
@@ -123,6 +124,11 @@ const CrewDriversRoute = CrewDriversRouteImport.update({
   path: '/crew/drivers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CrewPortalRoute = CrewPortalRouteImport.update({
+  id: '/crew/portal',
+  path: '/crew/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FleetBusesRoute = FleetBusesRouteImport.update({
   id: '/fleet/buses',
   path: '/fleet/buses',
@@ -196,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/crew/availability': typeof CrewAvailabilityRoute
   '/crew/conductors': typeof CrewConductorsRoute
   '/crew/drivers': typeof CrewDriversRoute
+  '/crew/portal': typeof CrewPortalRoute
   '/fleet/buses': typeof FleetBusesRoute
   '/fleet/maintenance': typeof FleetMaintenanceRoute
   '/network/map': typeof NetworkMapRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/crew/availability': typeof CrewAvailabilityRoute
   '/crew/conductors': typeof CrewConductorsRoute
   '/crew/drivers': typeof CrewDriversRoute
+  '/crew/portal': typeof CrewPortalRoute
   '/fleet/buses': typeof FleetBusesRoute
   '/fleet/maintenance': typeof FleetMaintenanceRoute
   '/network/map': typeof NetworkMapRoute
@@ -256,6 +264,7 @@ export interface FileRoutesById {
   '/crew/availability': typeof CrewAvailabilityRoute
   '/crew/conductors': typeof CrewConductorsRoute
   '/crew/drivers': typeof CrewDriversRoute
+  '/crew/portal': typeof CrewPortalRoute
   '/fleet/buses': typeof FleetBusesRoute
   '/fleet/maintenance': typeof FleetMaintenanceRoute
   '/network/map': typeof NetworkMapRoute
@@ -288,6 +297,7 @@ export interface FileRouteTypes {
     | '/crew/availability'
     | '/crew/conductors'
     | '/crew/drivers'
+    | '/crew/portal'
     | '/fleet/buses'
     | '/fleet/maintenance'
     | '/network/map'
@@ -317,6 +327,7 @@ export interface FileRouteTypes {
     | '/crew/availability'
     | '/crew/conductors'
     | '/crew/drivers'
+    | '/crew/portal'
     | '/fleet/buses'
     | '/fleet/maintenance'
     | '/network/map'
@@ -347,6 +358,7 @@ export interface FileRouteTypes {
     | '/crew/availability'
     | '/crew/conductors'
     | '/crew/drivers'
+    | '/crew/portal'
     | '/fleet/buses'
     | '/fleet/maintenance'
     | '/network/map'
@@ -373,6 +385,7 @@ export interface RootRouteChildren {
   CrewAvailabilityRoute: typeof CrewAvailabilityRoute
   CrewConductorsRoute: typeof CrewConductorsRoute
   CrewDriversRoute: typeof CrewDriversRoute
+  CrewPortalRoute: typeof CrewPortalRoute
   FleetBusesRoute: typeof FleetBusesRoute
   FleetMaintenanceRoute: typeof FleetMaintenanceRoute
   NetworkMapRoute: typeof NetworkMapRoute
@@ -507,6 +520,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CrewDriversRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/crew/portal': {
+      id: '/crew/portal'
+      path: '/crew/portal'
+      fullPath: '/crew/portal'
+      preLoaderRoute: typeof CrewPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/fleet/buses': {
       id: '/fleet/buses'
       path: '/fleet/buses'
@@ -621,6 +641,7 @@ const rootRouteChildren: RootRouteChildren = {
   CrewAvailabilityRoute: CrewAvailabilityRoute,
   CrewConductorsRoute: CrewConductorsRoute,
   CrewDriversRoute: CrewDriversRoute,
+  CrewPortalRoute: CrewPortalRoute,
   FleetBusesRoute: FleetBusesRoute,
   FleetMaintenanceRoute: FleetMaintenanceRoute,
   NetworkMapRoute: NetworkMapRoute,

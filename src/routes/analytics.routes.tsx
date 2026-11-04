@@ -5,6 +5,7 @@ import { ArrowLeft, Compass, Download, TrendingUp } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
+import { useActiveTenant } from "@/lib/tenant-context";
 import {
   Table,
   TableBody,
@@ -27,12 +28,13 @@ export const Route = createFileRoute("/analytics/routes")({
 });
 
 function RoutesAnalyticsPage() {
+  const { currentTenant } = useActiveTenant();
   const [serviceDate, setServiceDate] = useState("25 Aug 2026");
   const [rankingFilter, setRankingFilter] = useState<string>("default");
 
   // Query
   const { data: routeStats = [], isLoading } = useQuery({
-    queryKey: ["route-analytics-data", serviceDate],
+    queryKey: ["route-analytics-data", currentTenant.id, serviceDate],
     queryFn: () => getRouteAnalytics({ serviceDate }),
   });
 

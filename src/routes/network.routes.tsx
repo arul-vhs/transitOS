@@ -191,6 +191,7 @@ function RoutesPage() {
 
       await queryClient.invalidateQueries({ queryKey: ["all-stops"] });
       await queryClient.invalidateQueries({ queryKey: ["routes"] });
+      await queryClient.invalidateQueries({ queryKey: ["route"] });
       await queryClient.invalidateQueries({ queryKey: ["trips"] });
       toast.success(`Stop renamed to "${renamedStopName.trim()}" successfully across all routes and trips.`);
       setEditingStop(null);
@@ -348,10 +349,9 @@ function RoutesPage() {
     mutationFn: updateRoute,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["routes"] });
-      if (selectedRouteId) {
-        queryClient.invalidateQueries({ queryKey: ["route", selectedRouteId] });
-      }
-      toast.success("Bus route details updated.");
+      queryClient.invalidateQueries({ queryKey: ["all-stops"] });
+      queryClient.invalidateQueries({ queryKey: ["route"] });
+      toast.success("Bus route details and stops updated.");
       setIsFormOpen(false);
       resetForm();
     },
@@ -365,9 +365,7 @@ function RoutesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-stops"] });
       queryClient.invalidateQueries({ queryKey: ["routes"] });
-      if (selectedRouteId) {
-        queryClient.invalidateQueries({ queryKey: ["route", selectedRouteId] });
-      }
+      queryClient.invalidateQueries({ queryKey: ["route"] });
       toast.success("Bus stop added to route.");
       setIsAddStopOpen(false);
       setNewStopName("");
@@ -382,9 +380,7 @@ function RoutesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-stops"] });
       queryClient.invalidateQueries({ queryKey: ["routes"] });
-      if (selectedRouteId) {
-        queryClient.invalidateQueries({ queryKey: ["route", selectedRouteId] });
-      }
+      queryClient.invalidateQueries({ queryKey: ["route"] });
       toast.success("Stop removed from corridor.");
     },
     onError: (err: Error) => {
@@ -420,14 +416,20 @@ function RoutesPage() {
     setLengthKm(String(route.lengthKm || "10.00"));
     setDurationMin(String(route.durationMin || 30));
     setPeakFreq(String(route.peakFrequency || 15));
+    const stopsForRoute =
+      route.stops && route.stops.length > 0
+        ? route.stops
+        : allStopsList.filter((s) => s.routeId === route.id);
     setRouteStops(
-      (route.stops || []).map((s) => ({
-        id: s.id,
-        name: s.name,
-        sequence: s.sequence,
-        latitude: s.latitude,
-        longitude: s.longitude,
-      })),
+      stopsForRoute
+        .sort((a, b) => a.sequence - b.sequence)
+        .map((s, idx) => ({
+          id: s.id,
+          name: s.name,
+          sequence: s.sequence || idx + 1,
+          latitude: s.latitude,
+          longitude: s.longitude,
+        })),
     );
     setIsFormOpen(true);
   };
@@ -508,6 +510,7 @@ function RoutesPage() {
           lengthKm: lengthKm.trim(),
           durationMin: parseInt(durationMin, 10) || 30,
           peakFrequency: parseInt(peakFreq, 10) || 15,
+          stops: routeStops,
         },
       });
     } else {

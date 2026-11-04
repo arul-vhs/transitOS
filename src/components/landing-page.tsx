@@ -56,32 +56,44 @@ export interface LandingPageProps {
 
 const DEMO_ACCOUNTS = [
   {
-    role: "System Admin",
+    role: "System Admin (Chennai MTC)",
+    email: "admin@mtcchennai.demo",
+    corp: "Chennai MTC",
+    depot: "Central / Broadway Depot",
+    description:
+      "Metropolitan operations: 50 buses, 70 crew, 12 GTFS corridors, and multi-depot management.",
+  },
+  {
+    role: "System Admin (Salem)",
     email: "admin@salemtransport.demo",
-    depot: "Central Operations",
+    corp: "Salem Transport",
+    depot: "Meyyanur Central Depot",
     description:
-      "Multi-tenant tenant management, role configurations, and system-wide audit logs.",
+      "Municipal operations: 24 buses, 48 crew, 8 corridors, and statutory MV Act constraint solving.",
   },
   {
-    role: "Chief Scheduler",
-    email: "scheduler@salemtransport.demo",
-    depot: "Meyyanur Depot",
+    role: "Chief Scheduler (MTC)",
+    email: "scheduler@mtcchennai.demo",
+    corp: "Chennai MTC",
+    depot: "Central Operations Cell",
     description:
-      "Automated duty generation, OR-Tools timetable optimizer, and crew rosters.",
+      "Automated vehicle-duty pairing, timetable synchronization, and crew shift rosters.",
   },
   {
-    role: "Depot Manager",
-    email: "depot@salemtransport.demo",
-    depot: "Meyyanur Depot",
+    role: "Depot Manager (MTC)",
+    email: "depot@mtcchennai.demo",
+    corp: "Chennai MTC",
+    depot: "Broadway Depot",
     description:
-      "Vehicle bays, bus maintenance schedules, and standby unit dispatching.",
+      "Depot dispatch bays, preventive maintenance tracking, and standby bus allocation.",
   },
   {
-    role: "Route Planner",
+    role: "Route Planner (Salem)",
     email: "planner@salemtransport.demo",
+    corp: "Salem Transport",
     depot: "Network GIS Cell",
     description:
-      "Corridor geometry, stop headway audits, and GeoJSON overlap detection.",
+      "GIS corridor alignment, intermediate stop headway audits, and overlap analysis.",
   },
 ];
 
@@ -181,8 +193,7 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
             </span>
             <span className="text-slate-400 hidden sm:inline">|</span>
             <span className="text-slate-300 hidden sm:inline">
-              Seeded operational dataset: Salem Transport Corporation (24 buses,
-              48 crew, 8 corridors).
+              Multi-tenant operational datasets: Chennai Metropolitan Transport Corporation (50 buses, 70 crew, 12 corridors) and Salem Transport Corporation (24 buses, 48 crew, 8 corridors).
             </span>
           </div>
           <div className="flex items-center gap-4 text-slate-400">
@@ -327,20 +338,31 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Button
                   size="default"
-                  onClick={() => handleQuickLogin("admin@salemtransport.demo")}
+                  onClick={() => handleQuickLogin("admin@mtcchennai.demo")}
                   disabled={loggingIn}
                   className="rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-5 h-10 cursor-pointer"
                 >
                   <Server className="mr-2 size-4" />
-                  <span>Access Demo System (Org Admin)</span>
+                  <span>Launch Chennai MTC Console</span>
                   <ArrowRight className="ml-2 size-4" />
+                </Button>
+
+                <Button
+                  size="default"
+                  variant="outline"
+                  onClick={() => handleQuickLogin("admin@salemtransport.demo")}
+                  disabled={loggingIn}
+                  className="rounded-md text-xs font-semibold px-5 h-10 cursor-pointer"
+                >
+                  <Bus className="mr-2 size-4 text-blue-600 dark:text-blue-400" />
+                  <span>Launch Salem Transport Console</span>
                 </Button>
 
                 <Button
                   asChild
                   variant="outline"
                   size="default"
-                  className="rounded-md text-xs font-semibold px-5 h-10"
+                  className="rounded-md text-xs font-semibold px-4 h-10"
                 >
                   <Link to="/simulation">
                     <Radio className="mr-2 size-4 text-blue-600 dark:text-blue-400" />

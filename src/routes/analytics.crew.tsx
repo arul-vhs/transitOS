@@ -14,15 +14,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getCrewAnalytics } from "@/lib/analytics-fns";
+import { useActiveTenant } from "@/lib/tenant-context";
 
 export const Route = createFileRoute("/analytics/crew")({
   component: CrewAnalyticsPage,
 });
 
 function CrewAnalyticsPage() {
+  const { currentTenant } = useActiveTenant();
   // Query
   const { data: crewStats = [], isLoading } = useQuery({
-    queryKey: ["crew-analytics-data"],
+    queryKey: ["crew-analytics-data", currentTenant.id],
     queryFn: () => getCrewAnalytics(),
   });
 

@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/dialog";
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
+import { useActiveTenant } from "@/lib/tenant-context";
 import { getBuses, getDrivers, getConductors } from "@/lib/fleet-crew";
 import { getTrips } from "@/lib/scheduling-fns";
 import { getRoutes } from "@/lib/routes-gis-fns";
@@ -99,6 +100,7 @@ function IncidentsPage() {
   const user = context?.user;
   const canGenerate = hasPermission(user?.role || "", "schedule.generate");
   const canPublish = hasPermission(user?.role || "", "schedule.publish");
+  const { currentTenant } = useActiveTenant();
 
   // Local state parameters
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(
@@ -127,30 +129,30 @@ function IncidentsPage() {
 
   // Queries
   const { data: incidentsList = [], isLoading: listLoading } = useQuery({
-    queryKey: ["incidents-list", DEFAULT_DATE],
+    queryKey: ["incidents-list", currentTenant.id, DEFAULT_DATE],
     queryFn: () => getIncidents({ serviceDate: DEFAULT_DATE }),
   });
 
   const { data: selectedIncident, isLoading: detailsLoading } = useQuery({
-    queryKey: ["incident-details", selectedIncidentId],
+    queryKey: ["incident-details", currentTenant.id, selectedIncidentId],
     queryFn: () => getIncidentDetails(selectedIncidentId!),
     enabled: !!selectedIncidentId,
   });
 
   const { data: busesList = [] } = useQuery({
-    queryKey: ["buses-dropdown"],
+    queryKey: ["buses-dropdown", currentTenant.id],
     queryFn: () => getBuses(),
   });
   const { data: driversList = [] } = useQuery({
-    queryKey: ["drivers-dropdown"],
+    queryKey: ["drivers-dropdown", currentTenant.id],
     queryFn: () => getDrivers(),
   });
   const { data: tripsList = [] } = useQuery({
-    queryKey: ["trips-dropdown"],
+    queryKey: ["trips-dropdown", currentTenant.id],
     queryFn: () => getTrips({ serviceDate: DEFAULT_DATE }),
   });
   const { data: routesList = [] } = useQuery({
-    queryKey: ["routes-dropdown"],
+    queryKey: ["routes-dropdown", currentTenant.id],
     queryFn: () => getRoutes(),
   });
 

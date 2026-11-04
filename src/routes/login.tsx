@@ -187,13 +187,10 @@ function LoginPage() {
             </p>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: "System Admin", email: "admin@salemtransport.demo" },
-                { label: "Scheduler", email: "scheduler@salemtransport.demo" },
-                { label: "Depot Manager", email: "depot@salemtransport.demo" },
-                {
-                  label: "Route Planner",
-                  email: "planner@salemtransport.demo",
-                },
+                { label: "Admin (Chennai MTC)", email: "admin@mtcchennai.demo" },
+                { label: "Admin (Salem Transport)", email: "admin@salemtransport.demo" },
+                { label: "Scheduler (MTC)", email: "scheduler@mtcchennai.demo" },
+                { label: "Depot Manager (Salem)", email: "depot@salemtransport.demo" },
               ].map((account) => (
                 <button
                   key={account.email}

@@ -27,12 +27,14 @@ import {
 import { getPlanVsActual, exportAnalyticsCsv } from "@/lib/analytics-fns";
 import { getRoutes } from "@/lib/routes-gis-fns";
 import { getBuses } from "@/lib/fleet-crew";
+import { useActiveTenant } from "@/lib/tenant-context";
 
 export const Route = createFileRoute("/analytics/plan-vs-actual")({
   component: PlanVsActualPage,
 });
 
 function PlanVsActualPage() {
+  const { currentTenant } = useActiveTenant();
   const [serviceDate, setServiceDate] = useState("25 Aug 2026");
   const [routeId, setRouteId] = useState<string>("all");
   const [busId, setBusId] = useState<string>("all");
@@ -40,7 +42,7 @@ function PlanVsActualPage() {
 
   // Queries
   const { data: pvsList = [], isLoading: listLoading } = useQuery({
-    queryKey: ["plan-vs-actual-data", routeId, busId, status, serviceDate],
+    queryKey: ["plan-vs-actual-data", currentTenant.id, routeId, busId, status, serviceDate],
     queryFn: () =>
       getPlanVsActual({
         routeId: routeId === "all" ? undefined : routeId,
@@ -51,12 +53,12 @@ function PlanVsActualPage() {
   });
 
   const { data: routesList = [] } = useQuery<any[]>({
-    queryKey: ["routes-filters"],
+    queryKey: ["routes-filters", currentTenant.id],
     queryFn: () => getRoutes() as any,
   });
 
   const { data: busesList = [] } = useQuery<any[]>({
-    queryKey: ["buses-filters"],
+    queryKey: ["buses-filters", currentTenant.id],
     queryFn: () => getBuses() as any,
   });
 

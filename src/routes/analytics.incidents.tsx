@@ -17,22 +17,24 @@ import {
   getIncidentAnalytics,
   getRecoveryAnalytics,
 } from "@/lib/analytics-fns";
+import { useActiveTenant } from "@/lib/tenant-context";
 
 export const Route = createFileRoute("/analytics/incidents")({
   component: IncidentsAnalyticsPage,
 });
 
 function IncidentsAnalyticsPage() {
+  const { currentTenant } = useActiveTenant();
   // Queries
   const { data: incidentStats = {} as any, isLoading: statsLoading } = useQuery(
     {
-      queryKey: ["incidents-analytics-details"],
+      queryKey: ["incidents-analytics-details", currentTenant.id],
       queryFn: () => getIncidentAnalytics(),
     },
   );
 
   const { data: recoveryStats = [], isLoading: runsLoading } = useQuery({
-    queryKey: ["recovery-runs-details"],
+    queryKey: ["recovery-runs-details", currentTenant.id],
     queryFn: () => getRecoveryAnalytics(),
   });
 

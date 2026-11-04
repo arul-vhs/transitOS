@@ -59,6 +59,7 @@ import {
 } from "@/components/ui/dialog";
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
+import { useActiveTenant } from "@/lib/tenant-context";
 import { getBuses, getDrivers, getConductors } from "@/lib/fleet-crew";
 import {
   getTrips,
@@ -106,6 +107,7 @@ function DutiesPage() {
   const context = RootRoute.useRouteContext();
   const user = context?.user;
   const canModify = hasPermission(user?.role || "", "schedule.modify");
+  const { currentTenant } = useActiveTenant();
 
   // Filter & Search state
   const [serviceDate, setServiceDate] = useState(DEFAULT_DATE);
@@ -134,21 +136,21 @@ function DutiesPage() {
 
   // 1. Fetch active buses, drivers, conductors for dropdowns
   const { data: busesList = [] } = useQuery({
-    queryKey: ["active-buses-select"],
+    queryKey: ["active-buses-select", currentTenant.id],
     queryFn: () => getBuses(),
   });
   const { data: driversList = [] } = useQuery({
-    queryKey: ["active-drivers-select"],
+    queryKey: ["active-drivers-select", currentTenant.id],
     queryFn: () => getDrivers(),
   });
   const { data: conductorsList = [] } = useQuery({
-    queryKey: ["active-conductors-select"],
+    queryKey: ["active-conductors-select", currentTenant.id],
     queryFn: () => getConductors(),
   });
 
   // 2. Fetch Duties list
   const { data: dutiesList = [], isLoading: dutiesLoading } = useQuery({
-    queryKey: ["duties", serviceDate, statusFilter],
+    queryKey: ["duties", currentTenant.id, serviceDate, statusFilter],
     queryFn: () => getDuties({ serviceDate, status: statusFilter }),
   });
 
@@ -161,20 +163,20 @@ function DutiesPage() {
 
   // 3. Fetch Selected Duty Detailed View
   const { data: selectedDuty = null } = useQuery({
-    queryKey: ["duty-details", selectedDutyId],
+    queryKey: ["duty-details", currentTenant.id, selectedDutyId],
     queryFn: () => getDuty(selectedDutyId!),
     enabled: !!selectedDutyId,
   });
 
   // 4. Fetch All Today's Trips (to list unassigned ones to add)
   const { data: allTripsList = [] } = useQuery({
-    queryKey: ["all-trips-duties", serviceDate],
+    queryKey: ["all-trips-duties", currentTenant.id, serviceDate],
     queryFn: () => getTrips({ serviceDate }),
   });
 
   // 5. Run validation on selected duty
   const { data: validation = { isValid: true, issues: [] } } = useQuery({
-    queryKey: ["duty-validation", selectedDutyId, selectedDuty],
+    queryKey: ["duty-validation", currentTenant.id, selectedDutyId, selectedDuty],
     queryFn: () => validateDuty({ dutyId: selectedDutyId! }),
     enabled: !!selectedDutyId,
   });

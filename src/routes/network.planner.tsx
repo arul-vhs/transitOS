@@ -107,7 +107,7 @@ function RoutePlannerPage() {
 
   // Fetch Existing Active Routes for Map Reference & Overlap
   const { data: activeRoutes = [] } = useQuery<any[]>({
-    queryKey: ["active-routes-planner"],
+    queryKey: ["active-routes-planner", currentTenant.id],
     queryFn: () => getRoutes({ status: "active" }) as any,
   });
 

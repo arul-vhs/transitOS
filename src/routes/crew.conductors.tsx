@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/dialog";
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
+import { useActiveTenant } from "@/lib/tenant-context";
 import {
   getConductors,
   createCrewMember,
@@ -98,6 +99,7 @@ function ConductorsPage() {
   const context = RootRoute.useRouteContext();
   const user = context?.user;
   const canManage = hasPermission(user?.role || "", "crew.manage");
+  const { currentTenant, currentDepot } = useActiveTenant();
 
   // Filters state
   const [search, setSearch] = useState("");
@@ -111,7 +113,7 @@ function ConductorsPage() {
   // Form values
   const [name, setName] = useState("");
   const [employeeId, setEmployeeId] = useState("");
-  const [depot, setDepot] = useState("Meyyanur Depot");
+  const [depot, setDepot] = useState(currentTenant?.activeDepot || currentDepot || "Central Depot");
   const [status, setStatus] = useState("available");
 
   // Query Conductors

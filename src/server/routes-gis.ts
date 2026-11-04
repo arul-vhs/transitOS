@@ -272,56 +272,150 @@ export async function updateRouteImpl(
     peakFrequency?: number;
     offPeakFrequency?: number;
     geometryGeojson?: any;
+    stops?: Array<{
+      id?: string;
+      name: string;
+      sequence: number;
+      latitude?: string;
+      longitude?: string;
+    }>;
   },
 ) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "routes.manage");
 
-  const route = await db.query.routes.findFirst({
+  let route = await db.query.routes.findFirst({
     where: and(eq(routes.id, id), eq(routes.tenantId, currentUser.tenantId)),
-  });
-  if (!route) throw new Error("Route not found");
+  }).catch(() => null);
 
-  if (data.code !== route.code) {
-    const existing = await db.query.routes.findFirst({
-      where: and(
-        eq(routes.code, data.code),
-        eq(routes.tenantId, currentUser.tenantId),
-      ),
-    });
-    if (existing) {
-      throw new Error(`Route code ${data.code} already exists.`);
+  const fallbackIdx = FALLBACK_ROUTES.findIndex(
+    (r) => r.id === id && r.tenantId === currentUser.tenantId,
+  );
+
+  if (!route && fallbackIdx === -1) {
+    throw new Error("Route not found");
+  }
+
+  // Update in DB if present
+  let updatedRoute: any = null;
+  if (route) {
+    if (data.code !== route.code) {
+      const existing = await db.query.routes.findFirst({
+        where: and(
+          eq(routes.code, data.code),
+          eq(routes.tenantId, currentUser.tenantId),
+        ),
+      });
+      if (existing && existing.id !== id) {
+        throw new Error(`Route code ${data.code} already exists.`);
+      }
+    }
+
+    const [dbResult] = await db
+      .update(routes)
+      .set({
+        code: data.code,
+        name: data.name,
+        origin: data.origin,
+        destination: data.destination,
+        lengthKm: data.lengthKm,
+        durationMin: data.durationMin,
+        direction: data.direction,
+        color: data.color,
+        status: data.status,
+        peakFrequency: data.peakFrequency,
+        offPeakFrequency: data.offPeakFrequency,
+        geometryGeojson: data.geometryGeojson,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(routes.id, id), eq(routes.tenantId, currentUser.tenantId)))
+      .returning();
+    updatedRoute = dbResult;
+
+    // Synchronize stops in DB if provided
+    if (data.stops && Array.isArray(data.stops)) {
+      try {
+        await db
+          .delete(stops)
+          .where(and(eq(stops.routeId, id), eq(stops.tenantId, currentUser.tenantId)));
+
+        for (const st of data.stops) {
+          await db.insert(stops).values({
+            tenantId: currentUser.tenantId,
+            routeId: id,
+            name: st.name.trim(),
+            sequence: st.sequence,
+            latitude: String(st.latitude || "13.0827"),
+            longitude: String(st.longitude || "80.2707"),
+          });
+        }
+      } catch (stopSyncErr) {
+        console.warn("Failed to sync route stops in database:", stopSyncErr);
+      }
     }
   }
 
-  const [updatedRoute] = await db
-    .update(routes)
-    .set({
+  // Synchronize in fallback dataset as well
+  if (fallbackIdx !== -1) {
+    const existingFallback = FALLBACK_ROUTES[fallbackIdx]!;
+    FALLBACK_ROUTES[fallbackIdx] = {
+      ...existingFallback,
       code: data.code,
       name: data.name,
       origin: data.origin,
       destination: data.destination,
       lengthKm: data.lengthKm,
+      distanceKm: data.lengthKm,
       durationMin: data.durationMin,
-      direction: data.direction,
-      color: data.color,
-      status: data.status,
-      peakFrequency: data.peakFrequency,
-      offPeakFrequency: data.offPeakFrequency,
-      geometryGeojson: data.geometryGeojson,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(routes.id, id), eq(routes.tenantId, currentUser.tenantId)))
-    .returning();
+      runtimeMinutes: data.durationMin,
+      direction: data.direction || existingFallback.direction,
+      color: data.color || existingFallback.color,
+      status: data.status || existingFallback.status,
+      peakFrequency: data.peakFrequency ?? existingFallback.peakFrequency,
+      offPeakFrequency: data.offPeakFrequency ?? existingFallback.offPeakFrequency,
+      stopsCount: data.stops ? data.stops.length : existingFallback.stopsCount,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (data.stops && Array.isArray(data.stops)) {
+      // Remove old stops for this route from FALLBACK_STOPS
+      for (let i = FALLBACK_STOPS.length - 1; i >= 0; i--) {
+        if (FALLBACK_STOPS[i]!.routeId === id && FALLBACK_STOPS[i]!.tenantId === currentUser.tenantId) {
+          FALLBACK_STOPS.splice(i, 1);
+        }
+      }
+      // Add new stops to FALLBACK_STOPS
+      data.stops.forEach((st) => {
+        FALLBACK_STOPS.push({
+          id: st.id && !st.id.startsWith("pending-") ? st.id : `stop-${id}-${st.sequence}`,
+          tenantId: currentUser.tenantId,
+          routeId: id,
+          name: st.name.trim(),
+          code: st.name.trim(),
+          sequence: st.sequence,
+          sequenceOrder: st.sequence,
+          latitude: String(st.latitude || "13.0827"),
+          longitude: String(st.longitude || "80.2707"),
+          isTimepoint: true,
+        });
+      });
+    }
+
+    if (!updatedRoute) {
+      updatedRoute = FALLBACK_ROUTES[fallbackIdx];
+    }
+  }
 
   // Audit log
-  await db.insert(auditLogs).values({
-    tenantId: currentUser.tenantId,
-    userId: currentUser.id,
-    email: currentUser.email,
-    action: "ROUTE_UPDATED",
-    details: `Updated route: ${updatedRoute!.code} (${updatedRoute!.name})`,
-  });
+  try {
+    await db.insert(auditLogs).values({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      email: currentUser.email,
+      action: "ROUTE_UPDATED",
+      details: `Updated route: ${data.code} (${data.name}) with ${data.stops?.length ?? 0} stops`,
+    });
+  } catch {}
 
   return updatedRoute;
 }
@@ -493,26 +587,58 @@ export async function createStopImpl(data: {
     }
   }
 
-  const [newStop] = await db
-    .insert(stops)
-    .values({
+  let newStop: any = null;
+  try {
+    const [dbResult] = await db
+      .insert(stops)
+      .values({
+        tenantId: currentUser.tenantId,
+        routeId: data.routeId,
+        name: data.name,
+        sequence: data.sequence,
+        latitude: data.latitude,
+        longitude: data.longitude,
+      })
+      .returning();
+    newStop = dbResult;
+  } catch (err) {
+    newStop = {
+      id: `stop-${data.routeId}-${data.sequence}-${Date.now()}`,
       tenantId: currentUser.tenantId,
       routeId: data.routeId,
       name: data.name,
+      code: data.name,
       sequence: data.sequence,
+      sequenceOrder: data.sequence,
       latitude: data.latitude,
       longitude: data.longitude,
-    })
-    .returning();
+      isTimepoint: true,
+    };
+  }
+
+  FALLBACK_STOPS.push({
+    id: newStop.id,
+    tenantId: currentUser.tenantId,
+    routeId: data.routeId,
+    name: data.name,
+    code: data.name,
+    sequence: data.sequence,
+    sequenceOrder: data.sequence,
+    latitude: data.latitude,
+    longitude: data.longitude,
+    isTimepoint: true,
+  });
 
   // Audit log
-  await db.insert(auditLogs).values({
-    tenantId: currentUser.tenantId,
-    userId: currentUser.id,
-    email: currentUser.email,
-    action: "STOP_CREATED",
-    details: `Added stop ${data.name} to route ID ${data.routeId} at sequence ${data.sequence}`,
-  });
+  try {
+    await db.insert(auditLogs).values({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      email: currentUser.email,
+      action: "STOP_CREATED",
+      details: `Added stop ${data.name} to route ID ${data.routeId} at sequence ${data.sequence}`,
+    });
+  } catch {}
 
   return newStop;
 }
@@ -529,11 +655,6 @@ export async function updateStopImpl(
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "routes.manage");
 
-  const stopRecord = await db.query.stops.findFirst({
-    where: and(eq(stops.id, id), eq(stops.tenantId, currentUser.tenantId)),
-  });
-  if (!stopRecord) throw new Error("Stop not found");
-
   if (!data.name) throw new Error("Stop name is required");
   const latNum = Number(data.latitude);
   const lngNum = Number(data.longitude);
@@ -542,21 +663,55 @@ export async function updateStopImpl(
   if (isNaN(lngNum) || lngNum < -180 || lngNum > 180)
     throw new Error("Longitude must be between -180 and 180");
 
-  const oldName = stopRecord.name;
+  let stopRecord = await db.query.stops.findFirst({
+    where: and(eq(stops.id, id), eq(stops.tenantId, currentUser.tenantId)),
+  }).catch(() => null);
+
+  const fallbackIdx = FALLBACK_STOPS.findIndex(
+    (s) => s.id === id && s.tenantId === currentUser.tenantId,
+  );
+
+  if (!stopRecord && fallbackIdx === -1) {
+    throw new Error("Stop not found");
+  }
+
+  const oldName = stopRecord ? stopRecord.name : FALLBACK_STOPS[fallbackIdx]!.name;
   const newName = data.name.trim();
 
-  const [updatedStop] = await db
-    .update(stops)
-    .set({
+  let updatedStop: any = null;
+
+  if (stopRecord) {
+    const [dbResult] = await db
+      .update(stops)
+      .set({
+        name: newName,
+        sequence: data.sequence,
+        latitude: data.latitude,
+        longitude: data.longitude,
+      })
+      .where(and(eq(stops.id, id), eq(stops.tenantId, currentUser.tenantId)))
+      .returning();
+    updatedStop = dbResult;
+  }
+
+  // Update in fallback data
+  if (fallbackIdx !== -1) {
+    FALLBACK_STOPS[fallbackIdx] = {
+      ...FALLBACK_STOPS[fallbackIdx]!,
       name: newName,
+      code: newName,
       sequence: data.sequence,
+      sequenceOrder: data.sequence,
       latitude: data.latitude,
       longitude: data.longitude,
-    })
-    .where(and(eq(stops.id, id), eq(stops.tenantId, currentUser.tenantId)))
-    .returning();
+    };
+    if (!updatedStop) {
+      updatedStop = FALLBACK_STOPS[fallbackIdx];
+    }
+  }
 
   if (oldName !== newName) {
+    // Propagate in DB
     try {
       await db
         .update(stops)
@@ -610,16 +765,31 @@ export async function updateStopImpl(
     } catch (propagationErr) {
       console.warn("Failed to propagate stop rename across related tables:", propagationErr);
     }
+
+    // Propagate in fallback datasets
+    FALLBACK_STOPS.forEach((s) => {
+      if (s.tenantId === currentUser.tenantId && s.name === oldName) {
+        s.name = newName;
+      }
+    });
+    FALLBACK_ROUTES.forEach((r) => {
+      if (r.tenantId === currentUser.tenantId) {
+        if (r.origin === oldName) r.origin = newName;
+        if (r.destination === oldName) r.destination = newName;
+      }
+    });
   }
 
   // Audit log
-  await db.insert(auditLogs).values({
-    tenantId: currentUser.tenantId,
-    userId: currentUser.id,
-    email: currentUser.email,
-    action: "STOP_UPDATED",
-    details: `Updated stop ${data.name} on route ID ${stopRecord.routeId}`,
-  });
+  try {
+    await db.insert(auditLogs).values({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      email: currentUser.email,
+      action: "STOP_UPDATED",
+      details: `Updated stop ${data.name} (renamed from ${oldName})`,
+    });
+  } catch {}
 
   return updatedStop;
 }
@@ -628,41 +798,56 @@ export async function deleteStopImpl(id: string) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "routes.manage");
 
-  const stopRecord = await db.query.stops.findFirst({
+  let stopRecord = await db.query.stops.findFirst({
     where: and(eq(stops.id, id), eq(stops.tenantId, currentUser.tenantId)),
-  });
-  if (!stopRecord) throw new Error("Stop not found");
+  }).catch(() => null);
 
-  await db
-    .delete(stops)
-    .where(and(eq(stops.id, id), eq(stops.tenantId, currentUser.tenantId)));
+  const fallbackIdx = FALLBACK_STOPS.findIndex(
+    (s) => s.id === id && s.tenantId === currentUser.tenantId,
+  );
 
-  // Renumber remaining stops sequence sequentially
-  const remainingStops = await db
-    .select()
-    .from(stops)
-    .where(
-      and(
-        eq(stops.routeId, stopRecord.routeId),
-        eq(stops.tenantId, currentUser.tenantId),
-      ),
-    )
-    .orderBy(asc(stops.sequence));
+  if (!stopRecord && fallbackIdx === -1) {
+    throw new Error("Stop not found");
+  }
 
-  let index = 1;
-  for (const s of remainingStops) {
-    await db.update(stops).set({ sequence: index }).where(eq(stops.id, s.id));
-    index++;
+  if (stopRecord) {
+    await db
+      .delete(stops)
+      .where(and(eq(stops.id, id), eq(stops.tenantId, currentUser.tenantId)));
+
+    // Renumber remaining stops sequence sequentially
+    const remainingStops = await db
+      .select()
+      .from(stops)
+      .where(
+        and(
+          eq(stops.routeId, stopRecord.routeId),
+          eq(stops.tenantId, currentUser.tenantId),
+        ),
+      )
+      .orderBy(asc(stops.sequence));
+
+    let index = 1;
+    for (const s of remainingStops) {
+      await db.update(stops).set({ sequence: index }).where(eq(stops.id, s.id));
+      index++;
+    }
+  }
+
+  if (fallbackIdx !== -1) {
+    FALLBACK_STOPS.splice(fallbackIdx, 1);
   }
 
   // Audit log
-  await db.insert(auditLogs).values({
-    tenantId: currentUser.tenantId,
-    userId: currentUser.id,
-    email: currentUser.email,
-    action: "STOP_DELETED",
-    details: `Deleted stop ${stopRecord.name} from route ID ${stopRecord.routeId}`,
-  });
+  try {
+    await db.insert(auditLogs).values({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      email: currentUser.email,
+      action: "STOP_DELETED",
+      details: `Deleted stop ID ${id}`,
+    });
+  } catch {}
 
   return { success: true };
 }

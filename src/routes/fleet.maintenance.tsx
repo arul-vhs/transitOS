@@ -43,6 +43,7 @@ import {
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
 import { getBuses, updateBusStatus } from "@/lib/fleet-crew";
+import { useActiveTenant } from "@/lib/tenant-context";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/fleet/maintenance")({
@@ -69,6 +70,7 @@ function MaintenancePage() {
   const context = RootRoute.useRouteContext();
   const user = context?.user;
   const canManage = hasPermission(user?.role || "", "fleet.manage");
+  const { currentTenant } = useActiveTenant();
 
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -76,7 +78,7 @@ function MaintenancePage() {
 
   // 1. Fetch all buses
   const { data: busesList = [], isLoading } = useQuery({
-    queryKey: ["buses-maintenance"],
+    queryKey: ["buses-maintenance", currentTenant.id],
     queryFn: () => getBuses(),
   });
 

@@ -21,17 +21,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getFleetAnalytics } from "@/lib/analytics-fns";
+import { useActiveTenant } from "@/lib/tenant-context";
 
 export const Route = createFileRoute("/analytics/fleet")({
   component: FleetAnalyticsPage,
 });
 
 function FleetAnalyticsPage() {
+  const { currentTenant } = useActiveTenant();
   const [depotFilter, setDepotFilter] = useState<string>("all");
 
   // Query
   const { data: fleetStats = [], isLoading } = useQuery({
-    queryKey: ["fleet-analytics-data", depotFilter],
+    queryKey: ["fleet-analytics-data", currentTenant.id, depotFilter],
     queryFn: () =>
       getFleetAnalytics(
         depotFilter === "all" ? undefined : { depot: depotFilter },

@@ -60,6 +60,7 @@ import {
 } from "@/components/ui/dialog";
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
+import { useActiveTenant } from "@/lib/tenant-context";
 import { getBuses, getDrivers, getConductors } from "@/lib/fleet-crew";
 import { getTrips, getDuties } from "@/lib/scheduling-fns";
 import {
@@ -106,6 +107,7 @@ function OptimizerPage() {
   const user = context?.user;
   const canGenerate = hasPermission(user?.role || "", "schedule.generate");
   const canPublish = hasPermission(user?.role || "", "schedule.publish");
+  const { currentTenant } = useActiveTenant();
 
   // State parameters
   const [serviceDate, setServiceDate] = useState(DEFAULT_DATE);
@@ -139,23 +141,23 @@ function OptimizerPage() {
 
   // 1. Fetch current database baseline parameters
   const { data: currentTrips = [] } = useQuery({
-    queryKey: ["current-trips-opt", serviceDate],
+    queryKey: ["current-trips-opt", currentTenant.id, serviceDate],
     queryFn: () => getTrips({ serviceDate }),
   });
   const { data: currentDuties = [] } = useQuery({
-    queryKey: ["current-duties-opt", serviceDate],
+    queryKey: ["current-duties-opt", currentTenant.id, serviceDate],
     queryFn: () => getDuties({ serviceDate }),
   });
   const { data: busesList = [] } = useQuery({
-    queryKey: ["buses-count-opt"],
+    queryKey: ["buses-count-opt", currentTenant.id],
     queryFn: () => getBuses(),
   });
   const { data: driversList = [] } = useQuery({
-    queryKey: ["drivers-count-opt"],
+    queryKey: ["drivers-count-opt", currentTenant.id],
     queryFn: () => getDrivers(),
   });
   const { data: conductorsList = [] } = useQuery({
-    queryKey: ["conductors-count-opt"],
+    queryKey: ["conductors-count-opt", currentTenant.id],
     queryFn: () => getConductors(),
   });
 

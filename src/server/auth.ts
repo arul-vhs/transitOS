@@ -43,10 +43,11 @@ export function getSessionFromRequest(): SessionPayload | null {
     const session = jwt.verify(token, SECRET) as SessionPayload;
     if (session) {
       if (
-        !session.tenantId ||
         session.tenantId === "ten-salem-transport" ||
-        session.tenantId.length < 30
+        session.tenantId === "6fcb73df-750e-4fe5-b0cb-456b119dcd64"
       ) {
+        session.tenantId = SALEM_TENANT_ID;
+      } else if (!session.tenantId) {
         session.tenantId = CHENNAI_MTC_TENANT_ID;
       }
       if (session.userId && OLD_USER_ID_MAP[session.userId]) {
@@ -183,14 +184,14 @@ export async function getCurrentUser() {
   const session = getSessionFromRequest();
   if (!session) return null;
 
-  let cleanTenantId =
-    !session.tenantId ||
-    session.tenantId === "ten-salem-transport" ||
-    session.tenantId.length < 30
-      ? CHENNAI_MTC_TENANT_ID
-      : session.tenantId;
-  if (cleanTenantId === "6fcb73df-750e-4fe5-b0cb-456b119dcd64") {
+  let cleanTenantId = session.tenantId;
+  if (
+    cleanTenantId === "ten-salem-transport" ||
+    cleanTenantId === "6fcb73df-750e-4fe5-b0cb-456b119dcd64"
+  ) {
     cleanTenantId = SALEM_TENANT_ID;
+  } else if (!cleanTenantId) {
+    cleanTenantId = CHENNAI_MTC_TENANT_ID;
   }
 
   const cleanUserId = OLD_USER_ID_MAP[session.userId] || session.userId;
@@ -216,13 +217,16 @@ export async function getCurrentUser() {
       let resolvedTenantSlug = user.tenant.slug;
 
       if (cleanTenantId && cleanTenantId !== user.tenantId) {
+        resolvedTenantId = cleanTenantId;
         const switchedTenant = await db.query.tenants.findFirst({
           where: eq(tenants.id, cleanTenantId),
         });
         if (switchedTenant) {
-          resolvedTenantId = switchedTenant.id;
           resolvedTenantName = switchedTenant.name;
           resolvedTenantSlug = switchedTenant.slug;
+        } else if (cleanTenantId === CHENNAI_MTC_TENANT_ID) {
+          resolvedTenantName = "Chennai Metropolitan Transport Corporation";
+          resolvedTenantSlug = "chennai-mtc";
         }
       }
 

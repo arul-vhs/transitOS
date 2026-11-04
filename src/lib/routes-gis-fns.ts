@@ -105,6 +105,7 @@ const _updateRoute = createServerFn({ method: "POST" })
         peakFrequency?: number;
         offPeakFrequency?: number;
         geometryGeojson?: any;
+        stops?: any[];
       };
     }) => payload,
   )

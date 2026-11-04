@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { switchTenantFn } from "@/lib/auth";
+import { createTenant, deleteTenant } from "@/lib/tenant-fns";
 
 export interface DepotDetail {
   id: string;
@@ -241,7 +242,7 @@ export function useActiveTenant() {
     }
   };
 
-  const registerTenant = (newTenantData: {
+  const registerTenant = async (newTenantData: {
     name: string;
     code: string;
     region: string;
@@ -249,7 +250,21 @@ export function useActiveTenant() {
     routesCount?: number;
     depots?: DepotDetail[];
   }) => {
-    const newId = `tenant-${Date.now()}`;
+    let newId = `tenant-${Date.now()}`;
+    try {
+      const serverCreated = await createTenant({
+        name: newTenantData.name,
+        code: newTenantData.code,
+        region: newTenantData.region,
+        fleetSize: newTenantData.fleetSize,
+      });
+      if (serverCreated?.id) {
+        newId = serverCreated.id;
+      }
+    } catch (err) {
+      console.warn("Failed to create tenant on server, fallback to client state:", err);
+    }
+
     const defaultDepots: DepotDetail[] =
       newTenantData.depots && newTenantData.depots.length > 0
         ? newTenantData.depots
@@ -279,7 +294,6 @@ export function useActiveTenant() {
 
     const updated = [...tenantsList, newTenant];
     setTenantsList(updated);
-    switchTenant(newId);
 
     if (typeof window !== "undefined") {
       try {
@@ -292,7 +306,39 @@ export function useActiveTenant() {
       }
     }
 
+    await switchTenant(newId);
     return newTenant;
+  };
+
+  const removeTenant = async (tenantId: string) => {
+    if (tenantId === SALEM_TENANT_ID || tenantId === CHENNAI_MTC_TENANT_ID) {
+      throw new Error("Default municipal corporations cannot be removed.");
+    }
+
+    try {
+      await deleteTenant(tenantId);
+    } catch (err: any) {
+      console.warn("Server delete tenant failed, continuing local removal:", err);
+    }
+
+    const updated = tenantsList.filter((t) => t.id !== tenantId);
+    setTenantsList(updated);
+
+    if (typeof window !== "undefined") {
+      try {
+        const customOnly = updated.filter(
+          (t) => !INITIAL_TENANTS.some((init) => init.id === t.id),
+        );
+        localStorage.setItem(CUSTOM_TENANTS_KEY, JSON.stringify(customOnly));
+      } catch (e) {
+        void e;
+      }
+    }
+
+    if (activeTenantId === tenantId) {
+      const fallbackTarget = updated[0]?.id || CHENNAI_MTC_TENANT_ID;
+      await switchTenant(fallbackTarget);
+    }
   };
 
   return {
@@ -308,6 +354,8 @@ export function useActiveTenant() {
     setActiveDepotId: switchDepot,
     addTenant: registerTenant,
     registerTenant,
+    removeTenant,
+    deleteTenant: removeTenant,
     corporationCount: tenantsList.length,
   };
 }

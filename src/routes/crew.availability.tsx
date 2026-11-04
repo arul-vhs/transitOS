@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/sheet";
 import { hasPermission } from "@/lib/auth-shared";
 import { getCrewAvailability } from "@/lib/fleet-crew";
+import { useActiveTenant } from "@/lib/tenant-context";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/crew/availability")({
@@ -268,6 +269,7 @@ function formatHour(h: number) {
 }
 
 function CrewAvailabilityPage() {
+  const { currentTenant } = useActiveTenant();
   const [roleFilter, setRoleFilter] = useState<"all" | "driver" | "conductor">(
     "all",
   );
@@ -288,7 +290,7 @@ function CrewAvailabilityPage() {
     refetch,
     isFetching,
   } = useQuery<CrewMember[]>({
-    queryKey: ["crew-availability"],
+    queryKey: ["crew-availability", currentTenant.id],
     queryFn: () => getCrewAvailability() as Promise<CrewMember[]>,
   });
 
