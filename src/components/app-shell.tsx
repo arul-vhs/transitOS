@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import {
   BarChart3,
@@ -164,7 +165,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   item.to === "/"
                     ? pathname === "/"
                     : pathname === item.to ||
-                      pathname.startsWith(item.to + "/");
+                    pathname.startsWith(item.to + "/");
                 return (
                   <Link
                     key={item.to}
@@ -442,7 +443,7 @@ export function AppShell({
               ) : null}
             </div>
 
-            
+
             {/* Persistent Global Search */}
             <div className="hidden sm:flex items-center flex-1 max-w-sm ml-2">
               <GlobalSearchBar />
@@ -623,10 +624,10 @@ export function AppShell({
                         <AvatarFallback className="bg-primary text-primary-foreground font-bold text-xs rounded-md">
                           {user.name
                             ? user.name
-                                .split(" ")
-                                .map((n: string) => n[0])
-                                .join("")
-                                .toUpperCase()
+                              .split(" ")
+                              .map((n: string) => n[0])
+                              .join("")
+                              .toUpperCase()
                             : "U"}
                         </AvatarFallback>
                       </Avatar>

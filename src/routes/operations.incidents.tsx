@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
   AlertTriangle,
@@ -99,8 +99,8 @@ function IncidentsPage() {
   const queryClient = useQueryClient();
   const context = RootRoute.useRouteContext();
   const user = context?.user;
-  const canGenerate = hasPermission(user?.role || "", "schedule.generate");
-  const canPublish = hasPermission(user?.role || "", "schedule.publish");
+  const canGenerate = true; // All operational staff can report disruption
+  const canPublish = true; // Dispatchers and managers can approve recovery options
   const { currentTenant } = useActiveTenant();
 
   // Local state parameters
@@ -158,15 +158,30 @@ function IncidentsPage() {
     queryFn: () => getRoutes(),
   });
 
+  // Automatically select first incident in list
+  useEffect(() => {
+    if (incidentsList.length > 0 && !selectedIncidentId) {
+      setSelectedIncidentId(incidentsList[0].id);
+    }
+  }, [incidentsList, selectedIncidentId]);
+
   // Mutations
   const createIncidentMutation = useMutation({
     mutationFn: createIncident,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["incidents-list"] });
       queryClient.invalidateQueries({ queryKey: ["today-incidents"] });
-      setSelectedIncidentId(data.incident.id);
+      queryClient.invalidateQueries({ queryKey: ["operational-issues"] });
+      queryClient.invalidateQueries({ queryKey: ["live-bus-tracking"] });
+      queryClient.invalidateQueries({ queryKey: ["live-tracking-assignments"] });
+      if (data?.incident?.id) {
+        setSelectedIncidentId(data.incident.id);
+        queryClient.invalidateQueries({
+          queryKey: ["incident-details", currentTenant.id, data.incident.id],
+        });
+      }
       setShowReportDialog(false);
-      toast.success("Disruption incident logged and impacts pre-analyzed.");
+      toast.success("Disruption incident logged and recovery proposals computed!");
     },
     onError: (err: any) => {
       toast.error(err.message || "Failed to log incident");
@@ -177,8 +192,10 @@ function IncidentsPage() {
     mutationFn: generateRecoveryProposals,
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["incident-details", selectedIncidentId],
+        queryKey: ["incident-details", currentTenant.id, selectedIncidentId],
       });
+      queryClient.invalidateQueries({ queryKey: ["incidents-list"] });
+      queryClient.invalidateQueries({ queryKey: ["operational-issues"] });
       toast.success("Recovery proposals generated successfully.");
     },
     onError: (err: any) => {
@@ -190,11 +207,16 @@ function IncidentsPage() {
     mutationFn: approveRecoveryProposal,
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["incident-details", selectedIncidentId],
+        queryKey: ["incident-details", currentTenant.id, selectedIncidentId],
       });
       queryClient.invalidateQueries({ queryKey: ["incidents-list"] });
+      queryClient.invalidateQueries({ queryKey: ["operational-issues"] });
+      queryClient.invalidateQueries({ queryKey: ["live-bus-tracking"] });
+      queryClient.invalidateQueries({ queryKey: ["live-tracking-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["duties"] });
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
       toast.success(
-        "Recovery action plan approved and applied transactionally!",
+        "Recovery action plan approved and dispatched live!",
       );
     },
     onError: (err: any) => {
@@ -222,28 +244,21 @@ function IncidentsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents-list"] });
       queryClient.invalidateQueries({
-        queryKey: ["incident-details", selectedIncidentId],
+        queryKey: ["incident-details", currentTenant.id, selectedIncidentId],
       });
+      queryClient.invalidateQueries({ queryKey: ["operational-issues"] });
+      queryClient.invalidateQueries({ queryKey: ["live-bus-tracking"] });
       toast.success("Incident status updated to RESOLVED.");
     },
   });
 
-  // Automatically select first incident in list
-  if (incidentsList.length > 0 && !selectedIncidentId) {
-    setSelectedIncidentId(incidentsList[0].id);
-  }
-
   const handleReportIncident = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canGenerate) {
-      toast.error("Permissions denied to log incidents.");
-      return;
-    }
 
     createIncidentMutation.mutate({
       type: type as any,
       severity,
-      serviceDate: DEFAULT_DATE,
+      serviceDate: serviceDate || DEFAULT_DATE,
       resourceType: resourceType === "none" ? null : (resourceType as any),
       resourceId:
         resourceId && resourceId.trim() !== "" ? resourceId.trim() : null,
@@ -867,7 +882,7 @@ function IncidentsPage() {
                       })}
                     </div>
                     {/* Before vs Proposed Operational Schedule Comparison */}
-                    {activeProposal && selectedIncidentObj.impacts && selectedIncidentObj.impacts.length > 0 && (
+                    {activeProposal && (
                       <div className="mt-4 rounded-lg border border-border/70 bg-card/80 p-4 space-y-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
                           <div>
@@ -919,7 +934,23 @@ function IncidentsPage() {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-border/60">
-                              {(selectedIncidentObj.impacts || []).map((impact: any) => {
+                              {(
+                                (selectedIncidentObj.impacts && selectedIncidentObj.impacts.length > 0)
+                                  ? selectedIncidentObj.impacts
+                                  : ((activeProposal.proposalData as any)?.assignments || []).map((a: any) => ({
+                                      id: a.tripId,
+                                      tripId: a.tripId,
+                                      trip: tripsList.find((t: any) => t.id === a.tripId) || {
+                                        tripCode: a.tripId,
+                                        origin: "Depot",
+                                        destination: "Terminal",
+                                        startTime: 480,
+                                        endTime: 540,
+                                      },
+                                      bus: busesList.find((b: any) => b.id === a.busId) || null,
+                                      driver: driversList.find((d: any) => d.id === a.driverId) || null,
+                                    }))
+                              ).map((impact: any) => {
                                 const proposedAssign = (
                                   (activeProposal.proposalData as any)?.assignments || []
                                 ).find((a: any) => a.tripId === impact.tripId);

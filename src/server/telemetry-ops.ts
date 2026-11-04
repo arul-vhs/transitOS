@@ -82,6 +82,68 @@ export interface LiveTrackedBus {
 // In-memory tenant store for latest vehicle telemetry: key = `${tenantId}:${busRegNumber}`
 const LIVE_TELEMETRY = new Map<string, TelemetryRecord>();
 
+export interface LiveDisruptionRecord {
+  incidentId: string;
+  tenantId: string;
+  resourceType?: string | null;
+  resourceId?: string | null;
+  busRegNumber?: string | null;
+  tripId?: string | null;
+  type: string;
+  severity: string;
+  reason: string;
+  reportedAt: number;
+  resolved: boolean;
+}
+
+export const LIVE_DISRUPTIONS = new Map<string, LiveDisruptionRecord>();
+
+export function recordLiveDisruptionTelemetry(params: {
+  tenantId: string;
+  incidentId: string;
+  resourceType?: string | null;
+  resourceId?: string | null;
+  busRegNumber?: string | null;
+  tripId?: string | null;
+  type: string;
+  severity: string;
+  reason: string;
+}) {
+  const record: LiveDisruptionRecord = {
+    incidentId: params.incidentId,
+    tenantId: params.tenantId,
+    resourceType: params.resourceType,
+    resourceId: params.resourceId,
+    busRegNumber: params.busRegNumber,
+    tripId: params.tripId,
+    type: params.type,
+    severity: params.severity,
+    reason: params.reason,
+    reportedAt: Date.now(),
+    resolved: false,
+  };
+
+  LIVE_DISRUPTIONS.set(`INC-${params.incidentId}`, record);
+  if (params.busRegNumber) {
+    LIVE_DISRUPTIONS.set(`${params.tenantId}:${params.busRegNumber.toUpperCase()}`, record);
+  }
+}
+
+export function clearLiveDisruptionTelemetry(params: {
+  tenantId: string;
+  incidentId?: string | null;
+  busRegNumber?: string | null;
+}) {
+  if (params.incidentId) {
+    const dis = LIVE_DISRUPTIONS.get(`INC-${params.incidentId}`);
+    if (dis) dis.resolved = true;
+  }
+  if (params.busRegNumber) {
+    const dis = LIVE_DISRUPTIONS.get(`${params.tenantId}:${params.busRegNumber.toUpperCase()}`);
+    if (dis) dis.resolved = true;
+  }
+}
+
 // Haversine formula to compute distance in km between two lat/lng coordinates
 function haversineDistanceKm(
   lat1: number,
@@ -585,6 +647,28 @@ export async function getLiveBusTrackingImpl(filters?: {
         speedKmH = Math.max(22, Math.round(30 + Math.sin(seed + nowMs / 10000) * 8));
         statusReason = "Operating on timetable schedule (+/- 1 min headway).";
       }
+    }
+
+    // Check if vehicle has an active operational disruption
+    const directDisruption = LIVE_DISRUPTIONS.get(`${currentUser.tenantId}:${a.busRegNumber.toUpperCase()}`);
+    const activeDisruption =
+      directDisruption ||
+      Array.from(LIVE_DISRUPTIONS.values()).find(
+        (d) =>
+          !d.resolved &&
+          d.tenantId === currentUser.tenantId &&
+          ((d.resourceId && (d.resourceId === a.busId || d.resourceId === a.busRegNumber)) ||
+            (d.busRegNumber && d.busRegNumber.toUpperCase() === a.busRegNumber.toUpperCase()) ||
+            (d.tripId && d.tripId === a.tripId)),
+      );
+
+    if (activeDisruption && !activeDisruption.resolved) {
+      isLive = true;
+      gpsStatus = "LIVE";
+      delayMinutes = activeDisruption.severity === "critical" ? 45 : 25;
+      delayStatus = activeDisruption.type.includes("BREAKDOWN") ? "STATIONARY" : "DELAYED";
+      speedKmH = activeDisruption.type.includes("BREAKDOWN") ? 0 : 12;
+      statusReason = `[DISRUPTION ALERT] ${activeDisruption.reason || activeDisruption.type.replace(/_/g, " ")}. Central Dispatch response active.`;
     }
 
     // Apply Filters
