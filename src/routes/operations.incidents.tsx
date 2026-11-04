@@ -121,6 +121,9 @@ function IncidentsPage() {
   const [expectedEndTime, setExpectedEndTime] = useState<number | null>(740);
   const [locationName, setLocationName] = useState<string>("");
   const [descriptionText, setDescriptionText] = useState<string>("");
+  const [selectedProposalId, setSelectedProposalId] = useState<string | null>(
+    null,
+  );
 
   // Queries
   const { data: incidentsList = [], isLoading: listLoading } = useQuery({
@@ -261,6 +264,10 @@ function IncidentsPage() {
     (a, b) => Number(a.objectiveScore) - Number(b.objectiveScore),
   );
   const recommendedProposalId = sortedProposals[0]?.id;
+  const activeProposal =
+    proposals.find((p: any) => p.id === selectedProposalId) ||
+    proposals.find((p: any) => p.id === recommendedProposalId) ||
+    proposals[0];
   const selectedIncidentObj = selectedIncident;
 
   return (
@@ -698,14 +705,18 @@ function IncidentsPage() {
                     <div className="grid gap-4 md:grid-cols-3">
                       {proposals.map((prop: any) => {
                         const isRecommended = prop.id === recommendedProposalId;
+                        const isSelected = prop.id === activeProposal?.id;
                         return (
                           <div
                             key={prop.id}
+                            onClick={() => setSelectedProposalId(prop.id)}
                             className={cn(
-                              "p-4 rounded-xl border flex flex-col justify-between relative transition-all duration-150",
-                              isRecommended
-                                ? "border-emerald-500/50 bg-emerald-500/5 shadow-md shadow-emerald-500/5 ring-1 ring-emerald-500/30"
-                                : "border-border/70 bg-card/60 hover:border-border",
+                              "p-4 rounded-lg border flex flex-col justify-between relative transition-all duration-150 cursor-pointer",
+                              isSelected
+                                ? "border-primary bg-primary/5 ring-2 ring-primary/40 shadow-sm"
+                                : isRecommended
+                                  ? "border-emerald-500/50 bg-emerald-500/5 shadow-md shadow-emerald-500/5 ring-1 ring-emerald-500/30"
+                                  : "border-border/70 bg-card/60 hover:border-border",
                             )}
                           >
                             <div className="space-y-3">
@@ -853,6 +864,182 @@ function IncidentsPage() {
                         );
                       })}
                     </div>
+                    {/* Before vs Proposed Operational Schedule Comparison */}
+                    {activeProposal && selectedIncidentObj.impacts && selectedIncidentObj.impacts.length > 0 && (
+                      <div className="mt-4 rounded-lg border border-border/70 bg-card/80 p-4 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant="outline"
+                                className="font-mono text-[10px] text-primary border-primary/30 px-1.5 py-0.5 rounded"
+                              >
+                                Option {activeProposal.proposalNumber} Detail
+                              </Badge>
+                              <h4 className="text-xs font-bold text-foreground">
+                                Before vs Proposed Operational Schedule Comparison
+                              </h4>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              {activeProposal.explanation}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs font-mono">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                              {activeProposal.tripsRecovered} Recovered
+                            </span>
+                            <span className="text-muted-foreground">·</span>
+                            <span
+                              className={
+                                activeProposal.cancellations > 0
+                                  ? "text-destructive font-semibold"
+                                  : "text-muted-foreground"
+                              }
+                            >
+                              {activeProposal.cancellations} Cancelled
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Comparison Table */}
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs text-left">
+                            <thead className="bg-muted/50 border-y border-border/60 text-muted-foreground uppercase text-[10px] tracking-wider font-medium">
+                              <tr>
+                                <th className="px-3 py-2.5">Trip & Corridor</th>
+                                <th className="px-3 py-2.5">Time</th>
+                                <th className="px-3 py-2.5">Before: Bus</th>
+                                <th className="px-3 py-2.5">Before: Crew</th>
+                                <th className="px-3 py-2.5">Proposed Bus</th>
+                                <th className="px-3 py-2.5">Proposed Crew</th>
+                                <th className="px-3 py-2.5 text-right">Result</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/60">
+                              {(selectedIncidentObj.impacts || []).map((impact: any) => {
+                                const proposedAssign = (
+                                  (activeProposal.proposalData as any)?.assignments || []
+                                ).find((a: any) => a.tripId === impact.tripId);
+
+                                const proposedBus = proposedAssign
+                                  ? busesList.find((b: any) => b.id === proposedAssign.busId)?.registrationNumber ||
+                                    proposedAssign.busId
+                                  : null;
+                                const proposedDriver = proposedAssign
+                                  ? driversList.find((d: any) => d.id === proposedAssign.driverId)?.name ||
+                                    proposedAssign.driverId
+                                  : null;
+
+                                const isRecovered = !!proposedAssign;
+                                const busChanged =
+                                  proposedBus &&
+                                  proposedBus !== impact.bus?.registrationNumber;
+                                const driverChanged =
+                                  proposedDriver &&
+                                  proposedDriver !== impact.driver?.name;
+
+                                return (
+                                  <tr
+                                    key={impact.id}
+                                    className="hover:bg-muted/30 transition-colors"
+                                  >
+                                    <td className="px-3 py-2.5 font-medium text-foreground">
+                                      <span className="font-mono text-primary font-bold">
+                                        {impact.trip?.tripCode || "Trip"}
+                                      </span>
+                                      <span className="text-muted-foreground block text-[11px] truncate max-w-[180px]">
+                                        {impact.trip?.origin} → {impact.trip?.destination}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2.5 font-mono text-muted-foreground">
+                                      {formatMinutesToTime(impact.trip?.startTime || 0)} - {formatMinutesToTime(impact.trip?.endTime || 0)}
+                                    </td>
+                                    <td className="px-3 py-2.5 font-mono">
+                                      {impact.bus?.registrationNumber ? (
+                                        <span
+                                          className={
+                                            selectedIncidentObj.resourceId === impact.bus?.id
+                                              ? "text-destructive line-through"
+                                              : "text-foreground"
+                                          }
+                                        >
+                                          {impact.bus.registrationNumber}
+                                        </span>
+                                      ) : (
+                                        <span className="text-muted-foreground">-</span>
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-2.5">
+                                      <span className="text-foreground">
+                                        {impact.driver?.name || "Unassigned"}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2.5 font-mono">
+                                      {isRecovered ? (
+                                        <span
+                                          className={
+                                            busChanged
+                                              ? "text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1"
+                                              : "text-foreground"
+                                          }
+                                        >
+                                          {proposedBus}
+                                          {busChanged && (
+                                            <Badge
+                                              variant="outline"
+                                              className="text-[9px] font-mono px-1 py-0 text-emerald-600 border-emerald-500/30 rounded"
+                                            >
+                                              Spare
+                                            </Badge>
+                                          )}
+                                        </span>
+                                      ) : (
+                                        <span className="text-destructive font-semibold">
+                                          Cancelled
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-2.5">
+                                      {isRecovered ? (
+                                        <span
+                                          className={
+                                            driverChanged
+                                              ? "text-primary font-semibold"
+                                              : "text-foreground"
+                                          }
+                                        >
+                                          {proposedDriver}
+                                          {proposedAssign?.handoverRequired && (
+                                            <span className="text-[10px] text-amber-500 block">
+                                              Relief Handover
+                                            </span>
+                                          )}
+                                        </span>
+                                      ) : (
+                                        <span className="text-muted-foreground">None</span>
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-right">
+                                      {isRecovered ? (
+                                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded text-[10px] font-mono">
+                                          Recovered
+                                        </Badge>
+                                      ) : (
+                                        <Badge className="bg-red-500/15 text-destructive border border-red-500/30 rounded text-[10px] font-mono">
+                                          Cancelled
+                                        </Badge>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
                   </section>
                 )}
               </div>

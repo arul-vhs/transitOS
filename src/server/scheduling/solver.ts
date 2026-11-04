@@ -2,6 +2,7 @@ import {
   checkTurnaround,
   checkDutyDuration,
   checkLicenseCategory,
+  checkContinuousDriving,
 } from "./constraints";
 import { generateCandidates } from "./candidate-generation";
 import { calculateObjectiveScore, calculateQualityScore } from "./objective";
@@ -141,8 +142,22 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
         );
 
         if (isDriverOk && isConductorOk) {
-          // Double check overlap (should be clear since duty itself is sequential, but verify rest/timeline)
+          // Enforce statutory 240-minute continuous driving limit
+          const previousDutyTrips = duty.trips
+            .map((dt) => input.trips.find((t) => t.id === dt.tripId))
+            .filter(Boolean) as Trip[];
+          if (!checkContinuousDriving(previousDutyTrips, trip, 240, 30)) {
+            continue;
+          }
+
+          // Double check overlap on bus and crew schedules
           if (
+            isResourceAvailable(
+              duty.busId,
+              lastTrip.endTime,
+              trip.endTime,
+              busSchedules,
+            ) &&
             isResourceAvailable(
               driverId,
               lastTrip.endTime,
@@ -156,6 +171,12 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
               crewSchedules,
             )
           ) {
+            reserveResource(
+              duty.busId,
+              lastTrip.endTime,
+              trip.endTime,
+              busSchedules,
+            );
             reserveResource(
               driverId,
               lastTrip.endTime,
@@ -284,6 +305,12 @@ export function solveSchedule(input: OptimizerInput): OptimizerResult {
           );
 
           if (newDriver && newConductor) {
+            reserveResource(
+              duty.busId,
+              lastTrip.endTime,
+              trip.endTime,
+              busSchedules,
+            );
             reserveResource(
               newDriver.id,
               trip.startTime,

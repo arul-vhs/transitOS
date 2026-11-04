@@ -20,8 +20,12 @@ import {
   ChevronDown,
   Check,
   Radio,
+  Sun,
+  Moon,
+  Laptop,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { useTheme } from "@/components/theme-provider";
 import { useActiveTenant } from "@/lib/tenant-context";
 
 import {
@@ -62,6 +66,7 @@ const NAV: NavGroup[] = [
       { label: "Bus Fleet", to: "/fleet/buses", icon: Bus },
       { label: "Staff & Crew", to: "/crew/drivers", icon: Users },
       { label: "Schedules & Timetable", to: "/operations/trips", icon: CalendarClock },
+      { label: "Smart Fleet Allocation", to: "/operations/allocation", icon: Workflow },
       { label: "Live Road Dispatch", to: "/operations/today", icon: RouteIcon },
     ],
   },
@@ -87,6 +92,7 @@ function isNavVisible(role: string, to: string): boolean {
     case "/crew/drivers":
     case "/network/routes":
     case "/network/planner":
+    case "/operations/allocation":
       return true;
     case "/settings":
       return ["ORGANIZATION_ADMIN", "PLATFORM_ADMIN"].includes(role);
@@ -206,6 +212,62 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </div>
       </div>
     </div>
+  );
+}
+
+export function ThemeToggle() {
+  const { theme, setTheme, resolvedTheme } = useTheme();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 w-8 p-0 border-border hover:bg-muted cursor-pointer rounded-md shadow-2xs"
+          title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)}`}
+        >
+          {resolvedTheme === "dark" ? (
+            <Moon className="size-4 text-sky-400" />
+          ) : (
+            <Sun className="size-4 text-amber-500" />
+          )}
+          <span className="sr-only">Toggle theme</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-36 rounded-lg shadow-lg border-border">
+        <DropdownMenuItem
+          onClick={() => setTheme("light")}
+          className="flex items-center justify-between text-xs cursor-pointer py-1.5 rounded-md"
+        >
+          <div className="flex items-center gap-2">
+            <Sun className="size-3.5 text-amber-500" />
+            <span>Light</span>
+          </div>
+          {theme === "light" && <Check className="size-3.5 text-primary" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => setTheme("dark")}
+          className="flex items-center justify-between text-xs cursor-pointer py-1.5 rounded-md"
+        >
+          <div className="flex items-center gap-2">
+            <Moon className="size-3.5 text-sky-400" />
+            <span>Dark</span>
+          </div>
+          {theme === "dark" && <Check className="size-3.5 text-primary" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => setTheme("system")}
+          className="flex items-center justify-between text-xs cursor-pointer py-1.5 rounded-md"
+        >
+          <div className="flex items-center gap-2">
+            <Laptop className="size-3.5 text-muted-foreground" />
+            <span>System</span>
+          </div>
+          {theme === "system" && <Check className="size-3.5 text-primary" />}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -520,6 +582,9 @@ export function AppShell({
                   </div>
                 </SheetContent>
               </Sheet>
+
+              {/* Theme Toggle (Light / Dark / System) */}
+              <ThemeToggle />
 
               {user && user.name && user.role ? (
                 <DropdownMenu>

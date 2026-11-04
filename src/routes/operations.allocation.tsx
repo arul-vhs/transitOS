@@ -326,7 +326,10 @@ function DynamicFleetAllocationPage() {
   };
 
   return (
-    <AppShell>
+    <AppShell
+      title="Smart Fleet Allocation"
+      subtitle="Demand-responsive capacity rebalancing, real-time surge detection, and multi-depot reserve dispatch"
+    >
       <div className="space-y-6 p-4 md:p-8 max-w-7xl mx-auto">
         {/* Top Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/60 pb-5">
@@ -336,7 +339,7 @@ function DynamicFleetAllocationPage() {
                 <Workflow className="h-5 w-5" />
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                Demand-Responsive Fleet Allocation
+                Corridor Rebalancing & Surge Controls
               </h1>
             </div>
             <p className="text-sm text-muted-foreground mt-1">

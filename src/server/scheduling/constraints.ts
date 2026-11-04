@@ -30,7 +30,6 @@ export function checkLicenseCategory(
   driver: Crew,
   busType: string | null,
 ): boolean {
-  // Configurable license compatibility layer
   // Standard compatibility rules:
   // - Double-Decker Express requires "Heavy Passenger Vehicle (HPV)"
   // - Standard Diesel Leyland requires Commercial Bus Licence or HPV
@@ -74,7 +73,23 @@ export function checkTurnaround(
     return { feasible: false, gap };
   }
 
-  // Turnaround constraints: route transition requires minimum turnaround buffer
+  // Inter-terminal positioning deadhead check
+  const isInterTerminal =
+    tripA.destination &&
+    tripB.origin &&
+    tripA.destination.trim().toLowerCase() !== tripB.origin.trim().toLowerCase();
+
+  if (isInterTerminal) {
+    const requiredRepositioningBuffer = Math.max(
+      15,
+      config.MIN_TURNAROUND_MINUTES,
+    );
+    if (gap < requiredRepositioningBuffer) {
+      return { feasible: false, gap };
+    }
+  }
+
+  // Route transition requires minimum turnaround buffer
   if (tripA.routeId !== tripB.routeId) {
     if (gap < config.MIN_TURNAROUND_MINUTES) {
       return { feasible: false, gap };
@@ -98,4 +113,36 @@ export function checkDutyDuration(
   const duration = endTime - startTime;
   const maxMinutes = config.MAX_DUTY_HOURS * 60;
   return duration <= maxMinutes;
+}
+
+/**
+ * Validates that continuous driving does not exceed statutory limit (240 minutes = 4 hours)
+ * without an intervening mandatory rest break of at least 30 minutes.
+ */
+export function checkContinuousDriving(
+  existingTrips: { startTime: number; endTime: number; durationMin?: number }[],
+  nextTrip: { startTime: number; endTime: number; durationMin?: number },
+  maxContinuousMin: number = 240,
+  minMandatoryRestMin: number = 30,
+): boolean {
+  const nextDuration =
+    nextTrip.durationMin ?? (nextTrip.endTime - nextTrip.startTime);
+  let continuousDriving = nextDuration;
+  let cursorStart = nextTrip.startTime;
+
+  for (let i = existingTrips.length - 1; i >= 0; i--) {
+    const prev = existingTrips[i];
+    if (!prev) continue;
+    const prevDuration = prev.durationMin ?? (prev.endTime - prev.startTime);
+    const breakGap = cursorStart - prev.endTime;
+
+    if (breakGap >= minMandatoryRestMin) {
+      // Driver received mandatory rest break; continuous streak resets
+      break;
+    }
+    continuousDriving += prevDuration;
+    cursorStart = prev.startTime;
+  }
+
+  return continuousDriving <= maxContinuousMin;
 }
