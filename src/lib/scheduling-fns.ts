@@ -423,6 +423,7 @@ export const resolveAssignmentConflict = async (
 export type {
   ProblemCategory,
   ConflictLifecycleStatus,
+  AutomationLevel,
   SolutionOption,
   ConflictDiagnostic,
   OperationalIssue,
@@ -494,4 +495,76 @@ const _rejectIssueRecommendation = createServerFn({ method: "POST" })
 
 export const rejectIssueRecommendation = async (params: any) => {
   return await _rejectIssueRecommendation(toServerFnArgs(params)!);
+};
+
+const _recommendConductorForTrip = createServerFn({ method: "POST" })
+  .validator((params: { tripId: string; serviceDate?: string }) => params)
+  .handler(async ({ data }) => {
+    const { recommendConductorForTripImpl } = await import(
+      "../server/scheduling-ops"
+    );
+    return await recommendConductorForTripImpl(data);
+  });
+
+export const recommendConductorForTrip = async (params: any) => {
+  return await _recommendConductorForTrip(toServerFnArgs(params)!);
+};
+
+const _assignConductorToTrip = createServerFn({ method: "POST" })
+  .validator(
+    (params: {
+      tripId: string;
+      dutyId?: string;
+      conductorId: string;
+      serviceDate?: string;
+    }) => params,
+  )
+  .handler(async ({ data }) => {
+    const { assignConductorToTripImpl } = await import(
+      "../server/scheduling-ops"
+    );
+    return await assignConductorToTripImpl(data);
+  });
+
+export const assignConductorToTrip = async (params: any) => {
+  return await _assignConductorToTrip(toServerFnArgs(params)!);
+};
+
+const _bulkAssignConductors = createServerFn({ method: "POST" })
+  .validator((params?: { serviceDate?: string; depot?: string }) => params)
+  .handler(async ({ data }) => {
+    const { bulkAssignConductorsImpl } = await import(
+      "../server/scheduling-ops"
+    );
+    return await bulkAssignConductorsImpl(data);
+  });
+
+export const bulkAssignConductors = async (params?: any) => {
+  return await _bulkAssignConductors(toServerFnArgs(params));
+};
+
+const _retryIssueAnalysis = createServerFn({ method: "POST" })
+  .validator((params: { issueId: string }) => params)
+  .handler(async ({ data }) => {
+    const { retryIssueAnalysisImpl } = await import("../server/scheduling-ops");
+    return await retryIssueAnalysisImpl(data);
+  });
+
+export const retryIssueAnalysis = async (params: any) => {
+  return await _retryIssueAnalysis(toServerFnArgs(params)!);
+};
+
+const _markIssueManuallyResolved = createServerFn({ method: "POST" })
+  .validator(
+    (params: { issueId: string; resolutionNotes: string }) => params,
+  )
+  .handler(async ({ data }) => {
+    const { markIssueManuallyResolvedImpl } = await import(
+      "../server/scheduling-ops"
+    );
+    return await markIssueManuallyResolvedImpl(data);
+  });
+
+export const markIssueManuallyResolved = async (params: any) => {
+  return await _markIssueManuallyResolved(toServerFnArgs(params)!);
 };

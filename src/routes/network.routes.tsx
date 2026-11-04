@@ -24,6 +24,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { TransitTable, ColumnDef } from "@/components/ui/transit-table";
 import { useActiveTenant } from "@/lib/tenant-context";
+import { RouteBadge } from "@/lib/route-utils";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -524,14 +525,7 @@ function RoutesPage() {
     {
       header: "Route No",
       accessorKey: "code",
-      cell: (route) => (
-        <span
-          className="inline-flex items-center justify-center px-2 py-0.5 rounded font-mono text-xs font-bold text-white shadow-2xs"
-          style={{ backgroundColor: route.color || "#2563EB" }}
-        >
-          {route.code}
-        </span>
-      ),
+      cell: (route) => <RouteBadge route={route} size="md" />,
     },
     {
       header: "Corridor Terminals",

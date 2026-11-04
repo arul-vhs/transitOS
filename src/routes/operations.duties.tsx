@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { RouteBadge } from "@/lib/route-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -857,15 +858,10 @@ function DutiesPage() {
                                       t.endTime || t.startTime + 45,
                                     )}
                                   </span>
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-[10px] font-mono"
-                                  >
-                                    {t.routeCode || "Corridor"}
-                                  </Badge>
+                                  <RouteBadge route={t.routeCode} size="sm" />
                                 </div>
                                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                                  {t.origin || "Terminal A"} ➔{" "}
+                                  {t.origin || "Terminal A"} -{" "}
                                   {t.destination || "Terminal B"}
                                 </p>
                               </div>
@@ -1045,15 +1041,10 @@ function DutiesPage() {
                         <span className="font-bold text-xs font-mono text-foreground">
                           {formatMinutesToTime(t.startTime)}
                         </span>
-                        <Badge
-                          variant="secondary"
-                          className="text-[9px] font-mono px-1 py-0"
-                        >
-                          {t.routeCode || "Route"}
-                        </Badge>
+                        <RouteBadge route={t.routeCode} size="sm" />
                       </div>
                       <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                        {t.origin || "Origin"} ➔ {t.destination || "Dest"}
+                        {t.origin || "Origin"} - {t.destination || "Dest"}
                       </p>
                     </div>
 

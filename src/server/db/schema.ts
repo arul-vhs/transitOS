@@ -993,3 +993,44 @@ export const fleetAllocationsRelations = relations(
     }),
   }),
 );
+
+
+// 21. Vehicle Telemetry & Live GPS Ingestion Table
+export const vehicleTelemetry = pgTable(
+  "vehicle_telemetry",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    busId: uuid("bus_id").references(() => buses.id, { onDelete: "cascade" }),
+    busRegNumber: varchar("bus_reg_number", { length: 50 }).notNull(),
+    latitude: decimal("latitude", { precision: 10, scale: 6 }).notNull(),
+    longitude: decimal("longitude", { precision: 10, scale: 6 }).notNull(),
+    speedKmH: decimal("speed_kmh", { precision: 6, scale: 2 }).default("0.00"),
+    heading: integer("heading").default(0),
+    accuracyMeters: decimal("accuracy_meters", { precision: 8, scale: 2 }),
+    source: varchar("source", { length: 50 }).notNull().default("AVL_GATEWAY"), // AVL_GATEWAY, DRIVER_MOBILE, TELEMETRY_API
+    timestamp: timestamp("timestamp").notNull().defaultNow(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("vehicle_telemetry_tenant_id_idx").on(table.tenantId),
+    index("vehicle_telemetry_bus_reg_idx").on(table.busRegNumber),
+    index("vehicle_telemetry_timestamp_idx").on(table.timestamp),
+  ],
+);
+
+export const vehicleTelemetryRelations = relations(
+  vehicleTelemetry,
+  ({ one }) => ({
+    tenant: one(tenants, {
+      fields: [vehicleTelemetry.tenantId],
+      references: [tenants.id],
+    }),
+    bus: one(buses, {
+      fields: [vehicleTelemetry.busId],
+      references: [buses.id],
+    }),
+  }),
+);

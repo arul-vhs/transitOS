@@ -24,6 +24,7 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { TransitTable, ColumnDef } from "@/components/ui/transit-table";
+import { RouteBadge, formatRouteName } from "@/lib/route-utils";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -613,13 +614,14 @@ function TripsPage() {
       header: "Route Corridor",
       accessorKey: "routeName",
       cell: (trip) => (
-        <div className="text-xs">
-          <p className="font-semibold text-foreground truncate max-w-[200px]">
-            {trip.routeName || trip.routeCode || "Route Corridor"}
-          </p>
-          <p className="text-[11px] text-muted-foreground truncate">
-            {trip.origin} → {trip.destination}
-          </p>
+        <div className="flex flex-col gap-1 items-start text-xs">
+          <RouteBadge route={trip.routeCode || trip.routeName} size="sm" />
+          <span className="text-[11px] text-muted-foreground truncate max-w-[200px]">
+            {formatRouteName(trip.routeName || trip.routeCode)}
+          </span>
+          <span className="text-[10px] text-muted-foreground/80 truncate">
+            {trip.origin} - {trip.destination}
+          </span>
         </div>
       ),
     },

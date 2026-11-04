@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Bus,
   Users,
@@ -19,7 +19,17 @@ import {
   Info,
   ChevronRight,
   ShieldAlert,
-  XCircle,
+  Radio,
+  Navigation,
+  Signal,
+  Eye,
+  Activity,
+  Filter,
+  CheckCheck,
+  UserCheck,
+  RotateCcw,
+  Smartphone,
+  Send,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -44,13 +54,33 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { hasPermission } from "@/lib/auth-shared";
+import { useActiveTenant } from "@/lib/tenant-context";
+import { useTheme } from "@/components/theme-provider";
+import { RouteBadge, formatRouteNumber, formatRouteName } from "@/lib/route-utils";
+import {
+  getLiveBusTracking,
+  ingestVehicleTelemetry,
+  LiveTrackedBus,
+} from "@/lib/telemetry-fns";
 import {
   getLiveTrackingAssignments,
   getOperationalIssues,
   reportOperationalProblem,
   approveIssueRecommendation,
   rejectIssueRecommendation,
+  recommendConductorForTrip,
+  assignConductorToTrip,
+  bulkAssignConductors,
+  retryIssueAnalysis,
+  markIssueManuallyResolved,
   ProblemCategory,
   OperationalIssue,
   SolutionOption,
@@ -70,7 +100,7 @@ export const Route = createFileRoute("/operations/today")({
       {
         name: "description",
         content:
-          "Operational monitoring of current bus, driver, and conductor assignments with intelligent conflict investigation and resolution.",
+          "Operational monitoring of live bus tracking, vehicle assignments, conductor staffing, and automated issue resolution.",
       },
     ],
   }),
@@ -106,35 +136,140 @@ interface LiveTrackingAssignment {
   conductorId: string | null;
   conductorName: string;
   conductorStatus: string;
+  conductorAssigned?: boolean;
+  driverAssigned?: boolean;
+  busAssigned?: boolean;
   status: "active" | "scheduled" | "conflicted" | "unassigned";
   conflicts: any[];
 }
 
+const TILE_LAYERS = {
+  voyager: {
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    attribution:
+      '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap contributors',
+  },
+  dark: {
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    attribution:
+      '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap contributors',
+  },
+};
+
 function OperationsTodayPage() {
   const queryClient = useQueryClient();
+  const { currentTenant } = useActiveTenant();
+  const { resolvedTheme } = useTheme();
+
   const [serviceDate] = useState(DEFAULT_SERVICE_DATE);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [routeFilter, setRouteFilter] = useState<string>("all");
+  const [assignmentStatusFilter, setAssignmentStatusFilter] = useState<string>("all");
+  const [mapRouteFilter, setMapRouteFilter] = useState<string>("all");
+  const [mapDepotFilter, setMapDepotFilter] = useState<string>("all");
+  const [mapStatusFilter, setMapStatusFilter] = useState<string>("all");
+  const [mapSearchQuery, setMapSearchQuery] = useState<string>("");
+
   const [issuesTab, setIssuesTab] = useState<
     "needs_review" | "manual" | "resolved" | "all"
   >("needs_review");
 
-  // Problem Reporting Dialog state
+  // Selected Bus for Map Inspection
+  const [selectedTrackedBus, setSelectedTrackedBus] = useState<LiveTrackedBus | null>(null);
+
+  // Problem Reporting Dialog State
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
-  const [reportCategory, setReportCategory] =
-    useState<ProblemCategory>("BUS_BREAKDOWN");
+  const [reportCategory, setReportCategory] = useState<ProblemCategory>("BUS_BREAKDOWN");
   const [reportTripId, setReportTripId] = useState<string>("");
+  const [reportBusId, setReportBusId] = useState<string>("");
   const [reportDescription, setReportDescription] = useState<string>("");
 
-  // Slide-over Review Drawer state
+  // Slide-over Diagnostic Review Drawer State
   const [reviewSheetOpen, setReviewSheetOpen] = useState(false);
-  const [selectedIssue, setSelectedIssue] = useState<OperationalIssue | null>(
-    null,
-  );
+  const [selectedIssue, setSelectedIssue] = useState<OperationalIssue | null>(null);
   const [selectedSolutionId, setSelectedSolutionId] = useState<string>("");
   const [dispatchNotes, setDispatchNotes] = useState<string>("");
 
-  // 1. Fetch Live Tracking Assignments
+  // Conductor Recommendation Drawer State
+  const [conductorDrawerOpen, setConductorDrawerOpen] = useState(false);
+  const [selectedTripForConductor, setSelectedTripForConductor] = useState<LiveTrackingAssignment | null>(null);
+
+  // Driver Mobile Check-in Dialog State
+  const [driverCheckinOpen, setDriverCheckinOpen] = useState(false);
+  const [checkinBusReg, setCheckinBusReg] = useState<string>("");
+  const [transmittingGps, setTransmittingGps] = useState(false);
+  const [lastTransmittedCoords, setLastTransmittedCoords] = useState<{
+    lat: number;
+    lng: number;
+    speed: number;
+    accuracy?: number;
+    time: string;
+  } | null>(null);
+
+  // Manual Resolution Dialog State
+  const [manualResolveDialogOpen, setManualResolveDialogOpen] = useState(false);
+  const [manualResolveNotes, setManualResolveNotes] = useState("");
+  const [targetManualIssueId, setTargetManualIssueId] = useState<string>("");
+
+  // ========================================================
+  // 1. DATA QUERIES
+  // ========================================================
+
+  // Fetch Live Bus Tracking Telemetry
+  const {
+    data: trackingData,
+    isLoading: loadingTracking,
+    isRefetching: refetchingTracking,
+    refetch: refetchTracking,
+  } = useQuery({
+    queryKey: [
+      "live-bus-tracking",
+      serviceDate,
+      mapDepotFilter,
+      mapRouteFilter,
+      mapStatusFilter,
+    ],
+    queryFn: () =>
+      getLiveBusTracking({
+        serviceDate,
+        depot: mapDepotFilter !== "all" ? mapDepotFilter : undefined,
+        routeCode: mapRouteFilter !== "all" ? mapRouteFilter : undefined,
+        statusFilter: mapStatusFilter !== "all" ? mapStatusFilter : undefined,
+      }),
+    refetchInterval: 10000, // Auto-sync live tracking every 10s
+  });
+
+  const trackedBuses: LiveTrackedBus[] = useMemo(
+    () => trackingData?.buses || [],
+    [trackingData?.buses],
+  );
+
+  const routesGeojson = useMemo(
+    () => trackingData?.routesGeojson || [],
+    [trackingData?.routesGeojson],
+  );
+
+  const trackingSummary = trackingData?.summary || {
+    totalBuses: 0,
+    liveTracked: 0,
+    delayedBuses: 0,
+    onTimeBuses: 0,
+    stationaryBuses: 0,
+    untrackedBuses: 0,
+  };
+
+  // Filter tracked buses for search query
+  const filteredTrackedBuses = useMemo(() => {
+    if (!mapSearchQuery.trim()) return trackedBuses;
+    const q = mapSearchQuery.toLowerCase();
+    return trackedBuses.filter(
+      (b) =>
+        b.busRegNumber.toLowerCase().includes(q) ||
+        (b.routeCode && b.routeCode.toLowerCase().includes(q)) ||
+        (b.driverName && b.driverName.toLowerCase().includes(q)) ||
+        (b.nextStopName && b.nextStopName.toLowerCase().includes(q)),
+    );
+  }, [trackedBuses, mapSearchQuery]);
+
+  // Fetch Live Tracking Assignments Table Data
   const {
     data: liveData,
     isLoading: loadingAssignments,
@@ -143,7 +278,7 @@ function OperationsTodayPage() {
   } = useQuery({
     queryKey: ["live-tracking-assignments", serviceDate],
     queryFn: () => getLiveTrackingAssignments({ serviceDate }),
-    refetchInterval: 30000,
+    refetchInterval: 15000,
   });
 
   const assignments: LiveTrackingAssignment[] = useMemo(
@@ -151,7 +286,20 @@ function OperationsTodayPage() {
     [liveData?.assignments],
   );
 
-  // 2. Fetch Operational Issues & Diagnostic Recommendations
+  const assignmentSummary = liveData?.summary || {
+    totalTrips: 0,
+    activeAssignments: 0,
+    conflictedAssignments: 0,
+    unassignedTrips: 0,
+    unassignedConductors: 0,
+    unassignedDrivers: 0,
+    unassignedBuses: 0,
+    availableBuses: 0,
+    availableDrivers: 0,
+    availableConductors: 0,
+  };
+
+  // Fetch Operational Issues & Diagnostic Recommendations
   const {
     data: issuesData,
     isLoading: loadingIssues,
@@ -172,10 +320,36 @@ function OperationsTodayPage() {
     active: 0,
     awaitingApproval: 0,
     awaitingManual: 0,
+    autoResolved: 0,
     resolved: 0,
   };
 
-  // 3. Report Problem Mutation
+  // Conductor Recommendation Query
+  const {
+    data: conductorRecData,
+    isLoading: loadingConductorRec,
+    refetch: refetchConductorRec,
+  } = useQuery({
+    queryKey: [
+      "recommend-conductor",
+      selectedTripForConductor?.tripId,
+      serviceDate,
+    ],
+    queryFn: () => {
+      if (!selectedTripForConductor?.tripId) return null;
+      return recommendConductorForTrip({
+        tripId: selectedTripForConductor.tripId,
+        serviceDate,
+      });
+    },
+    enabled: Boolean(selectedTripForConductor?.tripId && conductorDrawerOpen),
+  });
+
+  // ========================================================
+  // 2. MUTATIONS
+  // ========================================================
+
+  // Report Problem Mutation
   const reportMutation = useMutation({
     mutationFn: async () => {
       if (!reportDescription.trim()) {
@@ -183,6 +357,7 @@ function OperationsTodayPage() {
       }
       return await reportOperationalProblem({
         tripId: reportTripId || undefined,
+        busId: reportBusId || undefined,
         category: reportCategory,
         description: reportDescription.trim(),
         serviceDate,
@@ -192,53 +367,31 @@ function OperationsTodayPage() {
       toast.success(
         res.message || "Problem logged. Intelligent investigation complete.",
       );
-      queryClient.invalidateQueries({
-        queryKey: ["operational-issues"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["live-tracking-assignments"],
-      });
+      queryClient.invalidateQueries({ queryKey: ["operational-issues"] });
+      queryClient.invalidateQueries({ queryKey: ["live-tracking-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["live-bus-tracking"] });
       setReportDialogOpen(false);
       setReportDescription("");
       setReportTripId("");
-
-      // Immediately open the investigation drawer for admin approval
-      if (res.issue) {
-        setSelectedIssue(res.issue);
-        setSelectedSolutionId(res.issue.bestSolution?.id || "");
-        setDispatchNotes("");
-        setReviewSheetOpen(true);
-      }
+      setReportBusId("");
     },
     onError: (err: any) => {
       toast.error(err.message || "Failed to log operational problem.");
     },
   });
 
-  // 4. Approve Recommendation Mutation
+  // Approve Recommendation Mutation
   const approveMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedIssue) throw new Error("No issue selected");
-      return await approveIssueRecommendation({
-        issueId: selectedIssue.id,
-        solutionId: selectedSolutionId || undefined,
-        dispatchNotes: dispatchNotes.trim() || undefined,
-      });
+    mutationFn: async (vars: { issueId: string; solutionId?: string; dispatchNotes?: string }) => {
+      return await approveIssueRecommendation(vars);
     },
     onSuccess: (res) => {
-      toast.success(
-        res.message ||
-          "Recommendation approved. Backend assignments updated and revalidated.",
-      );
-      queryClient.invalidateQueries({
-        queryKey: ["operational-issues"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["live-tracking-assignments"],
-      });
+      toast.success(res.message);
+      queryClient.invalidateQueries({ queryKey: ["operational-issues"] });
+      queryClient.invalidateQueries({ queryKey: ["live-tracking-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["live-bus-tracking"] });
       setReviewSheetOpen(false);
       setSelectedIssue(null);
-      setSelectedSolutionId("");
       setDispatchNotes("");
     },
     onError: (err: any) => {
@@ -246,258 +399,618 @@ function OperationsTodayPage() {
     },
   });
 
-  // 5. Reject Recommendation Mutation
+  // Reject Recommendation Mutation
   const rejectMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedIssue) throw new Error("No issue selected");
-      return await rejectIssueRecommendation({
-        issueId: selectedIssue.id,
-        reason: dispatchNotes.trim() || "Manual intervention requested by supervisor",
-      });
+    mutationFn: async (vars: { issueId: string; reason?: string }) => {
+      return await rejectIssueRecommendation(vars);
     },
     onSuccess: (res) => {
-      toast.warning(
-        res.message || "Recommendation rejected. Flagged for manual intervention.",
-      );
-      queryClient.invalidateQueries({
-        queryKey: ["operational-issues"],
-      });
+      toast.success(res.message);
+      queryClient.invalidateQueries({ queryKey: ["operational-issues"] });
       setReviewSheetOpen(false);
       setSelectedIssue(null);
-      setSelectedSolutionId("");
-      setDispatchNotes("");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to update issue status.");
+      toast.error(err.message || "Failed to reject recommendation.");
     },
   });
 
-  // Open Problem Report Dialog (optionally preselecting a trip)
-  const handleOpenReportDialog = (trip?: LiveTrackingAssignment) => {
-    if (trip) {
-      setReportTripId(trip.tripId);
-      if (trip.busStatus === "breakdown" || trip.busStatus === "maintenance") {
-        setReportCategory("BUS_BREAKDOWN");
-      } else if (trip.driverStatus === "leave") {
-        setReportCategory("DRIVER_UNAVAILABLE");
-      } else if (trip.conductorStatus === "leave") {
-        setReportCategory("CONDUCTOR_ABSENT");
-      } else if (trip.conflicts.length > 0) {
-        setReportCategory("SCHEDULING_OVERLAP");
+  // Conductor Direct Assignment Mutation
+  const assignConductorMutation = useMutation({
+    mutationFn: async (vars: { tripId: string; dutyId?: string; conductorId: string }) => {
+      return await assignConductorToTrip({
+        ...vars,
+        serviceDate,
+      });
+    },
+    onSuccess: (res) => {
+      toast.success(res.message || "Conductor successfully assigned.");
+      queryClient.invalidateQueries({ queryKey: ["live-tracking-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["operational-issues"] });
+      queryClient.invalidateQueries({ queryKey: ["live-bus-tracking"] });
+      setConductorDrawerOpen(false);
+      setSelectedTripForConductor(null);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to assign conductor.");
+    },
+  });
+
+  // Bulk Conductor Assignment Mutation
+  const bulkConductorMutation = useMutation({
+    mutationFn: async () => {
+      return await bulkAssignConductors({
+        serviceDate,
+        depot: mapDepotFilter !== "all" ? mapDepotFilter : undefined,
+      });
+    },
+    onSuccess: (res) => {
+      if (res.assignedCount > 0) {
+        toast.success(
+          `Bulk assignment completed: ${res.assignedCount} trip(s) assigned conductors without conflicts.`,
+        );
       } else {
-        setReportCategory("BUS_BREAKDOWN");
+        toast.info(
+          res.unassignedRemaining > 0
+            ? "No additional eligible conductors available matching non-overlap constraints."
+            : "All scheduled trips already have assigned conductors.",
+        );
       }
-    } else {
-      setReportTripId(assignments[0]?.tripId || "");
-      setReportCategory("BUS_BREAKDOWN");
+      queryClient.invalidateQueries({ queryKey: ["live-tracking-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["operational-issues"] });
+      queryClient.invalidateQueries({ queryKey: ["live-bus-tracking"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Bulk conductor assignment failed.");
+    },
+  });
+
+  // Retry Issue Analysis Mutation
+  const retryAnalysisMutation = useMutation({
+    mutationFn: async (issueId: string) => {
+      return await retryIssueAnalysis({ issueId });
+    },
+    onSuccess: () => {
+      toast.success("Schedule engine re-analyzed operational issue.");
+      queryClient.invalidateQueries({ queryKey: ["operational-issues"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Re-analysis failed.");
+    },
+  });
+
+  // Mark Manually Resolved Mutation
+  const markManuallyResolvedMutation = useMutation({
+    mutationFn: async (vars: { issueId: string; resolutionNotes: string }) => {
+      return await markIssueManuallyResolved(vars);
+    },
+    onSuccess: () => {
+      toast.success("Issue marked as manually resolved by supervisor.");
+      queryClient.invalidateQueries({ queryKey: ["operational-issues"] });
+      queryClient.invalidateQueries({ queryKey: ["live-tracking-assignments"] });
+      setManualResolveDialogOpen(false);
+      setManualResolveNotes("");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to update resolution status.");
+    },
+  });
+
+  // Telemetry Ingestion Mutation (Driver Mobile Web Check-in)
+  const telemetryMutation = useMutation({
+    mutationFn: async (input: {
+      busRegNumber: string;
+      latitude: number;
+      longitude: number;
+      speedKmH: number;
+      accuracyMeters?: number;
+      source: "DRIVER_MOBILE" | "AVL_GATEWAY";
+    }) => {
+      return await ingestVehicleTelemetry(input);
+    },
+    onSuccess: (res) => {
+      toast.success(res.message);
+      queryClient.invalidateQueries({ queryKey: ["live-bus-tracking"] });
+      queryClient.invalidateQueries({ queryKey: ["live-tracking-assignments"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to ingest telemetry.");
+    },
+  });
+
+  // ========================================================
+  // 3. LEAFLET MAP INTEGRATION
+  // ========================================================
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const [L, setL] = useState<any>(null);
+  const markersLayerGroupRef = useRef<any>(null);
+  const polylinesLayerGroupRef = useRef<any>(null);
+  const activeTileLayerRef = useRef<any>(null);
+
+  // Dynamic Leaflet import to prevent SSR errors
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      import("leaflet").then((mod) => {
+        setL(mod.default);
+      });
     }
-    setReportDescription("");
-    setReportDialogOpen(true);
+  }, []);
+
+  // Map Center Coordinates
+  const defaultCenter = useMemo(() => {
+    if (currentTenant.id.startsWith("69000000")) {
+      return [13.045, 80.24] as [number, number]; // Chennai Central
+    }
+    return [11.6643, 78.146] as [number, number]; // Salem
+  }, [currentTenant.id]);
+
+  const defaultZoom = currentTenant.id.startsWith("69000000") ? 12 : 13;
+
+  // Initialize Leaflet Map
+  useEffect(() => {
+    if (!L || !mapContainerRef.current) return;
+
+    if (!mapInstanceRef.current) {
+      const map = L.map(mapContainerRef.current, {
+        center: defaultCenter,
+        zoom: defaultZoom,
+        zoomControl: false,
+      });
+
+      L.control.zoom({ position: "bottomright" }).addTo(map);
+
+      const tileConfig = resolvedTheme === "dark" ? TILE_LAYERS.dark : TILE_LAYERS.voyager;
+      activeTileLayerRef.current = L.tileLayer(tileConfig.url, {
+        attribution: tileConfig.attribution,
+        maxZoom: 19,
+      }).addTo(map);
+
+      polylinesLayerGroupRef.current = L.layerGroup().addTo(map);
+      markersLayerGroupRef.current = L.layerGroup().addTo(map);
+
+      mapInstanceRef.current = map;
+    }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [L, defaultCenter, defaultZoom]);
+
+  // Update Tile Layer on Theme Change
+  useEffect(() => {
+    if (!mapInstanceRef.current || !L) return;
+    if (activeTileLayerRef.current) {
+      mapInstanceRef.current.removeLayer(activeTileLayerRef.current);
+    }
+    const tileConfig = resolvedTheme === "dark" ? TILE_LAYERS.dark : TILE_LAYERS.voyager;
+    activeTileLayerRef.current = L.tileLayer(tileConfig.url, {
+      attribution: tileConfig.attribution,
+      maxZoom: 19,
+    }).addTo(mapInstanceRef.current);
+  }, [resolvedTheme, L]);
+
+  // Render Route Polylines
+  useEffect(() => {
+    if (!mapInstanceRef.current || !L || !polylinesLayerGroupRef.current) return;
+    polylinesLayerGroupRef.current.clearLayers();
+
+    routesGeojson.forEach((r) => {
+      if (mapRouteFilter !== "all" && r.routeCode !== mapRouteFilter) return;
+
+      const latLngs = r.coordinates.map((c: [number, number]) => [c[1], c[0]]);
+      if (latLngs.length > 0) {
+        const polyline = L.polyline(latLngs, {
+          color: r.color || "#2563eb",
+          weight: 4,
+          opacity: mapRouteFilter === "all" ? 0.45 : 0.85,
+          dashArray: mapRouteFilter === "all" ? "6, 6" : undefined,
+        });
+
+        polyline.bindTooltip(
+          `<strong>${r.routeCode}</strong>: ${r.routeName}`,
+          { sticky: true, className: "text-xs font-mono" },
+        );
+
+        polyline.addTo(polylinesLayerGroupRef.current);
+      }
+    });
+  }, [routesGeojson, mapRouteFilter, L]);
+
+  // Render Real Bus Location Markers
+  useEffect(() => {
+    if (!mapInstanceRef.current || !L || !markersLayerGroupRef.current) return;
+    markersLayerGroupRef.current.clearLayers();
+
+    filteredTrackedBuses.forEach((b) => {
+      // Only plot buses with actual coordinates
+      if (b.latitude === null || b.longitude === null) return;
+
+      const isOnTime = b.delayStatus === "ON_TIME";
+      const isDelayed = b.delayStatus === "DELAYED";
+      const isStationary = b.delayStatus === "STATIONARY";
+
+      const bgClass = isOnTime
+        ? "bg-emerald-600 text-white border-emerald-400"
+        : isDelayed
+          ? "bg-amber-600 text-white border-amber-400"
+          : isStationary
+            ? "bg-blue-600 text-white border-blue-400"
+            : "bg-slate-600 text-white border-slate-400";
+
+      const pingColor = isOnTime
+        ? "bg-emerald-400"
+        : isDelayed
+          ? "bg-amber-400"
+          : "bg-blue-400";
+
+      const html = `
+        <div class="relative group cursor-pointer transition-transform hover:scale-110">
+          ${
+            b.isLive
+              ? `<span class="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full ${pingColor} opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 ${pingColor}"></span>
+                </span>`
+              : ""
+          }
+          <div class="px-2 py-1 rounded-md text-[10px] font-bold font-mono shadow-md border flex items-center gap-1.5 ${bgClass}">
+            <span>${b.routeCode || "BUS"}</span>
+            <span class="opacity-80">·</span>
+            <span class="text-[9px] font-sans font-medium">${b.busRegNumber.slice(-4)}</span>
+          </div>
+        </div>
+      `;
+
+      const customIcon = L.divIcon({
+        className: "custom-bus-marker",
+        html,
+        iconSize: [68, 26],
+        iconAnchor: [34, 13],
+      });
+
+      const marker = L.marker([b.latitude, b.longitude], {
+        icon: customIcon,
+      });
+
+      marker.on("click", () => {
+        setSelectedTrackedBus(b);
+      });
+
+      marker.bindTooltip(
+        `<div class="p-1 space-y-0.5 font-sans">
+          <div class="font-bold text-xs flex items-center gap-1.5">
+            <span>${b.busRegNumber}</span>
+            <span class="text-[10px] px-1 py-0 rounded bg-muted font-mono font-normal">Route ${b.routeCode}</span>
+          </div>
+          <div class="text-[11px] text-muted-foreground">${b.routeName || b.origin + " to " + b.destination}</div>
+          <div class="text-[10px] font-mono text-emerald-600 font-semibold">${b.speedKmH} km/h · ${b.lastUpdatedAgo || "Just now"}</div>
+        </div>`,
+        { direction: "top", offset: [0, -10] },
+      );
+
+      marker.addTo(markersLayerGroupRef.current);
+    });
+  }, [filteredTrackedBuses, L]);
+
+  // Center on Selected Bus
+  const handleInspectBus = (bus: LiveTrackedBus) => {
+    setSelectedTrackedBus(bus);
+    if (
+      mapInstanceRef.current &&
+      bus.latitude !== null &&
+      bus.longitude !== null
+    ) {
+      mapInstanceRef.current.setView([bus.latitude, bus.longitude], 15, {
+        animate: true,
+      });
+    }
   };
+
+  // Transmit Device Geolocation (Driver Mobile Check-in)
+  const handleTransmitDeviceGps = (targetBusReg: string) => {
+    if (!targetBusReg) {
+      toast.error("Please enter or select a vehicle registration number.");
+      return;
+    }
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      toast.error("Geolocation is not supported by your current browser environment.");
+      return;
+    }
+
+    setTransmittingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude, speed, accuracy } = pos.coords;
+        const speedKmH = speed ? Math.round(speed * 3.6) : 28; // Default urban transit speed
+
+        telemetryMutation.mutate(
+          {
+            busRegNumber: targetBusReg,
+            latitude,
+            longitude,
+            speedKmH,
+            accuracyMeters: accuracy || 10,
+            source: "DRIVER_MOBILE",
+          },
+          {
+            onSuccess: () => {
+              setTransmittingGps(false);
+              setLastTransmittedCoords({
+                lat: latitude,
+                lng: longitude,
+                speed: speedKmH,
+                accuracy: Math.round(accuracy || 10),
+                time: new Date().toLocaleTimeString(),
+              });
+            },
+            onError: () => {
+              setTransmittingGps(false);
+            },
+          },
+        );
+      },
+      (err) => {
+        setTransmittingGps(false);
+        toast.error(`Geolocation permission denied or timed out: ${err.message}`);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
+  };
+
+  // Sample Terminal Ping (Fallback without requiring device GPS permissions)
+  const handleSampleTerminalPing = (
+    targetBusReg: string,
+    terminal: "broadway" | "cmbt" | "siruseri",
+  ) => {
+    if (!targetBusReg) {
+      toast.error("Please select a vehicle registration number.");
+      return;
+    }
+
+    const terminals = {
+      broadway: { lat: 13.088, lng: 80.285, speed: 18 },
+      cmbt: { lat: 13.068, lng: 80.205, speed: 22 },
+      siruseri: { lat: 12.825, lng: 80.222, speed: 36 },
+    };
+    const t = terminals[terminal];
+
+    telemetryMutation.mutate(
+      {
+        busRegNumber: targetBusReg,
+        latitude: t.lat,
+        longitude: t.lng,
+        speedKmH: t.speed,
+        accuracyMeters: 8,
+        source: "AVL_GATEWAY",
+      },
+      {
+        onSuccess: () => {
+          setLastTransmittedCoords({
+            lat: t.lat,
+            lng: t.lng,
+            speed: t.speed,
+            accuracy: 8,
+            time: new Date().toLocaleTimeString(),
+          });
+        },
+      },
+    );
+  };
+
+  // Filter Issues
+  const filteredIssues = useMemo(() => {
+    return issues.filter((iss) => {
+      if (issuesTab === "needs_review") {
+        return (
+          iss.lifecycleStatus === "AWAITING_APPROVAL" ||
+          iss.lifecycleStatus === "RECOMMENDATION_READY"
+        );
+      }
+      if (issuesTab === "manual") {
+        return iss.lifecycleStatus === "AWAITING_MANUAL_INTERVENTION";
+      }
+      if (issuesTab === "resolved") {
+        return (
+          iss.lifecycleStatus === "RESOLVED" ||
+          iss.lifecycleStatus === "AUTOMATICALLY_RESOLVED"
+        );
+      }
+      return true;
+    });
+  }, [issues, issuesTab]);
+
+  // Filter Assignments
+  const filteredAssignments = useMemo(() => {
+    return assignments.filter((item) => {
+      if (assignmentStatusFilter === "all") return true;
+      if (assignmentStatusFilter === "active") return item.status === "active";
+      if (assignmentStatusFilter === "conflicted") return item.status === "conflicted";
+      if (assignmentStatusFilter === "unassigned") return item.status === "unassigned";
+      if (assignmentStatusFilter === "missing_conductor") return !item.conductorId;
+      return true;
+    });
+  }, [assignments, assignmentStatusFilter]);
 
   // Open Issue Review Drawer
   const handleOpenReview = (issue: OperationalIssue) => {
     setSelectedIssue(issue);
     setSelectedSolutionId(issue.bestSolution?.id || "");
-    setDispatchNotes("");
     setReviewSheetOpen(true);
   };
 
-  // Distinct Route corridors for filter dropdown
-  const routeOptions = useMemo(() => {
-    const map = new Map<string, string>();
+  // Open Conductor Drawer
+  const handleOpenConductorDrawer = (assignment: LiveTrackingAssignment) => {
+    setSelectedTripForConductor(assignment);
+    setConductorDrawerOpen(true);
+  };
+
+  // Open Problem Report Dialog
+  const handleOpenReportDialog = (assignment?: LiveTrackingAssignment) => {
+    if (assignment) {
+      setReportTripId(assignment.tripId);
+      setReportBusId(assignment.busId || "");
+      setReportDescription(
+        `Operational delay or disruption reported on Trip ${assignment.tripCode} (Route ${assignment.routeCode}).`,
+      );
+    } else {
+      setReportTripId("");
+      setReportBusId("");
+      setReportDescription("");
+    }
+    setReportDialogOpen(true);
+  };
+
+  // Available Route Codes
+  const availableRouteCodes = useMemo(() => {
+    const set = new Set<string>();
+    routesGeojson.forEach((r) => set.add(r.routeCode));
+    assignments.forEach((a) => set.add(formatRouteNumber(a.routeCode)));
+    return Array.from(set).sort();
+  }, [routesGeojson, assignments]);
+
+  // Available Depots
+  const availableDepots = useMemo(() => {
+    const set = new Set<string>();
     assignments.forEach((a) => {
-      if (a.routeCode && !map.has(a.routeCode)) {
-        map.set(a.routeCode, `${a.routeCode}: ${a.routeName}`);
-      }
+      if (a.busDepot && a.busDepot !== "Depot") set.add(a.busDepot);
     });
-    return Array.from(map.entries()).map(([code, label]) => ({
-      value: code,
-      label,
-    }));
+    return Array.from(set).sort();
   }, [assignments]);
 
-  // Client-side filtering for Assignments TransitTable
-  const filteredAssignments = useMemo(() => {
-    return assignments.filter((item) => {
-      if (statusFilter !== "all") {
-        if (statusFilter === "conflicted" && item.status !== "conflicted") {
-          return false;
-        }
-        if (statusFilter === "active" && item.status !== "active") {
-          return false;
-        }
-        if (statusFilter === "unassigned" && item.status !== "unassigned") {
-          return false;
-        }
-      }
-      if (routeFilter !== "all" && item.routeCode !== routeFilter) {
-        return false;
-      }
-      return true;
-    });
-  }, [assignments, statusFilter, routeFilter]);
-
-  // Filtered Operational Issues based on tab
-  const filteredIssues = useMemo(() => {
-    switch (issuesTab) {
-      case "needs_review":
-        return issues.filter(
-          (i) =>
-            i.lifecycleStatus === "RECOMMENDATION_READY" ||
-            i.lifecycleStatus === "AWAITING_APPROVAL" ||
-            i.lifecycleStatus === "REPORTED",
-        );
-      case "manual":
-        return issues.filter(
-          (i) => i.lifecycleStatus === "AWAITING_MANUAL_INTERVENTION",
-        );
-      case "resolved":
-        return issues.filter((i) => i.lifecycleStatus === "RESOLVED");
-      case "all":
-      default:
-        return issues;
-    }
-  }, [issues, issuesTab]);
-
-  // Active solution currently selected in drawer
-  const currentActiveSolution: SolutionOption | null = useMemo(() => {
-    if (!selectedIssue) return null;
-    const all = [
-      selectedIssue.bestSolution,
-      ...selectedIssue.alternativeSolutions,
-    ].filter(Boolean) as SolutionOption[];
-    return all.find((s) => s.id === selectedSolutionId) || selectedIssue.bestSolution;
-  }, [selectedIssue, selectedSolutionId]);
-
-  // Table Column Definitions for Area 1
+  // ========================================================
+  // 4. ASSIGNMENT TABLE COLUMNS
+  // ========================================================
   const assignmentColumns: ColumnDef<LiveTrackingAssignment>[] = [
     {
-      header: "Bus Registration",
-      accessorKey: "busRegNumber",
-      cell: (item) => (
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "font-mono font-bold text-xs",
-                item.busId ? "text-foreground" : "text-muted-foreground italic",
-              )}
-            >
-              {item.busRegNumber}
-            </span>
-            {item.busStatus === "maintenance" ? (
-              <Badge
-                variant="outline"
-                className="text-[9px] px-1 py-0 border-rose-500/40 text-rose-600 dark:text-rose-400 bg-rose-500/10 rounded-md uppercase"
-              >
-                Maintenance
-              </Badge>
-            ) : item.busStatus === "breakdown" ? (
-              <Badge
-                variant="outline"
-                className="text-[9px] px-1 py-0 border-rose-600/40 text-rose-600 dark:text-rose-400 bg-rose-600/10 rounded-md uppercase"
-              >
-                Breakdown
-              </Badge>
-            ) : item.busId ? (
-              <div className="size-1.5 rounded-md bg-emerald-500" />
-            ) : null}
-          </div>
-          <span className="text-[10px] text-muted-foreground truncate max-w-[140px]">
-            {item.busType} · {item.busDepot}
-          </span>
-        </div>
-      ),
-    },
-    {
-      header: "Assigned Route",
+      header: "Route Number",
       accessorKey: "routeCode",
       cell: (item) => (
+        <div className="flex flex-col gap-1 items-start">
+          <RouteBadge route={item.routeCode} size="md" />
+          <span className="text-[11px] text-muted-foreground truncate max-w-[150px]">
+            {formatRouteName(item.routeName)}
+          </span>
+        </div>
+      ),
+    },
+    {
+      header: "Trip",
+      accessorKey: "tripCode",
+      cell: (item) => (
         <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-1.5">
+          <span className="font-mono text-xs font-bold text-foreground">
+            {item.tripCode}
+          </span>
+          <span className="text-[10px] text-muted-foreground">
+            {item.origin} to {item.destination}
+          </span>
+          <span className="text-[10px] font-mono text-muted-foreground/75">
+            {item.dutyCode || "No Duty"}
+          </span>
+        </div>
+      ),
+    },
+    {
+      header: "Bus",
+      accessorKey: "busRegNumber",
+      cell: (item) => {
+        if (!item.busId || item.busRegNumber === "Unassigned") {
+          return (
             <Badge
               variant="outline"
-              className="text-[10px] font-mono font-bold px-1.5 py-0 bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30 rounded-md"
+              className="text-[10px] font-medium border-border text-muted-foreground bg-muted/30 rounded-md"
             >
-              {item.routeCode}
+              Unassigned Bus
             </Badge>
-            <span className="text-xs font-semibold text-foreground truncate max-w-[170px]">
-              {item.routeName}
+          );
+        }
+        return (
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-1.5 font-mono text-xs font-bold text-foreground">
+              <Bus className="size-3 text-muted-foreground" />
+              <span>{item.busRegNumber}</span>
+            </div>
+            <span className="text-[10px] text-muted-foreground">
+              {item.busDepot} · {item.busType}
             </span>
           </div>
-          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-            <span>{item.origin}</span>
-            <ArrowRight className="size-2.5 text-muted-foreground/70" />
-            <span>{item.destination}</span>
-          </span>
-        </div>
-      ),
+        );
+      },
     },
     {
-      header: "Assigned Driver",
+      header: "Driver",
       accessorKey: "driverName",
-      cell: (item) => (
-        <div className="flex flex-col gap-0.5">
-          <span
-            className={cn(
-              "text-xs font-medium",
-              item.driverId
-                ? "text-foreground"
-                : "text-muted-foreground italic",
-            )}
-          >
-            {item.driverName}
-          </span>
-          <span className="text-[10px] text-muted-foreground">
-            {item.driverStatus === "leave" ? (
-              <span className="text-rose-600 dark:text-rose-400 font-semibold">
-                On Leave
-              </span>
-            ) : item.driverStatus === "unavailable" ? (
-              <span className="text-rose-600 dark:text-rose-400 font-semibold">
-                Unavailable
-              </span>
-            ) : (
-              "Heavy Vehicle (HPV)"
-            )}
-          </span>
-        </div>
-      ),
+      cell: (item) => {
+        if (!item.driverId || item.driverName === "Unassigned") {
+          return (
+            <Badge
+              variant="outline"
+              className="text-[10px] font-medium border-border text-muted-foreground bg-muted/30 rounded-md"
+            >
+              Unassigned Driver
+            </Badge>
+          );
+        }
+        return (
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+              <Users className="size-3 text-muted-foreground" />
+              <span>{item.driverName}</span>
+            </div>
+            <span className="text-[10px] font-mono text-muted-foreground">
+              Active Roster
+            </span>
+          </div>
+        );
+      },
     },
     {
-      header: "Assigned Conductor",
+      header: "Conductor",
       accessorKey: "conductorName",
-      cell: (item) => (
-        <div className="flex flex-col gap-0.5">
-          <span
-            className={cn(
-              "text-xs font-medium",
-              item.conductorId
-                ? "text-foreground"
-                : "text-muted-foreground italic",
-            )}
-          >
-            {item.conductorName}
-          </span>
-          <span className="text-[10px] text-muted-foreground">
-            {item.conductorStatus === "leave" ? (
-              <span className="text-rose-600 dark:text-rose-400 font-semibold">
-                On Leave
-              </span>
-            ) : item.conductorStatus === "unavailable" ? (
-              <span className="text-rose-600 dark:text-rose-400 font-semibold">
-                Unavailable
-              </span>
-            ) : (
-              "Fare Roster"
-            )}
-          </span>
-        </div>
-      ),
+      cell: (item) => {
+        if (!item.conductorId || item.conductorName === "Unassigned") {
+          return (
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className="text-[10px] font-bold border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10 rounded-md flex items-center gap-1"
+              >
+                <AlertTriangle className="size-2.5 text-amber-600 dark:text-amber-400" />
+                <span>Missing Conductor</span>
+              </Badge>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenConductorDrawer(item);
+                }}
+                className="h-6 text-[10px] px-2 rounded-md border-blue-500/40 text-blue-700 dark:text-blue-400 hover:bg-blue-500/10 font-medium"
+              >
+                Assign
+              </Button>
+            </div>
+          );
+        }
+        return (
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+              <UserCheck className="size-3 text-emerald-600 dark:text-emerald-400" />
+              <span>{item.conductorName}</span>
+            </div>
+            <span className="text-[10px] font-mono text-muted-foreground">
+              Ticketing Certified
+            </span>
+          </div>
+        );
+      },
     },
     {
-      header: "Trip & Departure",
+      header: "Departure",
       accessorKey: "startTime",
       cell: (item) => (
         <div className="flex flex-col gap-0.5">
@@ -508,16 +1021,14 @@ function OperationsTodayPage() {
               {formatMinutesToTime(item.endTime)}
             </span>
           </div>
-          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-mono">
-            <span>{item.tripCode}</span>
-            <span>·</span>
-            <span>{item.dutyCode || "No Duty"}</span>
-          </div>
+          <span className="text-[10px] text-muted-foreground">
+            {item.durationMin} mins duration
+          </span>
         </div>
       ),
     },
     {
-      header: "Operational Status",
+      header: "Status",
       accessorKey: "status",
       cell: (item) => {
         if (item.conflicts.length > 0) {
@@ -556,6 +1067,19 @@ function OperationsTodayPage() {
       header: "Actions",
       cell: (item) => (
         <div className="flex items-center gap-1.5">
+          {!item.conductorId && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs px-2.5 rounded-md border-blue-500/40 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10 font-medium"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenConductorDrawer(item);
+              }}
+            >
+              Recommend Conductor
+            </Button>
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -576,7 +1100,7 @@ function OperationsTodayPage() {
   return (
     <AppShell
       title="Live Tracking"
-      subtitle="Operational monitoring of assigned vehicles, drivers, conductors, and real-time conflict management."
+      subtitle="Operational monitoring of live bus tracking, assignments, conductor staffing, and automated issue resolution."
       actions={
         <div className="flex items-center gap-2">
           <Badge
@@ -590,19 +1114,34 @@ function OperationsTodayPage() {
             size="sm"
             variant="outline"
             onClick={() => {
+              refetchTracking();
               refetchAssignments();
               refetchIssues();
             }}
-            disabled={loadingAssignments || refetchingAssignments}
+            disabled={
+              loadingAssignments ||
+              refetchingAssignments ||
+              loadingTracking ||
+              refetchingTracking
+            }
             className="h-8 text-xs px-2.5 rounded-md border-border bg-card hover:bg-muted font-medium text-foreground"
           >
             <RefreshCw
               className={cn(
                 "size-3.5 mr-1.5",
-                refetchingAssignments && "animate-spin",
+                (refetchingAssignments || refetchingTracking) && "animate-spin",
               )}
             />
-            Sync
+            Sync Feeds
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setDriverCheckinOpen(true)}
+            variant="outline"
+            className="h-8 text-xs px-2.5 border-border bg-card hover:bg-muted font-medium text-foreground rounded-md flex items-center gap-1.5"
+          >
+            <Smartphone className="size-3.5 text-blue-600" />
+            Driver Mobile GPS
           </Button>
           <Button
             size="sm"
@@ -615,16 +1154,360 @@ function OperationsTodayPage() {
         </div>
       }
     >
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* ======================================================== */}
-        {/* AREA 2: OPERATIONAL ISSUES & CONFLICT MANAGEMENT */}
+        {/* SECTION A: LIVE BUS MAP */}
         {/* ======================================================== */}
         <section className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-foreground tracking-tight">
-                  Operational Issues & Problem Resolution
+                <h2 className="text-base font-bold text-foreground tracking-tight flex items-center gap-2">
+                  <Activity className="size-4 text-blue-600" />
+                  Live Bus Fleet Map & Telemetry
+                </h2>
+                <Badge
+                  variant="outline"
+                  className="text-[11px] font-bold px-2 py-0 border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-md flex items-center gap-1"
+                >
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  {trackingSummary.liveTracked} Live Tracking
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Real-time AVL positioning, corridor delay detection, and timetable adherence. Untracked vehicles are strictly labelled.
+              </p>
+            </div>
+
+            {/* Live Tracking KPI Summary Strip */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="px-2.5 py-1 rounded-md border border-border bg-card text-xs flex items-center gap-2">
+                <span className="text-muted-foreground">Monitored:</span>
+                <span className="font-mono font-bold text-foreground">
+                  {trackingSummary.totalBuses}
+                </span>
+              </div>
+              <div className="px-2.5 py-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-xs flex items-center gap-2">
+                <span className="text-emerald-700 dark:text-emerald-400 font-medium">On-Time:</span>
+                <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                  {trackingSummary.onTimeBuses}
+                </span>
+              </div>
+              <div className="px-2.5 py-1 rounded-md border border-amber-500/30 bg-amber-500/10 text-xs flex items-center gap-2">
+                <span className="text-amber-700 dark:text-amber-400 font-medium">Delayed:</span>
+                <span className="font-mono font-bold text-amber-700 dark:text-amber-400">
+                  {trackingSummary.delayedBuses}
+                </span>
+              </div>
+              <div className="px-2.5 py-1 rounded-md border border-blue-500/30 bg-blue-500/10 text-xs flex items-center gap-2">
+                <span className="text-blue-700 dark:text-blue-400 font-medium">Stationary:</span>
+                <span className="font-mono font-bold text-blue-700 dark:text-blue-400">
+                  {trackingSummary.stationaryBuses}
+                </span>
+              </div>
+              <div className="px-2.5 py-1 rounded-md border border-slate-500/30 bg-slate-500/10 text-xs flex items-center gap-2">
+                <span className="text-slate-600 dark:text-slate-400 font-medium">Untracked:</span>
+                <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                  {trackingSummary.untrackedBuses}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Map Filters & Controls */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 p-3 rounded-lg border border-border/70 bg-card/60">
+            <div>
+              <Input
+                placeholder="Search bus reg, route, driver..."
+                value={mapSearchQuery}
+                onChange={(e) => setMapSearchQuery(e.target.value)}
+                className="h-8 text-xs rounded-md bg-background"
+              />
+            </div>
+            <div>
+              <Select value={mapRouteFilter} onValueChange={setMapRouteFilter}>
+                <SelectTrigger className="h-8 text-xs rounded-md bg-background">
+                  <SelectValue placeholder="All Corridors" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Corridors ({availableRouteCodes.length})</SelectItem>
+                  {availableRouteCodes.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      Route {code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Select value={mapDepotFilter} onValueChange={setMapDepotFilter}>
+                <SelectTrigger className="h-8 text-xs rounded-md bg-background">
+                  <SelectValue placeholder="All Depots" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Depots</SelectItem>
+                  {availableDepots.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {d} Depot
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Select value={mapStatusFilter} onValueChange={setMapStatusFilter}>
+                <SelectTrigger className="h-8 text-xs rounded-md bg-background">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="live">Live Telemetry Only</SelectItem>
+                  <SelectItem value="delayed">Delayed Ahead</SelectItem>
+                  <SelectItem value="on_time">On-Time</SelectItem>
+                  <SelectItem value="stationary">Stationary Bottlenecks</SelectItem>
+                  <SelectItem value="untracked">Untracked / Offline</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Leaflet Map & Inspection Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Main Map Box */}
+            <div className="lg:col-span-2 relative h-[440px] rounded-lg border border-border/80 bg-card overflow-hidden shadow-xs">
+              <div ref={mapContainerRef} className="w-full h-full z-0" />
+              {loadingTracking && (
+                <div className="absolute top-3 left-3 z-10 bg-card/90 backdrop-blur-xs border border-border px-2.5 py-1 rounded-md text-xs flex items-center gap-2 shadow-xs">
+                  <RefreshCw className="size-3 animate-spin text-blue-600" />
+                  <span>Streaming AVL telemetry...</span>
+                </div>
+              )}
+            </div>
+
+            {/* Bus Inspection / Sidebar Info */}
+            <div className="rounded-lg border border-border/80 bg-card p-4 flex flex-col justify-between space-y-3 shadow-xs">
+              {selectedTrackedBus ? (
+                <div className="space-y-3 text-xs">
+                  <div className="flex items-center justify-between pb-2 border-b border-border/60">
+                    <div className="flex items-center gap-2">
+                      <RouteBadge route={selectedTrackedBus.routeCode} size="md" />
+                      <div>
+                        <div className="font-bold text-sm text-foreground font-mono">
+                          {selectedTrackedBus.busRegNumber}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {selectedTrackedBus.depot} Depot · {selectedTrackedBus.busType}
+                        </div>
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] font-bold rounded-md px-1.5 py-0.5",
+                        selectedTrackedBus.delayStatus === "ON_TIME"
+                          ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10"
+                          : selectedTrackedBus.delayStatus === "DELAYED"
+                            ? "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"
+                            : selectedTrackedBus.delayStatus === "STATIONARY"
+                              ? "border-blue-500/40 text-blue-700 dark:text-blue-400 bg-blue-500/10"
+                              : "border-border text-muted-foreground bg-muted/40",
+                      )}
+                    >
+                      {selectedTrackedBus.delayStatus.replace(/_/g, " ")}
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] text-muted-foreground font-medium">
+                      Operational Trip:
+                    </div>
+                    <div className="p-2 rounded-md bg-muted/40 border border-border/60 space-y-1">
+                      <div className="font-bold text-foreground font-mono flex items-center justify-between">
+                        <span>{selectedTrackedBus.tripCode}</span>
+                        <span>
+                          {selectedTrackedBus.scheduledDeparture
+                            ? formatMinutesToTime(selectedTrackedBus.scheduledDeparture)
+                            : "--"}
+                          {" - "}
+                          {selectedTrackedBus.scheduledArrival
+                            ? formatMinutesToTime(selectedTrackedBus.scheduledArrival)
+                            : "--"}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {selectedTrackedBus.origin} to {selectedTrackedBus.destination}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 rounded-md border border-border/60 bg-muted/20">
+                      <div className="text-[10px] text-muted-foreground">Speed & Telemetry</div>
+                      <div className="font-mono font-bold text-foreground mt-0.5">
+                        {selectedTrackedBus.speedKmH !== null ? `${selectedTrackedBus.speedKmH} km/h` : "No Feed"}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        {selectedTrackedBus.lastUpdatedAgo || "Untracked"}
+                      </div>
+                    </div>
+                    <div className="p-2 rounded-md border border-border/60 bg-muted/20">
+                      <div className="text-[10px] text-muted-foreground">Approaching Stop</div>
+                      <div className="font-medium text-foreground truncate mt-0.5">
+                        {selectedTrackedBus.nextStopName || "Terminal Point"}
+                      </div>
+                      <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
+                        {selectedTrackedBus.distanceToNextStopKm !== null
+                          ? `${selectedTrackedBus.distanceToNextStopKm} km away`
+                          : "--"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-[10px] text-muted-foreground">Operating Crew:</div>
+                    <div className="flex items-center justify-between text-[11px] p-2 rounded-md border border-border/60 bg-card">
+                      <div>
+                        <span className="text-muted-foreground">Driver: </span>
+                        <span className="font-bold text-foreground">
+                          {selectedTrackedBus.driverName || "Unassigned"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Conductor: </span>
+                        <span className="font-bold text-foreground">
+                          {selectedTrackedBus.conductorName || "Unassigned"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-2 rounded-md border border-border/80 bg-muted/20 text-[11px] text-muted-foreground">
+                    <span className="font-medium text-foreground">Delay Diagnostics: </span>
+                    {selectedTrackedBus.statusReason}
+                  </div>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setReportBusId(selectedTrackedBus.busId || "");
+                      setReportTripId(selectedTrackedBus.activeTripId || "");
+                      setReportDescription(
+                        `Operator or supervisor flagged delay / issue on ${selectedTrackedBus.busRegNumber} (Route ${selectedTrackedBus.routeCode}).`,
+                      );
+                      setReportDialogOpen(true);
+                    }}
+                    className="w-full text-xs h-8 rounded-md border-border hover:bg-muted font-medium text-foreground"
+                  >
+                    <AlertTriangle className="size-3.5 mr-1.5 text-amber-600" />
+                    Report Incident on this Bus
+                  </Button>
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2 text-muted-foreground">
+                  <div className="size-10 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                    <Navigation className="size-5" />
+                  </div>
+                  <h3 className="text-xs font-bold text-foreground">
+                    Select a Vehicle on Map
+                  </h3>
+                  <p className="text-[11px] max-w-xs text-muted-foreground">
+                    Click any live vehicle marker on the corridor map to view speed, approaching stop distance, timetable delay, and crew staffing.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ======================================================== */}
+        {/* SECTION B: CURRENT VEHICLE & CREW ASSIGNMENTS TABLE */}
+        {/* ======================================================== */}
+        <section className="space-y-3 pt-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-foreground tracking-tight flex items-center gap-2">
+                  <Users className="size-4 text-emerald-600" />
+                  Current Vehicle & Crew Assignments
+                </h2>
+                {assignmentSummary.unassignedConductors > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="text-[11px] font-bold px-2 py-0 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded-md"
+                  >
+                    {assignmentSummary.unassignedConductors} Missing Conductors
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Every scheduled trip departure with assigned bus, driver, and conductor. Overlaps and unassigned duties are flagged.
+              </p>
+            </div>
+
+            {/* Table Header Action: Bulk Assign Conductors */}
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => bulkConductorMutation.mutate()}
+                disabled={bulkConductorMutation.isPending}
+                className="h-8 text-xs px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md shadow-xs flex items-center gap-1.5"
+              >
+                <CheckCheck className="size-3.5" />
+                {bulkConductorMutation.isPending
+                  ? "Assigning Conductors..."
+                  : "Bulk Assign Available Conductors"}
+              </Button>
+            </div>
+          </div>
+
+          <TransitTable
+            data={filteredAssignments}
+            columns={assignmentColumns}
+            isLoading={loadingAssignments}
+            searchPlaceholder="Search by route, bus reg, driver, conductor, or trip code..."
+            searchFilter={(item, query) => {
+              const q = query.toLowerCase();
+              return (
+                item.busRegNumber.toLowerCase().includes(q) ||
+                item.routeCode.toLowerCase().includes(q) ||
+                item.routeName.toLowerCase().includes(q) ||
+                item.driverName.toLowerCase().includes(q) ||
+                item.conductorName.toLowerCase().includes(q) ||
+                item.tripCode.toLowerCase().includes(q) ||
+                (item.dutyCode || "").toLowerCase().includes(q) ||
+                item.origin.toLowerCase().includes(q) ||
+                item.destination.toLowerCase().includes(q)
+              );
+            }}
+            filters={[
+              {
+                key: "status",
+                label: "Filter Assignments",
+                value: assignmentStatusFilter,
+                options: [
+                  { label: "All Assignments", value: "all" },
+                  { label: "Active & Staffed", value: "active" },
+                  { label: "Missing Conductor", value: "missing_conductor" },
+                  { label: "Conflicted", value: "conflicted" },
+                  { label: "Unassigned", value: "unassigned" },
+                ],
+                onChange: (v) => setAssignmentStatusFilter(v),
+              },
+            ]}
+          />
+        </section>
+
+        {/* ======================================================== */}
+        {/* SECTION C: OPERATIONAL ISSUES & AUTOMATIC RESOLUTION CENTER */}
+        {/* ======================================================== */}
+        <section className="space-y-4 pt-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-foreground tracking-tight flex items-center gap-2">
+                  <ShieldAlert className="size-4 text-amber-600" />
+                  Operational Issues & Problem Resolution Center
                 </h2>
                 {issuesSummary.active > 0 ? (
                   <Badge
@@ -643,9 +1526,7 @@ function OperationsTodayPage() {
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Reported problems and automatically detected conflicts with
-                intelligent 8-point diagnostic investigations and ranked
-                solutions.
+                Automated 8-point diagnostic investigations with configurable Level 1 auto-resolutions and Level 2 supervisor reviews.
               </p>
             </div>
 
@@ -661,7 +1542,7 @@ function OperationsTodayPage() {
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <span>Needs Review</span>
+                <span>Needs Review (Level 2)</span>
                 <span className="font-mono text-[10px] px-1 py-0 bg-amber-500/20 text-amber-700 dark:text-amber-300 rounded-md">
                   {issuesSummary.awaitingApproval}
                 </span>
@@ -676,7 +1557,7 @@ function OperationsTodayPage() {
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <span>Awaiting Manual</span>
+                <span>Awaiting Manual (Level 3)</span>
                 <span className="font-mono text-[10px] px-1 py-0 bg-muted text-muted-foreground rounded-md">
                   {issuesSummary.awaitingManual}
                 </span>
@@ -691,7 +1572,7 @@ function OperationsTodayPage() {
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <span>Resolved History</span>
+                <span>Auto-Resolved & History</span>
                 <span className="font-mono text-[10px] px-1 py-0 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 rounded-md">
                   {issuesSummary.resolved}
                 </span>
@@ -715,7 +1596,7 @@ function OperationsTodayPage() {
           {loadingIssues ? (
             <div className="py-12 rounded-lg border border-border/80 bg-card flex flex-col items-center justify-center gap-2 text-muted-foreground text-xs">
               <RefreshCw className="size-5 animate-spin text-blue-600" />
-              <span>Scanning schedules and investigating conflicts...</span>
+              <span>Scanning schedules and formulating diagnostic solutions...</span>
             </div>
           ) : filteredIssues.length === 0 ? (
             <div className="rounded-lg border border-border/80 bg-card p-8 text-center space-y-2">
@@ -727,7 +1608,7 @@ function OperationsTodayPage() {
               </h3>
               <p className="text-xs text-muted-foreground max-w-md mx-auto">
                 {issuesTab === "needs_review"
-                  ? "All corridor trips have feasible, validated vehicle and crew assignments with zero active conflicts."
+                  ? "All corridor trips have feasible, validated vehicle and crew assignments with zero active approvals required."
                   : issuesTab === "manual"
                     ? "Zero issues currently require manual supervisor intervention."
                     : "No issue records match the selected filter."}
@@ -740,16 +1621,16 @@ function OperationsTodayPage() {
                   key={issue.id}
                   className={cn(
                     "rounded-lg border p-4 space-y-3 shadow-xs flex flex-col justify-between transition-all",
-                    issue.lifecycleStatus === "RESOLVED"
+                    issue.lifecycleStatus === "RESOLVED" ||
+                      issue.lifecycleStatus === "AUTOMATICALLY_RESOLVED"
                       ? "border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/10"
-                      : issue.lifecycleStatus ===
-                          "AWAITING_MANUAL_INTERVENTION"
+                      : issue.lifecycleStatus === "AWAITING_MANUAL_INTERVENTION"
                         ? "border-rose-500/30 bg-rose-500/5 dark:bg-rose-950/10"
                         : "border-border/80 bg-card hover:border-blue-400/80",
                   )}
                 >
                   <div className="space-y-2.5">
-                    {/* Card Top Badges */}
+                    {/* Top Badges */}
                     <div className="flex items-center justify-between gap-1.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <Badge
@@ -768,9 +1649,11 @@ function OperationsTodayPage() {
                           variant="outline"
                           className="text-[9px] font-mono text-muted-foreground border-border bg-muted/40 rounded-md"
                         >
-                          {issue.source === "ADMIN_REPORTED"
-                            ? "Admin Reported"
-                            : "System Detected"}
+                          {issue.automationLevel === "LEVEL_1_AUTOMATIC"
+                            ? "Level 1: Auto"
+                            : issue.automationLevel === "LEVEL_2_APPROVAL_REQUIRED"
+                              ? "Level 2: Approval"
+                              : "Level 3: Manual"}
                         </Badge>
                       </div>
 
@@ -778,10 +1661,10 @@ function OperationsTodayPage() {
                         variant="outline"
                         className={cn(
                           "text-[9px] font-semibold rounded-md",
-                          issue.lifecycleStatus === "RESOLVED"
+                          issue.lifecycleStatus === "RESOLVED" ||
+                            issue.lifecycleStatus === "AUTOMATICALLY_RESOLVED"
                             ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10"
-                            : issue.lifecycleStatus ===
-                                "AWAITING_MANUAL_INTERVENTION"
+                            : issue.lifecycleStatus === "AWAITING_MANUAL_INTERVENTION"
                               ? "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10"
                               : "border-blue-500/40 text-blue-700 dark:text-blue-400 bg-blue-500/10",
                         )}
@@ -795,10 +1678,8 @@ function OperationsTodayPage() {
                       <div className="flex items-center gap-1.5 text-xs font-bold text-foreground font-mono">
                         <span>{issue.tripCode}</span>
                         <span>·</span>
-                        <span className="text-blue-600 dark:text-blue-400">
-                          {issue.routeCode}
-                        </span>
-                        <span className="font-sans font-medium text-muted-foreground truncate max-w-[150px]">
+                        <RouteBadge route={issue.routeCode} size="sm" />
+                        <span className="font-sans font-medium text-muted-foreground truncate max-w-[140px]">
                           ({issue.routeName})
                         </span>
                       </div>
@@ -807,13 +1688,23 @@ function OperationsTodayPage() {
                       </p>
                     </div>
 
-                    {/* System Recommendation Preview */}
-                    {issue.bestSolution ? (
+                    {/* Auto-Action Banner or Recommendation Preview */}
+                    {issue.automationActionTaken ? (
+                      <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2 text-xs space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+                          <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400" />
+                          Auto-Resolution Executed
+                        </span>
+                        <p className="text-[11px] text-foreground">
+                          {issue.automationActionTaken}
+                        </p>
+                      </div>
+                    ) : issue.bestSolution ? (
                       <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2 text-xs space-y-1">
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
                             <ShieldCheck className="size-3 text-emerald-600 dark:text-emerald-400" />
-                            Recommended Solution
+                            Rank 1 Recommendation
                           </span>
                           <span className="font-mono text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
                             {issue.bestSolution.suitabilityScore}/100 Match
@@ -827,694 +1718,667 @@ function OperationsTodayPage() {
                         </p>
                         <p className="text-[10px] text-muted-foreground">
                           {issue.bestSolution.depot} ·{" "}
-                          {issue.bestSolution.repositioningMinutes}m
-                          repositioning · 0 cascading conflicts
+                          {issue.bestSolution.repositioningMinutes}m lead time · 0 overlaps
                         </p>
                       </div>
                     ) : (
-                      <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs">
-                        <span className="text-[10px] font-bold uppercase text-amber-800 dark:text-amber-300 flex items-center gap-1">
-                          <AlertTriangle className="size-3 text-amber-600" />
+                      <div className="rounded-md border border-rose-500/30 bg-rose-500/10 p-2 text-xs">
+                        <span className="text-[10px] font-bold uppercase text-rose-800 dark:text-rose-300 flex items-center gap-1">
+                          <AlertTriangle className="size-3 text-rose-600" />
                           Manual Intervention Required
                         </span>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          Standard depot pool exhausted. Dispatch standby unit.
+                          Standard depot pool exhausted. Supervisor manual action needed.
                         </p>
                       </div>
                     )}
                   </div>
 
-                  {/* Card Action */}
-                  <div className="pt-2 border-t border-border/40 flex items-center justify-between">
+                  {/* Card Actions */}
+                  <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-1.5">
                     <span className="text-[10px] text-muted-foreground">
                       {new Date(issue.reportedAt).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
                     </span>
-                    <Button
-                      size="sm"
-                      className="h-7 text-xs px-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-xs flex items-center gap-1"
-                      onClick={() => handleOpenReview(issue)}
-                    >
-                      <span>Review Diagnostic</span>
-                      <ChevronRight className="size-3" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      {issue.lifecycleStatus === "AWAITING_MANUAL_INTERVENTION" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs px-2 rounded-md border-border hover:bg-muted font-medium text-foreground"
+                          onClick={() => retryAnalysisMutation.mutate(issue.id)}
+                          disabled={retryAnalysisMutation.isPending}
+                        >
+                          <RotateCcw className="size-3 mr-1" />
+                          Retry
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs px-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-xs flex items-center gap-1"
+                        onClick={() => handleOpenReview(issue)}
+                      >
+                        <span>8-Point Diagnostic</span>
+                        <ChevronRight className="size-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </section>
-
-        {/* ======================================================== */}
-        {/* AREA 1: CURRENT VEHICLE & CREW ASSIGNMENTS TABLE */}
-        {/* ======================================================== */}
-        <section className="space-y-3 pt-2">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-bold text-foreground tracking-tight">
-                Current Vehicle & Crew Assignments
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Operational roster for scheduled trips on {serviceDate}.
-              </p>
-            </div>
-          </div>
-
-          <TransitTable
-            data={filteredAssignments}
-            columns={assignmentColumns}
-            isLoading={loadingAssignments}
-            searchPlaceholder="Search by bus reg, route, driver, conductor, or trip code..."
-            searchFilter={(item, query) => {
-              const q = query.toLowerCase();
-              return (
-                item.busRegNumber.toLowerCase().includes(q) ||
-                item.routeCode.toLowerCase().includes(q) ||
-                item.routeName.toLowerCase().includes(q) ||
-                item.driverName.toLowerCase().includes(q) ||
-                item.conductorName.toLowerCase().includes(q) ||
-                item.tripCode.toLowerCase().includes(q) ||
-                (item.dutyCode || "").toLowerCase().includes(q) ||
-                item.origin.toLowerCase().includes(q) ||
-                item.destination.toLowerCase().includes(q)
-              );
-            }}
-            filters={[
-              {
-                key: "status",
-                label: "Status",
-                value: statusFilter,
-                options: [
-                  { label: "All Statuses", value: "all" },
-                  { label: "Active", value: "active" },
-                  { label: "Conflicted", value: "conflicted" },
-                  { label: "Unassigned", value: "unassigned" },
-                ],
-                onChange: setStatusFilter,
-              },
-              {
-                key: "route",
-                label: "Corridor",
-                value: routeFilter,
-                options: [
-                  { label: "All Corridors", value: "all" },
-                  ...routeOptions,
-                ],
-                onChange: setRouteFilter,
-              },
-            ]}
-            emptyMessage="No trip assignments found matching selected filter criteria."
-            defaultPageSize={10}
-            pageSizeOptions={[10, 25, 50, 100]}
-            exportCsvName={`TransitOS-Live-Assignments-${serviceDate.replace(/ /g, "-")}`}
-            rowDetailTitle={(item) =>
-              `${item.tripCode}: ${item.routeCode} - ${item.routeName}`
-            }
-            rowDetailSubtitle={(item) =>
-              `Departure: ${formatMinutesToTime(item.startTime)} - ${formatMinutesToTime(item.endTime)} (${item.origin} to ${item.destination})`
-            }
-            renderRowDetail={(item, onClose) => (
-              <div className="space-y-4 py-2 text-xs">
-                {/* Conflict Banner if any */}
-                {item.conflicts.length > 0 ? (
-                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3.5 space-y-2 text-amber-900 dark:text-amber-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 font-bold">
-                        <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" />
-                        <span>
-                          {item.conflicts.length} Active Conflict Detected
-                        </span>
-                      </div>
-                      <Button
-                        size="sm"
-                        className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-md"
-                        onClick={() => {
-                          onClose();
-                          handleOpenReportDialog(item);
-                        }}
-                      >
-                        Investigate Conflict
-                      </Button>
-                    </div>
-                    {item.conflicts.map((c) => (
-                      <p
-                        key={c.id}
-                        className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300"
-                      >
-                        {c.description}
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
-
-                {/* Resource Details Grid */}
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-lg border border-border/80 bg-card p-3 space-y-1">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
-                      Vehicle Allocation
-                    </span>
-                    <p className="font-mono text-sm font-bold text-foreground">
-                      {item.busRegNumber}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {item.busType}
-                    </p>
-                    <div className="pt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                      <MapPin className="size-3" />
-                      <span>{item.busDepot}</span>
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-border/80 bg-card p-3 space-y-1">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
-                      Driver Roster
-                    </span>
-                    <p className="text-sm font-bold text-foreground">
-                      {item.driverName}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      Heavy Passenger Vehicle (HPV)
-                    </p>
-                    <div className="pt-1 flex items-center gap-1 text-[10px]">
-                      <span className="text-muted-foreground">Status:</span>
-                      <span
-                        className={cn(
-                          "font-medium",
-                          item.driverStatus === "leave"
-                            ? "text-rose-600"
-                            : "text-emerald-600 dark:text-emerald-400",
-                        )}
-                      >
-                        {item.driverStatus}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-border/80 bg-card p-3 space-y-1">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
-                      Conductor Roster
-                    </span>
-                    <p className="text-sm font-bold text-foreground">
-                      {item.conductorName}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      Ticket & Fare Stage
-                    </p>
-                    <div className="pt-1 flex items-center gap-1 text-[10px]">
-                      <span className="text-muted-foreground">Status:</span>
-                      <span
-                        className={cn(
-                          "font-medium",
-                          item.conductorStatus === "leave"
-                            ? "text-rose-600"
-                            : "text-emerald-600 dark:text-emerald-400",
-                        )}
-                      >
-                        {item.conductorStatus}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 flex justify-end gap-2">
-                  <Button
-                    size="sm"
-                    className="h-8 text-xs px-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-xs"
-                    onClick={() => {
-                      onClose();
-                      handleOpenReportDialog(item);
-                    }}
-                  >
-                    <AlertTriangle className="size-3 mr-1.5" />
-                    Report Issue on this Trip
-                  </Button>
-                </div>
-              </div>
-            )}
-          />
-        </section>
       </div>
 
       {/* ======================================================== */}
-      {/* REPORT AN OPERATIONAL PROBLEM DIALOG */}
+      {/* 8-POINT DIAGNOSTIC & APPROVAL SHEET */}
       {/* ======================================================== */}
-      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
-        <DialogContent className="max-w-md rounded-lg">
+      <Sheet open={reviewSheetOpen} onOpenChange={setReviewSheetOpen}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-6 space-y-6">
+          {selectedIssue && (
+            <>
+              <SheetHeader className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] font-bold uppercase rounded-md border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"
+                  >
+                    {selectedIssue.category.replace(/_/g, " ")}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] font-mono text-muted-foreground border-border bg-muted/40 rounded-md"
+                  >
+                    {selectedIssue.automationLevel.replace(/_/g, " ")}
+                  </Badge>
+                </div>
+                <SheetTitle className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
+                  <span>8-Point Operational Diagnostic</span>
+                  <RouteBadge route={selectedIssue.routeCode} size="sm" />
+                </SheetTitle>
+                <SheetDescription className="text-xs text-muted-foreground">
+                  Trip {selectedIssue.tripCode} ({selectedIssue.routeName}) · Service Date {selectedIssue.serviceDate}
+                </SheetDescription>
+              </SheetHeader>
+
+              {/* 8 Plain-Language Answers */}
+              <div className="space-y-3.5 text-xs">
+                <div className="rounded-lg border border-border/80 bg-muted/30 p-3 space-y-1">
+                  <div className="font-bold text-foreground text-[11px] uppercase tracking-wide">
+                    1. What Happened?
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {selectedIssue.diagnostic.whatHappened}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-border/80 bg-muted/30 p-3 space-y-1">
+                  <div className="font-bold text-foreground text-[11px] uppercase tracking-wide">
+                    2. Affected Routes & Trips
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed font-mono">
+                    {selectedIssue.diagnostic.affectedRouteTrips}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-border/80 bg-muted/30 p-3 space-y-1">
+                  <div className="font-bold text-foreground text-[11px] uppercase tracking-wide">
+                    3. Involved Resources
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {selectedIssue.diagnostic.involvedResources}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-border/80 bg-muted/30 p-3 space-y-1">
+                  <div className="font-bold text-foreground text-[11px] uppercase tracking-wide">
+                    4. Why is Current Assignment Invalid?
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {selectedIssue.diagnostic.whyInvalid}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-border/80 bg-muted/30 p-3 space-y-1">
+                  <div className="font-bold text-foreground text-[11px] uppercase tracking-wide">
+                    5. Operational Consequences if Unresolved
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {selectedIssue.diagnostic.operationalConsequences}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 space-y-1">
+                  <div className="font-bold text-emerald-800 dark:text-emerald-300 text-[11px] uppercase tracking-wide">
+                    6. Recommended Solution
+                  </div>
+                  <p className="text-foreground leading-relaxed font-medium">
+                    {selectedIssue.diagnostic.recommendedSolution}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-border/80 bg-muted/30 p-3 space-y-1">
+                  <div className="font-bold text-foreground text-[11px] uppercase tracking-wide">
+                    7. Why is This Better than Alternatives?
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {selectedIssue.diagnostic.whyBetter}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-border/80 bg-muted/30 p-3 space-y-1">
+                  <div className="font-bold text-foreground text-[11px] uppercase tracking-wide">
+                    8. Remaining Operational Risks
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {selectedIssue.diagnostic.remainingRisks}
+                  </p>
+                </div>
+              </div>
+
+              {/* Solution Options Selector */}
+              {selectedIssue.lifecycleStatus !== "RESOLVED" &&
+                selectedIssue.lifecycleStatus !== "AUTOMATICALLY_RESOLVED" && (
+                  <div className="space-y-3 pt-3 border-t border-border/60">
+                    <h3 className="font-bold text-sm text-foreground">
+                      Ranked Solution Options
+                    </h3>
+                    <div className="space-y-2">
+                      {[selectedIssue.bestSolution, ...selectedIssue.alternativeSolutions]
+                        .filter(Boolean)
+                        .map((sol) => (
+                          <div
+                            key={sol!.id}
+                            onClick={() => setSelectedSolutionId(sol!.id)}
+                            className={cn(
+                              "p-3 rounded-lg border text-xs cursor-pointer transition-all space-y-1",
+                              selectedSolutionId === sol!.id
+                                ? "border-blue-600 bg-blue-500/10 dark:bg-blue-950/20 shadow-xs"
+                                : "border-border/80 bg-card hover:bg-muted/40",
+                            )}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-foreground flex items-center gap-1.5">
+                                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-muted">
+                                  Rank {sol!.rank}
+                                </span>
+                                {sol!.title}
+                              </span>
+                              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                {sol!.suitabilityScore}/100 Match
+                              </span>
+                            </div>
+                            <p className="text-muted-foreground">{sol!.reason}</p>
+                            <div className="text-[10px] text-muted-foreground/80 flex items-center gap-3">
+                              <span>Depot: {sol!.depot}</span>
+                              <span>Lead Time: {sol!.repositioningMinutes} min</span>
+                              <span>Cascading Risk: {sol!.cascadingConflictRisk}</span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+
+                    <div className="space-y-1.5 pt-2">
+                      <label className="text-xs font-medium text-foreground">
+                        Supervisor Dispatch Notes (Optional)
+                      </label>
+                      <Textarea
+                        placeholder="e.g. Cleared by Adyar depot master. Fleet repositioned."
+                        value={dispatchNotes}
+                        onChange={(e) => setDispatchNotes(e.target.value)}
+                        className="text-xs rounded-md"
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                )}
+
+              <SheetFooter className="flex-row gap-2 justify-end pt-4 border-t border-border/60">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setReviewSheetOpen(false)}
+                  className="rounded-md text-xs font-medium"
+                >
+                  Close
+                </Button>
+
+                {selectedIssue.lifecycleStatus === "AWAITING_MANUAL_INTERVENTION" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setTargetManualIssueId(selectedIssue.id);
+                      setManualResolveDialogOpen(true);
+                    }}
+                    className="rounded-md text-xs font-medium border-border hover:bg-muted"
+                  >
+                    Mark Manually Resolved
+                  </Button>
+                )}
+
+                {selectedIssue.lifecycleStatus !== "RESOLVED" &&
+                  selectedIssue.lifecycleStatus !== "AUTOMATICALLY_RESOLVED" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          rejectMutation.mutate({
+                            issueId: selectedIssue.id,
+                            reason: dispatchNotes || "Supervisor requested manual depot override.",
+                          })
+                        }
+                        disabled={rejectMutation.isPending}
+                        className="rounded-md text-xs font-medium border-rose-500/40 text-rose-700 dark:text-rose-400 hover:bg-rose-500/10"
+                      >
+                        Reject
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          approveMutation.mutate({
+                            issueId: selectedIssue.id,
+                            solutionId: selectedSolutionId,
+                            dispatchNotes,
+                          })
+                        }
+                        disabled={approveMutation.isPending}
+                        className="rounded-md text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                      >
+                        {approveMutation.isPending ? "Executing..." : "Approve & Dispatch"}
+                      </Button>
+                    </>
+                  )}
+              </SheetFooter>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* ======================================================== */}
+      {/* CONDUCTOR RECOMMENDATION DRAWER */}
+      {/* ======================================================== */}
+      <Sheet open={conductorDrawerOpen} onOpenChange={setConductorDrawerOpen}>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto p-6 space-y-6">
+          {selectedTripForConductor && (
+            <>
+              <SheetHeader className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] font-bold uppercase rounded-md border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"
+                  >
+                    Missing Conductor
+                  </Badge>
+                  <RouteBadge route={selectedTripForConductor.routeCode} size="sm" />
+                </div>
+                <SheetTitle className="text-lg font-bold tracking-tight text-foreground">
+                  Recommend Conductor for Trip {selectedTripForConductor.tripCode}
+                </SheetTitle>
+                <SheetDescription className="text-xs text-muted-foreground">
+                  Departure at {formatMinutesToTime(selectedTripForConductor.startTime)} ({selectedTripForConductor.origin} to {selectedTripForConductor.destination})
+                </SheetDescription>
+              </SheetHeader>
+
+              {loadingConductorRec ? (
+                <div className="py-12 rounded-lg border border-border/80 bg-card flex flex-col items-center justify-center gap-2 text-muted-foreground text-xs">
+                  <RefreshCw className="size-5 animate-spin text-blue-600" />
+                  <span>Evaluating depot conductor rosters, rest hours, and overlaps...</span>
+                </div>
+              ) : conductorRecData?.recommended ? (
+                <div className="space-y-4 text-xs">
+                  {/* Top Recommendation Card */}
+                  <div className="rounded-lg border-2 border-emerald-500/50 bg-emerald-500/10 p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                        <ShieldCheck className="size-4 text-emerald-600 dark:text-emerald-400" />
+                        Top System Recommendation
+                      </span>
+                      <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                        {conductorRecData.recommended.suitabilityScore}/100 Match
+                      </span>
+                    </div>
+
+                    <div className="text-sm font-bold text-foreground">
+                      {conductorRecData.recommended.replacementConductorName}
+                    </div>
+
+                    <p className="text-muted-foreground">
+                      {conductorRecData.recommended.reason}
+                    </p>
+
+                    <div className="pt-2 flex items-center justify-between border-t border-emerald-500/20">
+                      <span className="text-[10px] text-muted-foreground">
+                        {conductorRecData.recommended.depot} · {conductorRecData.recommended.repositioningMinutes}m lead time
+                      </span>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          assignConductorMutation.mutate({
+                            tripId: selectedTripForConductor.tripId,
+                            dutyId: selectedTripForConductor.dutyId || undefined,
+                            conductorId: conductorRecData.recommended!.replacementConductorId!,
+                          })
+                        }
+                        disabled={assignConductorMutation.isPending}
+                        className="h-7 text-xs px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md shadow-xs"
+                      >
+                        Assign This Conductor
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Alternative Candidates */}
+                  {conductorRecData.alternatives.length > 0 && (
+                    <div className="space-y-2 pt-2">
+                      <h4 className="text-xs font-bold text-foreground">
+                        Alternative Available Conductors
+                      </h4>
+                      {conductorRecData.alternatives.map((alt) => (
+                        <div
+                          key={alt.id}
+                          className="p-3 rounded-lg border border-border/80 bg-card hover:bg-muted/30 transition-all flex items-center justify-between gap-3"
+                        >
+                          <div>
+                            <div className="font-bold text-foreground">
+                              {alt.replacementConductorName}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {alt.depot} · Suitability {alt.suitabilityScore}/100
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              assignConductorMutation.mutate({
+                                tripId: selectedTripForConductor.tripId,
+                                dutyId: selectedTripForConductor.dutyId || undefined,
+                                conductorId: alt.replacementConductorId!,
+                              })
+                            }
+                            disabled={assignConductorMutation.isPending}
+                            className="h-7 text-xs px-2.5 rounded-md border-border hover:bg-muted font-medium"
+                          >
+                            Assign
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-8 rounded-lg border border-amber-500/30 bg-amber-500/10 text-center space-y-2">
+                  <AlertTriangle className="size-6 text-amber-600 mx-auto" />
+                  <h4 className="text-xs font-bold text-foreground">
+                    No Eligible Conductors in Depot Pool
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground max-w-sm mx-auto">
+                    All available conductors are currently deployed or required for mandatory rest buffers. Request central standby deployment.
+                  </p>
+                </div>
+              )}
+
+              <SheetFooter className="pt-4 border-t border-border/60">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConductorDrawerOpen(false)}
+                  className="rounded-md text-xs font-medium"
+                >
+                  Close
+                </Button>
+              </SheetFooter>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* ======================================================== */}
+      {/* DRIVER MOBILE GPS TRANSMISSION DIALOG */}
+      {/* ======================================================== */}
+      <Dialog open={driverCheckinOpen} onOpenChange={setDriverCheckinOpen}>
+        <DialogContent className="sm:max-w-md p-6 space-y-4">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2 text-foreground">
-              <AlertTriangle className="size-4 text-blue-600" />
-              <span>Report Operational Problem</span>
+            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+              <Smartphone className="size-4 text-blue-600" />
+              Driver Mobile Web GPS Interface
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Describe the problem in plain language. TransitOS will
-              investigate affected schedules, calculate candidate suitability,
-              and formulate ranked solutions.
+              Transmits actual live browser geolocation into TransitOS AVL gateway with explicit user permission. Never fabricates data.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3.5 py-1 text-xs">
-            {/* Category Selector */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                Problem Category
+          <div className="space-y-3 text-xs">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground">
+                Assigned Vehicle Registration
               </label>
-              <select
-                value={reportCategory}
-                onChange={(e) =>
-                  setReportCategory(e.target.value as ProblemCategory)
-                }
-                className="w-full h-8 text-xs px-2.5 rounded-md border border-border bg-card text-foreground focus:outline-hidden focus:ring-1 focus:ring-blue-600"
-              >
-                <option value="BUS_BREAKDOWN">
-                  Bus Breakdown (Mechanical Failure)
-                </option>
-                <option value="DRIVER_UNAVAILABLE">
-                  Driver Unavailable (Sick / Absent)
-                </option>
-                <option value="CONDUCTOR_ABSENT">
-                  Conductor Absent (Roster Gap)
-                </option>
-                <option value="TRIP_DELAY">Trip Delayed in Traffic</option>
-                <option value="SCHEDULING_OVERLAP">
-                  Scheduling Conflict / Double Booking
-                </option>
-                <option value="CANNOT_REACH_ON_TIME">
-                  Cannot Reach Terminus on Time
-                </option>
-                <option value="OPERATIONAL_DISRUPTION">
-                  Other Operational Disruption
-                </option>
-              </select>
-            </div>
-
-            {/* Affected Trip Selector */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                Affected Trip Departure
-              </label>
-              <select
-                value={reportTripId}
-                onChange={(e) => setReportTripId(e.target.value)}
-                className="w-full h-8 text-xs px-2.5 rounded-md border border-border bg-card text-foreground focus:outline-hidden focus:ring-1 focus:ring-blue-600"
-              >
-                {assignments.map((a) => (
-                  <option key={a.tripId} value={a.tripId}>
-                    {a.tripCode} ({formatMinutesToTime(a.startTime)} -{" "}
-                    {a.routeCode}: {a.busRegNumber})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Plain-Language Description */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                Describe the Operational Problem
-              </label>
-              <Textarea
-                rows={3}
-                placeholder="e.g. Bus engine overheating at Tambaram terminal. Radiator coolant leak confirmed by mechanic."
-                value={reportDescription}
-                onChange={(e) => setReportDescription(e.target.value)}
-                className="text-xs rounded-md"
+              <Input
+                placeholder="e.g. TN-01-N-9842"
+                value={checkinBusReg}
+                onChange={(e) => setCheckinBusReg(e.target.value)}
+                className="h-8 text-xs font-mono rounded-md"
               />
+            </div>
+
+            <Button
+              onClick={() => handleTransmitDeviceGps(checkinBusReg)}
+              disabled={transmittingGps || !checkinBusReg.trim()}
+              className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-xs flex items-center justify-center gap-1.5"
+            >
+              <Send className="size-3.5" />
+              {transmittingGps ? "Acquiring GPS Fix..." : "Transmit My Current Geolocation"}
+            </Button>
+
+            {lastTransmittedCoords && (
+              <div className="p-2.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 space-y-1 font-mono text-[11px]">
+                <div className="font-bold text-emerald-800 dark:text-emerald-300">
+                  Last Telemetry Packet Transmitted:
+                </div>
+                <div className="text-foreground">
+                  Lat: {lastTransmittedCoords.lat.toFixed(5)} · Lng: {lastTransmittedCoords.lng.toFixed(5)}
+                </div>
+                <div className="text-muted-foreground">
+                  Speed: {lastTransmittedCoords.speed} km/h · Accuracy: {lastTransmittedCoords.accuracy}m at {lastTransmittedCoords.time}
+                </div>
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-border/60 space-y-2">
+              <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
+                Quick Terminal Check-in Pings (Chennai Corridors)
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleSampleTerminalPing(checkinBusReg || "TN-01-N-9842", "broadway")}
+                  className="h-7 text-[11px] rounded-md font-mono"
+                >
+                  Broadway
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleSampleTerminalPing(checkinBusReg || "TN-01-N-9842", "cmbt")}
+                  className="h-7 text-[11px] rounded-md font-mono"
+                >
+                  CMBT
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleSampleTerminalPing(checkinBusReg || "TN-01-N-9842", "siruseri")}
+                  className="h-7 text-[11px] rounded-md font-mono"
+                >
+                  Siruseri IT
+                </Button>
+              </div>
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-border/50">
+          <DialogFooter className="pt-2">
             <Button
-              type="button"
               variant="outline"
               size="sm"
-              className="text-xs h-8 rounded-md"
-              onClick={() => setReportDialogOpen(false)}
+              onClick={() => setDriverCheckinOpen(false)}
+              className="rounded-md text-xs font-medium"
             >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              disabled={!reportDescription.trim() || reportMutation.isPending}
-              className="text-xs h-8 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-xs"
-              onClick={() => reportMutation.mutate()}
-            >
-              {reportMutation.isPending ? (
-                <>
-                  <RefreshCw className="size-3 mr-1.5 animate-spin" />
-                  Investigating Data...
-                </>
-              ) : (
-                "Investigate & Find Solution"
-              )}
+              Done
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* ======================================================== */}
-      {/* SLIDE-OVER REVIEW DRAWER: 8-POINT DIAGNOSTIC & SOLUTIONS */}
+      {/* OPERATIONAL PROBLEM REPORTING DIALOG */}
       {/* ======================================================== */}
-      <Sheet open={reviewSheetOpen} onOpenChange={setReviewSheetOpen}>
-        <SheetContent
-          side="right"
-          className="w-full sm:max-w-xl md:max-w-2xl overflow-y-auto p-6 space-y-6"
-        >
-          {selectedIssue ? (
-            <div className="space-y-6">
-              <SheetHeader className="space-y-2 border-b border-border/60 pb-4">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] font-bold uppercase border-blue-500/40 text-blue-700 dark:text-blue-300 bg-blue-500/10 rounded-md"
-                  >
-                    {selectedIssue.category.replace(/_/g, " ")}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "text-[10px] font-bold rounded-md",
-                      selectedIssue.lifecycleStatus === "RESOLVED"
-                        ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10"
-                        : selectedIssue.lifecycleStatus ===
-                            "AWAITING_MANUAL_INTERVENTION"
-                          ? "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10"
-                          : "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10",
-                    )}
-                  >
-                    Status: {selectedIssue.lifecycleStatus.replace(/_/g, " ")}
-                  </Badge>
-                </div>
-                <SheetTitle className="text-base font-bold text-foreground">
-                  Conflict Diagnostic: Trip {selectedIssue.tripCode}
-                </SheetTitle>
-                <SheetDescription className="text-xs text-muted-foreground">
-                  {selectedIssue.routeCode} · {selectedIssue.routeName} ·
-                  Reported on {selectedIssue.serviceDate}
-                </SheetDescription>
-              </SheetHeader>
+      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+        <DialogContent className="sm:max-w-md p-6 space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+              <AlertTriangle className="size-4 text-amber-600" />
+              Report Operational Incident
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Logs an operational disruption. The schedule engine triggers automated 8-point diagnostic analysis and ranks feasible solutions.
+            </DialogDescription>
+          </DialogHeader>
 
-              {/* 8-POINT PLAIN LANGUAGE INVESTIGATION REPORT */}
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <Info className="size-3.5 text-blue-600" />
-                  <span>TransitOS 8-Point Operational Investigation</span>
-                </h3>
-
-                <div className="grid gap-2.5 text-xs">
-                  {/* Point 1 */}
-                  <div className="rounded-lg border border-border/70 bg-card p-3 space-y-1">
-                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                      1. What exactly happened?
-                    </span>
-                    <p className="text-foreground leading-relaxed">
-                      {selectedIssue.diagnostic.whatHappened}
-                    </p>
-                  </div>
-
-                  {/* Point 2 */}
-                  <div className="rounded-lg border border-border/70 bg-card p-3 space-y-1">
-                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                      2. Which route or trip is affected?
-                    </span>
-                    <p className="text-foreground leading-relaxed">
-                      {selectedIssue.diagnostic.affectedRouteTrips}
-                    </p>
-                  </div>
-
-                  {/* Point 3 */}
-                  <div className="rounded-lg border border-border/70 bg-card p-3 space-y-1">
-                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                      3. Which bus, driver or conductor is involved?
-                    </span>
-                    <p className="text-foreground leading-relaxed">
-                      {selectedIssue.diagnostic.involvedResources}
-                    </p>
-                  </div>
-
-                  {/* Point 4 */}
-                  <div className="rounded-lg border border-border/70 bg-card p-3 space-y-1">
-                    <span className="text-[10px] font-bold uppercase text-rose-600 dark:text-rose-400">
-                      4. Why is the current assignment invalid?
-                    </span>
-                    <p className="text-foreground leading-relaxed">
-                      {selectedIssue.diagnostic.whyInvalid}
-                    </p>
-                  </div>
-
-                  {/* Point 5 */}
-                  <div className="rounded-lg border border-border/70 bg-card p-3 space-y-1">
-                    <span className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">
-                      5. What are the operational consequences?
-                    </span>
-                    <p className="text-foreground leading-relaxed">
-                      {selectedIssue.diagnostic.operationalConsequences}
-                    </p>
-                  </div>
-
-                  {/* Point 6 */}
-                  <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/5 p-3 space-y-1">
-                    <span className="text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-400">
-                      6. What solution does the system recommend?
-                    </span>
-                    <p className="text-foreground leading-relaxed font-medium">
-                      {selectedIssue.diagnostic.recommendedSolution}
-                    </p>
-                  </div>
-
-                  {/* Point 7 */}
-                  <div className="rounded-lg border border-border/70 bg-card p-3 space-y-1">
-                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                      7. Why is that solution better?
-                    </span>
-                    <p className="text-foreground leading-relaxed">
-                      {selectedIssue.diagnostic.whyBetter}
-                    </p>
-                  </div>
-
-                  {/* Point 8 */}
-                  <div className="rounded-lg border border-border/70 bg-card p-3 space-y-1">
-                    <span className="text-[10px] font-bold uppercase text-muted-foreground">
-                      8. Are there any remaining risks or unresolved issues?
-                    </span>
-                    <p className="text-foreground leading-relaxed">
-                      {selectedIssue.diagnostic.remainingRisks}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* RANKED SOLUTIONS & SELECTION */}
-              {selectedIssue.bestSolution ? (
-                <div className="space-y-3 pt-2 border-t border-border/60">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Ranked Feasible Solutions
-                    </h3>
-                    <span className="text-[10px] text-muted-foreground">
-                      {selectedIssue.alternativeSolutions.length + 1} options
-                      evaluated
-                    </span>
-                  </div>
-
-                  {/* Option Switcher Buttons */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSelectedSolutionId(selectedIssue.bestSolution!.id)
-                      }
-                      className={cn(
-                        "p-2.5 rounded-lg border text-left transition-all relative",
-                        selectedSolutionId === selectedIssue.bestSolution.id
-                          ? "border-emerald-600 bg-emerald-500/10 ring-1 ring-emerald-600 shadow-xs"
-                          : "border-border/80 bg-card hover:bg-muted/50",
-                      )}
-                    >
-                      <Badge
-                        variant="outline"
-                        className="text-[9px] px-1 py-0 mb-1 border-emerald-500/50 bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold rounded-md"
-                      >
-                        Rank 1 (Best)
-                      </Badge>
-                      <p className="text-xs font-bold text-foreground truncate">
-                        {selectedIssue.bestSolution.replacementBusReg ||
-                          selectedIssue.bestSolution.replacementDriverName ||
-                          selectedIssue.bestSolution.replacementConductorName}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground font-mono">
-                        {selectedIssue.bestSolution.suitabilityScore}/100 Match
-                      </p>
-                    </button>
-
-                    {selectedIssue.alternativeSolutions.map((alt, idx) => (
-                      <button
-                        key={alt.id}
-                        type="button"
-                        onClick={() => setSelectedSolutionId(alt.id)}
-                        className={cn(
-                          "p-2.5 rounded-lg border text-left transition-all",
-                          selectedSolutionId === alt.id
-                            ? "border-blue-600 bg-blue-500/10 ring-1 ring-blue-600 shadow-xs"
-                            : "border-border/80 bg-card hover:bg-muted/50",
-                        )}
-                      >
-                        <Badge
-                          variant="outline"
-                          className="text-[9px] px-1 py-0 mb-1 border-blue-500/40 text-blue-700 dark:text-blue-300 rounded-md"
-                        >
-                          Rank {alt.rank} (Alt {idx + 1})
-                        </Badge>
-                        <p className="text-xs font-bold text-foreground truncate">
-                          {alt.replacementBusReg ||
-                            alt.replacementDriverName ||
-                            alt.replacementConductorName}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground font-mono">
-                          {alt.suitabilityScore}/100 Match
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Detailed Selected Solution Card */}
-                  {currentActiveSolution ? (
-                    <div className="rounded-lg border border-border/80 bg-muted/20 p-3.5 space-y-2 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-foreground">
-                          {currentActiveSolution.title}
-                        </span>
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] font-mono border-emerald-500/40 text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 rounded-md"
-                        >
-                          Suitability: {currentActiveSolution.suitabilityScore}
-                          /100
-                        </Badge>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-[11px] text-muted-foreground pt-1 border-t border-border/40">
-                        <div>
-                          <span className="block text-[10px] uppercase">
-                            Home Depot:
-                          </span>
-                          <span className="font-semibold text-foreground">
-                            {currentActiveSolution.depot}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="block text-[10px] uppercase">
-                            Repositioning Deadhead:
-                          </span>
-                          <span className="font-semibold text-foreground">
-                            {currentActiveSolution.repositioningMinutes} mins
-                          </span>
-                        </div>
-                      </div>
-
-                      <p className="text-[11px] text-muted-foreground leading-relaxed pt-1">
-                        <span className="font-semibold text-foreground">
-                          Reason:{" "}
-                        </span>
-                        {currentActiveSolution.reason}
-                      </p>
-
-                      <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2 text-[11px] text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
-                        <ShieldCheck className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <span>{currentActiveSolution.impactSummary}</span>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-4 text-xs space-y-1.5">
-                  <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-bold">
-                    <XCircle className="size-4" />
-                    <span>No Automated Feasible Replacement Found</span>
-                  </div>
-                  <p className="text-muted-foreground">
-                    All depot reserve units have overlapping assignments or
-                    unmet rest buffers. Manual supervisor intervention required
-                    (deploy standby vehicle or adjust trip timing).
-                  </p>
-                </div>
-              )}
-
-              {/* ACTION FOOTER */}
-              <div className="pt-3 border-t border-border/70 space-y-3">
-                {selectedIssue.lifecycleStatus === "RESOLVED" ? (
-                  <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 flex items-center gap-2.5 text-emerald-900 dark:text-emerald-200 text-xs">
-                    <CheckCircle2 className="size-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <div>
-                      <p className="font-bold">
-                        Issue Resolved & Timetable Feasibility Guaranteed
-                      </p>
-                      <p className="text-[11px] text-emerald-800 dark:text-emerald-300">
-                        Approved by {selectedIssue.resolvedBy || "Administrator"}{" "}
-                        on{" "}
-                        {new Date(
-                          selectedIssue.resolvedAt || "",
-                        ).toLocaleString()}
-                        .
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                        Dispatch Notes / Audit Justification (Optional)
-                      </label>
-                      <Input
-                        placeholder="e.g. Approved primary standby bus from Broadway depot"
-                        value={dispatchNotes}
-                        onChange={(e) => setDispatchNotes(e.target.value)}
-                        className="h-8 text-xs rounded-md"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2 pt-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={rejectMutation.isPending}
-                        className="text-xs h-8 rounded-md border-border text-rose-600 hover:text-rose-700 hover:bg-rose-500/10"
-                        onClick={() => rejectMutation.mutate()}
-                      >
-                        Reject Recommendation
-                      </Button>
-
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={
-                          !currentActiveSolution || approveMutation.isPending
-                        }
-                        className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md shadow-xs flex items-center gap-1.5"
-                        onClick={() => approveMutation.mutate()}
-                      >
-                        {approveMutation.isPending ? (
-                          <>
-                            <RefreshCw className="size-3 animate-spin" />
-                            Updating Schedule...
-                          </>
-                        ) : (
-                          <>
-                            <Check className="size-3.5" />
-                            Approve Solution
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </div>
+          <div className="space-y-3 text-xs">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground">
+                Incident Category
+              </label>
+              <Select
+                value={reportCategory}
+                onValueChange={(v) => setReportCategory(v as ProblemCategory)}
+              >
+                <SelectTrigger className="h-8 text-xs rounded-md">
+                  <SelectValue placeholder="Select Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BUS_BREAKDOWN">Bus Mechanical Breakdown</SelectItem>
+                  <SelectItem value="DRIVER_UNAVAILABLE">Driver Absent / Emergency Leave</SelectItem>
+                  <SelectItem value="CONDUCTOR_ABSENT">Conductor Absent / Unassigned</SelectItem>
+                  <SelectItem value="TRIP_DELAY">Corridor Trip Delay / Bottleneck</SelectItem>
+                  <SelectItem value="SCHEDULING_OVERLAP">Scheduling Overlap Detected</SelectItem>
+                  <SelectItem value="CANNOT_REACH_ON_TIME">Deadhead Turnout Infeasible</SelectItem>
+                  <SelectItem value="OPERATIONAL_DISRUPTION">General Operational Disruption</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground">
+                Target Trip (Optional)
+              </label>
+              <Select value={reportTripId} onValueChange={setReportTripId}>
+                <SelectTrigger className="h-8 text-xs rounded-md">
+                  <SelectValue placeholder="Select Trip or Leave Blank" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Auto-Detect from Vehicle</SelectItem>
+                  {assignments.slice(0, 30).map((a) => (
+                    <SelectItem key={a.tripId} value={a.tripId}>
+                      Trip {a.tripCode} (Route {a.routeCode} - {formatMinutesToTime(a.startTime)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-foreground">
+                Incident Description & Context
+              </label>
+              <Textarea
+                placeholder="Describe mechanical faults, road bottlenecks, crew leaves, or dispatch constraints..."
+                value={reportDescription}
+                onChange={(e) => setReportDescription(e.target.value)}
+                className="text-xs rounded-md"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReportDialogOpen(false)}
+              className="rounded-md text-xs font-medium"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => reportMutation.mutate()}
+              disabled={reportMutation.isPending || !reportDescription.trim()}
+              className="rounded-md text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+            >
+              {reportMutation.isPending ? "Investigating..." : "Submit Incident"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ======================================================== */}
+      {/* MANUAL RESOLUTION DIALOG */}
+      {/* ======================================================== */}
+      <Dialog open={manualResolveDialogOpen} onOpenChange={setManualResolveDialogOpen}>
+        <DialogContent className="sm:max-w-md p-6 space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-foreground">
+              Supervisor Manual Issue Resolution
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Record the manual dispatch adjustments or fleet reassignments that resolved this issue.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 text-xs">
+            <label className="text-xs font-medium text-foreground">
+              Resolution Action & Supervisor Notes
+            </label>
+            <Textarea
+              placeholder="e.g. Dispatched standby Leyland fleet from Saidapet depot to absorb headway."
+              value={manualResolveNotes}
+              onChange={(e) => setManualResolveNotes(e.target.value)}
+              className="text-xs rounded-md"
+              rows={3}
+            />
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setManualResolveDialogOpen(false)}
+              className="rounded-md text-xs font-medium"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={() =>
+                markManuallyResolvedMutation.mutate({
+                  issueId: targetManualIssueId,
+                  resolutionNotes: manualResolveNotes || "Resolved manually by supervisor.",
+                })
+              }
+              disabled={markManuallyResolvedMutation.isPending}
+              className="rounded-md text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+            >
+              Confirm Resolution
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

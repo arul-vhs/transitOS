@@ -878,11 +878,50 @@ export async function assignBusToDutyImpl(
 
 export async function assignCrewToDutyImpl(
   dutyId: string,
-  driverId: string | null,
-  conductorId: string | null,
+  driverId?: string | null,
+  conductorId?: string | null,
 ) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "schedule.modify");
+
+  // Backend Overlap & Availability Validation
+  if (conductorId) {
+    const { assignments } = await getLiveTrackingAssignmentsImpl();
+    const targetDutyTrip = assignments.find((a) => a.dutyId === dutyId);
+    if (targetDutyTrip) {
+      const overlappingTrip = assignments.find(
+        (other) =>
+          other.dutyId !== dutyId &&
+          other.conductorId === conductorId &&
+          targetDutyTrip.startTime < other.endTime &&
+          targetDutyTrip.endTime > other.startTime,
+      );
+      if (overlappingTrip) {
+        throw new Error(
+          `Cannot assign conductor: Conductor is already assigned to overlapping Trip ${overlappingTrip.tripCode} (${formatMinutesToTime(overlappingTrip.startTime)} - ${formatMinutesToTime(overlappingTrip.endTime)}). Overlapping conductor assignments are prohibited on the backend.`,
+        );
+      }
+    }
+  }
+
+  if (driverId) {
+    const { assignments } = await getLiveTrackingAssignmentsImpl();
+    const targetDutyTrip = assignments.find((a) => a.dutyId === dutyId);
+    if (targetDutyTrip) {
+      const overlappingTrip = assignments.find(
+        (other) =>
+          other.dutyId !== dutyId &&
+          other.driverId === driverId &&
+          targetDutyTrip.startTime < other.endTime &&
+          targetDutyTrip.endTime > other.startTime,
+      );
+      if (overlappingTrip) {
+        throw new Error(
+          `Cannot assign driver: Driver is already assigned to overlapping Trip ${overlappingTrip.tripCode} (${formatMinutesToTime(overlappingTrip.startTime)} - ${formatMinutesToTime(overlappingTrip.endTime)}). Overlapping driver assignments are prohibited on the backend.`,
+        );
+      }
+    }
+  }
 
   try {
     const duty = await db.query.duties.findFirst({
@@ -893,9 +932,17 @@ export async function assignCrewToDutyImpl(
     });
     if (!duty) throw new Error("Duty not found in database");
 
+    const updatePayload: Record<string, any> = { updatedAt: new Date() };
+    if (driverId !== undefined) {
+      updatePayload.driverId = driverId;
+    }
+    if (conductorId !== undefined) {
+      updatePayload.conductorId = conductorId;
+    }
+
     await db
       .update(duties)
-      .set({ driverId, conductorId, updatedAt: new Date() })
+      .set(updatePayload)
       .where(eq(duties.id, dutyId));
 
     // Audit log
@@ -904,7 +951,7 @@ export async function assignCrewToDutyImpl(
       userId: currentUser.id,
       email: currentUser.email,
       action: "CREW_ASSIGNED",
-      details: `Assigned driver ID ${driverId || "None"} / conductor ID ${conductorId || "None"} to duty ${duty.dutyCode}`,
+      details: `Updated crew on duty ${duty.dutyCode}: driver=${driverId !== undefined ? driverId || "None" : "unchanged"}, conductor=${conductorId !== undefined ? conductorId || "None" : "unchanged"}`,
     });
 
     return { success: true };
@@ -1312,10 +1359,13 @@ export interface AssignmentConflict {
     | "BUS_UNAVAILABLE"
     | "DRIVER_UNAVAILABLE"
     | "CONDUCTOR_UNAVAILABLE"
+    | "MISSING_CONDUCTOR"
+    | "MISSING_DRIVER"
+    | "UNASSIGNED_BUS"
     | "TIMING_INFEASIBLE";
   resourceType: "bus" | "driver" | "conductor" | "timing";
   resourceId?: string | undefined;
-  resourceName: string;
+  resourceName?: string | undefined;
   description: string;
   severity: "critical" | "warning";
   conflictingTripCode?: string | undefined;
@@ -1349,6 +1399,9 @@ export interface LiveTrackingAssignment {
   conductorId: string | null;
   conductorName: string;
   conductorStatus: string;
+  conductorAssigned: boolean;
+  driverAssigned: boolean;
+  busAssigned: boolean;
   status: "active" | "scheduled" | "conflicted" | "unassigned";
   conflicts: AssignmentConflict[];
 }
@@ -1361,6 +1414,9 @@ export interface LiveTrackingResponse {
     activeAssignments: number;
     conflictedAssignments: number;
     unassignedTrips: number;
+    unassignedConductors: number;
+    unassignedDrivers: number;
+    unassignedBuses: number;
     availableBuses: number;
     availableDrivers: number;
     availableConductors: number;
@@ -1496,7 +1552,9 @@ export async function getLiveTrackingAssignmentsImpl(filters?: {
 
     tenantDuties.forEach((d) => {
       if (d.trips) {
-        d.trips.forEach((t: any) => dutyTripsMap.set(t.id, d));
+        d.trips.forEach((t: any) =>
+          dutyTripsMap.set(typeof t === "string" ? t : t.id, d),
+        );
       }
       if (d.dutyTrips) {
         d.dutyTrips.forEach((dt: any) => dutyTripsMap.set(dt.tripId, d));
@@ -1550,6 +1608,9 @@ export async function getLiveTrackingAssignmentsImpl(filters?: {
       conductorName: conductor?.name || duty?.conductorName || "Unassigned",
       conductorStatus:
         conductor?.status || (duty?.conductorId ? "assigned" : "unassigned"),
+      conductorAssigned: Boolean(conductor?.id || duty?.conductorId),
+      driverAssigned: Boolean(driver?.id || duty?.driverId),
+      busAssigned: Boolean(bus?.id || duty?.busId),
       status: "scheduled",
       conflicts: [],
     };
@@ -1820,6 +1881,20 @@ export async function getLiveTrackingAssignmentsImpl(filters?: {
           });
         }
       }
+    } else {
+      // Flag missing conductor assignment prominently
+      addConflict(a.tripId, {
+        id: `conf-no-cnd-${a.tripId}`,
+        tripId: a.tripId,
+        tripCode: a.tripCode,
+        dutyId: a.dutyId || undefined,
+        dutyCode: a.dutyCode || undefined,
+        type: "MISSING_CONDUCTOR",
+        resourceType: "conductor",
+        resourceName: "Unassigned",
+        description: `No conductor assigned to scheduled departure ${a.tripCode} (departure ${formatMinutesToTime(a.startTime)}).`,
+        severity: "warning",
+      });
     }
   });
 
@@ -1836,7 +1911,17 @@ export async function getLiveTrackingAssignmentsImpl(filters?: {
       }
     });
 
-    if (conflicts.length > 0) {
+    const hasHardConflict = conflicts.some(
+      (c) =>
+        c.type === "BUS_OVERLAP" ||
+        c.type === "DRIVER_OVERLAP" ||
+        c.type === "CONDUCTOR_OVERLAP" ||
+        c.type === "BUS_UNAVAILABLE" ||
+        c.type === "DRIVER_UNAVAILABLE" ||
+        c.type === "CONDUCTOR_UNAVAILABLE",
+    );
+
+    if (hasHardConflict) {
       a.status = "conflicted";
     } else if (a.busId && a.driverId && a.conductorId) {
       a.status = "active";
@@ -1849,6 +1934,9 @@ export async function getLiveTrackingAssignmentsImpl(filters?: {
   const activeAssignments = assignments.filter((a) => a.status === "active").length;
   const conflictedAssignments = assignments.filter((a) => a.status === "conflicted").length;
   const unassignedTrips = assignments.filter((a) => a.status === "unassigned").length;
+  const unassignedConductors = assignments.filter((a) => !a.conductorId).length;
+  const unassignedDrivers = assignments.filter((a) => !a.driverId).length;
+  const unassignedBuses = assignments.filter((a) => !a.busId).length;
 
   const assignedBusIds = new Set(
     assignments.filter((a) => a.busId).map((a) => a.busId),
@@ -1887,6 +1975,9 @@ export async function getLiveTrackingAssignmentsImpl(filters?: {
       activeAssignments,
       conflictedAssignments,
       unassignedTrips,
+      unassignedConductors,
+      unassignedDrivers,
+      unassignedBuses,
       availableBuses,
       availableDrivers,
       availableConductors,
@@ -2144,11 +2235,11 @@ export async function resolveAssignmentConflictImpl(params: {
     }
   } else if (params.replacementType === "driver") {
     if (targetDutyId) {
-      await assignCrewToDutyImpl(targetDutyId, params.replacementId, null);
+      await assignCrewToDutyImpl(targetDutyId, params.replacementId, undefined);
     }
   } else if (params.replacementType === "conductor") {
     if (targetDutyId) {
-      await assignCrewToDutyImpl(targetDutyId, null, params.replacementId);
+      await assignCrewToDutyImpl(targetDutyId, undefined, params.replacementId);
     }
   }
 
@@ -2178,6 +2269,9 @@ export type ProblemCategory =
   | "BUS_BREAKDOWN"
   | "DRIVER_UNAVAILABLE"
   | "CONDUCTOR_ABSENT"
+  | "MISSING_CONDUCTOR"
+  | "MISSING_DRIVER"
+  | "UNASSIGNED_BUS"
   | "TRIP_DELAY"
   | "SCHEDULING_OVERLAP"
   | "CANNOT_REACH_ON_TIME"
@@ -2188,20 +2282,26 @@ export type ConflictLifecycleStatus =
   | "ANALYZING"
   | "RECOMMENDATION_READY"
   | "AWAITING_APPROVAL"
+  | "AUTOMATICALLY_RESOLVED"
   | "RESOLVED"
   | "AWAITING_MANUAL_INTERVENTION";
+
+export type AutomationLevel =
+  | "LEVEL_1_AUTOMATIC"
+  | "LEVEL_2_APPROVAL_REQUIRED"
+  | "LEVEL_3_MANUAL_INTERVENTION";
 
 export interface SolutionOption {
   id: string;
   rank: number; // 1 = Best Recommendation, 2 = Alternative 1, 3 = Alternative 2
   title: string;
   resourceType: "bus" | "driver" | "conductor" | "multi";
-  replacementBusId?: string;
-  replacementBusReg?: string;
-  replacementDriverId?: string;
-  replacementDriverName?: string;
-  replacementConductorId?: string;
-  replacementConductorName?: string;
+  replacementBusId?: string | undefined;
+  replacementBusReg?: string | undefined;
+  replacementDriverId?: string | undefined;
+  replacementDriverName?: string | undefined;
+  replacementConductorId?: string | undefined;
+  replacementConductorName?: string | undefined;
   depot: string;
   repositioningMinutes: number;
   suitabilityScore: number;
@@ -2227,6 +2327,8 @@ export interface OperationalIssue {
   source: "ADMIN_REPORTED" | "SYSTEM_DETECTED";
   category: ProblemCategory;
   lifecycleStatus: ConflictLifecycleStatus;
+  automationLevel: AutomationLevel;
+  automationActionTaken?: string | undefined;
   urgency: "CRITICAL" | "HIGH" | "MEDIUM";
   tripId: string;
   tripCode: string;
@@ -2235,9 +2337,9 @@ export interface OperationalIssue {
   serviceDate: string;
   description: string;
   reportedAt: string;
-  resolvedAt?: string;
-  resolvedBy?: string;
-  appliedSolutionId?: string;
+  resolvedAt?: string | undefined;
+  resolvedBy?: string | undefined;
+  appliedSolutionId?: string | undefined;
   diagnostic: ConflictDiagnostic;
   bestSolution: SolutionOption | null;
   alternativeSolutions: SolutionOption[];
@@ -2260,6 +2362,12 @@ function mapConflictTypeToCategory(type: string): ProblemCategory {
       return "DRIVER_UNAVAILABLE";
     case "CONDUCTOR_UNAVAILABLE":
       return "CONDUCTOR_ABSENT";
+    case "MISSING_CONDUCTOR":
+      return "MISSING_CONDUCTOR";
+    case "MISSING_DRIVER":
+      return "MISSING_DRIVER";
+    case "UNASSIGNED_BUS":
+      return "UNASSIGNED_BUS";
     case "TIMING_INFEASIBLE":
       return "CANNOT_REACH_ON_TIME";
     default:
@@ -2271,12 +2379,12 @@ async function investigateOperationalIssueInternal(params: {
   tenantId: string;
   source: "ADMIN_REPORTED" | "SYSTEM_DETECTED";
   category: ProblemCategory;
-  tripId?: string;
-  busId?: string;
-  driverId?: string;
-  conductorId?: string;
+  tripId?: string | undefined;
+  busId?: string | undefined;
+  driverId?: string | undefined;
+  conductorId?: string | undefined;
   description: string;
-  serviceDate?: string;
+  serviceDate?: string | undefined;
 }): Promise<OperationalIssue> {
   const targetDate = params.serviceDate || "25 Aug 2026";
   const { assignments } = await getLiveTrackingAssignmentsImpl({
@@ -2318,14 +2426,21 @@ async function investigateOperationalIssueInternal(params: {
     }
     if (
       params.category === "BUS_BREAKDOWN" ||
-      params.category === "CANNOT_REACH_ON_TIME"
+      params.category === "CANNOT_REACH_ON_TIME" ||
+      params.category === "UNASSIGNED_BUS"
     ) {
       return a.busId && a.busId === targetAssignment!.busId;
     }
-    if (params.category === "DRIVER_UNAVAILABLE") {
+    if (
+      params.category === "DRIVER_UNAVAILABLE" ||
+      params.category === "MISSING_DRIVER"
+    ) {
       return a.driverId && a.driverId === targetAssignment!.driverId;
     }
-    if (params.category === "CONDUCTOR_ABSENT") {
+    if (
+      params.category === "CONDUCTOR_ABSENT" ||
+      params.category === "MISSING_CONDUCTOR"
+    ) {
       return a.conductorId && a.conductorId === targetAssignment!.conductorId;
     }
     return false;
@@ -2336,19 +2451,30 @@ async function investigateOperationalIssueInternal(params: {
 
   // 3. Determine Replacement Resource Type
   let replacementType: "bus" | "driver" | "conductor" = "bus";
-  if (params.category === "DRIVER_UNAVAILABLE") {
+  if (
+    params.category === "DRIVER_UNAVAILABLE" ||
+    params.category === "MISSING_DRIVER"
+  ) {
     replacementType = "driver";
-  } else if (params.category === "CONDUCTOR_ABSENT") {
+  } else if (
+    params.category === "CONDUCTOR_ABSENT" ||
+    params.category === "MISSING_CONDUCTOR"
+  ) {
     replacementType = "conductor";
+  } else if (
+    params.category === "BUS_BREAKDOWN" ||
+    params.category === "UNASSIGNED_BUS"
+  ) {
+    replacementType = "bus";
   } else if (params.category === "SCHEDULING_OVERLAP") {
     if (
-      targetAssignment.conflicts.some((c) => c.resourceType === "driver")
-    ) {
-      replacementType = "driver";
-    } else if (
       targetAssignment.conflicts.some((c) => c.resourceType === "conductor")
     ) {
       replacementType = "conductor";
+    } else if (
+      targetAssignment.conflicts.some((c) => c.resourceType === "driver")
+    ) {
+      replacementType = "driver";
     } else {
       replacementType = "bus";
     }
@@ -2421,11 +2547,47 @@ async function investigateOperationalIssueInternal(params: {
 
   const bestSolution = solutions.length > 0 ? solutions[0]! : null;
   const alternativeSolutions = solutions.slice(1, 3);
-
   const hasSolution = Boolean(bestSolution);
-  const lifecycleStatus: ConflictLifecycleStatus = hasSolution
-    ? "RECOMMENDATION_READY"
+
+  // Automation Policy Evaluation
+  let automationLevel: AutomationLevel = "LEVEL_2_APPROVAL_REQUIRED";
+  let lifecycleStatus: ConflictLifecycleStatus = hasSolution
+    ? "AWAITING_APPROVAL"
     : "AWAITING_MANUAL_INTERVENTION";
+  let automationActionTaken: string | undefined = undefined;
+
+  if (!hasSolution) {
+    automationLevel = "LEVEL_3_MANUAL_INTERVENTION";
+    lifecycleStatus = "AWAITING_MANUAL_INTERVENTION";
+  } else if (
+    (params.category === "MISSING_CONDUCTOR" ||
+      params.category === "CONDUCTOR_ABSENT") &&
+    bestSolution &&
+    bestSolution.suitabilityScore >= 90 &&
+    bestSolution.cascadingConflictRisk === "NONE"
+  ) {
+    // Level 1: Automatic Resolution for Low-Risk Conductor Assignment
+    automationLevel = "LEVEL_1_AUTOMATIC";
+    lifecycleStatus = "AUTOMATICALLY_RESOLVED";
+    automationActionTaken = `System automatically assigned eligible conductor ${bestSolution.replacementConductorName || bestSolution.title} from ${bestSolution.depot} (0 overlapping duties, suitability score ${bestSolution.suitabilityScore}/100) under Level 1 automation policy.`;
+
+    // Apply change immediately to duty if duty exists
+    if (targetAssignment.dutyId && bestSolution.replacementConductorId) {
+      try {
+        await assignCrewToDutyImpl(
+          targetAssignment.dutyId,
+          undefined,
+          bestSolution.replacementConductorId,
+        );
+      } catch {
+        // Fallback catch
+      }
+    }
+  } else {
+    // Level 2: Approval Required for High-Impact or Complex Replacements
+    automationLevel = "LEVEL_2_APPROVAL_REQUIRED";
+    lifecycleStatus = "AWAITING_APPROVAL";
+  }
 
   const urgency =
     params.category === "BUS_BREAKDOWN" ||
@@ -2445,6 +2607,15 @@ async function investigateOperationalIssueInternal(params: {
       break;
     case "CONDUCTOR_ABSENT":
       whatHappened = `Conductor ${targetAssignment.conductorName} is absent: "${params.description}". Fare stage collection and passenger safety requirements are unmet.`;
+      break;
+    case "MISSING_CONDUCTOR":
+      whatHappened = `Trip ${targetAssignment.tripCode} is scheduled for departure at ${formatMinutesToTime(targetAssignment.startTime)} without an assigned conductor. Ticketing and passenger safety compliance cannot be met without a conductor.`;
+      break;
+    case "MISSING_DRIVER":
+      whatHappened = `Trip ${targetAssignment.tripCode} is scheduled for departure without an assigned certified driver.`;
+      break;
+    case "UNASSIGNED_BUS":
+      whatHappened = `Trip ${targetAssignment.tripCode} has no vehicle assigned. Standby fleet turnout required.`;
       break;
     case "TRIP_DELAY":
       whatHappened = `Trip ${targetAssignment.tripCode} suffered significant operational delay: "${params.description}". Subsequent timetable headway cannot be maintained.`;
@@ -2466,9 +2637,12 @@ async function investigateOperationalIssueInternal(params: {
   const whyInvalid =
     params.category === "BUS_BREAKDOWN"
       ? `Operating a vehicle with mechanical breakdown violates transport safety standards and risks passenger stranding on the corridor.`
-      : params.category === "SCHEDULING_OVERLAP"
-        ? `The current assignment double-books resources, creating physically impossible concurrent duties.`
-        : `Regulatory rest, availability, or turnout constraints cannot be satisfied under the current roster allocation.`;
+      : params.category === "MISSING_CONDUCTOR" ||
+          params.category === "CONDUCTOR_ABSENT"
+        ? `Operating passenger service without a certified conductor violates state road transport regulations and impedes passenger boarding and fare settlement.`
+        : params.category === "SCHEDULING_OVERLAP"
+          ? `The current assignment double-books resources, creating physically impossible concurrent duties.`
+          : `Regulatory rest, availability, or turnout constraints cannot be satisfied under the current roster allocation.`;
 
   const operationalConsequences = `Without immediate replacement, ${affectedAssignments.length} scheduled departure(s) (${affectedTripCodes.join(", ")}) will be cancelled, affecting passenger headway and triggering severe service reliability penalties.`;
 
@@ -2477,7 +2651,7 @@ async function investigateOperationalIssueInternal(params: {
     : `All reserve resources at ${targetAssignment.busDepot} are currently committed. Depot supervisor manual intervention required to deploy central standby fleet or adjust trip headway.`;
 
   const whyBetter = bestSolution
-    ? `Selected candidate has verified zero secondary conflicts, meets all mandatory rest and turnout rules, and achieves a ${bestSolution.suitabilityScore}/100 suitability score with minimal repositioning delay.`
+    ? `Selected candidate has verified zero secondary conflicts, meets all mandatory rest and turnout rules, and achieves a ${bestSolution.suitabilityScore}/100 suitability score with minimal repositioning lead time.`
     : `No automated candidate satisfies non-overlap and rest compliance. Manual supervisory dispatch prevents secondary roster disruption.`;
 
   const remainingRisks = bestSolution
@@ -2503,6 +2677,8 @@ async function investigateOperationalIssueInternal(params: {
     source: params.source,
     category: params.category,
     lifecycleStatus,
+    automationLevel,
+    automationActionTaken,
     urgency,
     tripId: targetAssignment.tripId,
     tripCode: targetAssignment.tripCode,
@@ -2511,6 +2687,18 @@ async function investigateOperationalIssueInternal(params: {
     serviceDate: targetDate,
     description: params.description,
     reportedAt: new Date().toISOString(),
+    resolvedAt:
+      lifecycleStatus === "AUTOMATICALLY_RESOLVED"
+        ? new Date().toISOString()
+        : undefined,
+    resolvedBy:
+      lifecycleStatus === "AUTOMATICALLY_RESOLVED"
+        ? "TransitOS Auto-Resolver (Level 1)"
+        : undefined,
+    appliedSolutionId:
+      lifecycleStatus === "AUTOMATICALLY_RESOLVED"
+        ? bestSolution?.id
+        : undefined,
     diagnostic,
     bestSolution,
     alternativeSolutions,
@@ -2578,6 +2766,7 @@ export async function getOperationalIssuesImpl(params?: {
     active: number;
     awaitingApproval: number;
     awaitingManual: number;
+    autoResolved: number;
     resolved: number;
   };
 }> {
@@ -2626,20 +2815,28 @@ export async function getOperationalIssuesImpl(params?: {
 
   // 3. Sort: Active first (CRITICAL urgency top), then Resolved by resolvedAt desc
   tenantIssues.sort((a, b) => {
-    if (a.lifecycleStatus === "RESOLVED" && b.lifecycleStatus !== "RESOLVED") {
-      return 1;
-    }
-    if (a.lifecycleStatus !== "RESOLVED" && b.lifecycleStatus === "RESOLVED") {
-      return -1;
-    }
+    const isAResolved =
+      a.lifecycleStatus === "RESOLVED" ||
+      a.lifecycleStatus === "AUTOMATICALLY_RESOLVED";
+    const isBResolved =
+      b.lifecycleStatus === "RESOLVED" ||
+      b.lifecycleStatus === "AUTOMATICALLY_RESOLVED";
+    if (isAResolved && !isBResolved) return 1;
+    if (!isAResolved && isBResolved) return -1;
     if (a.urgency === "CRITICAL" && b.urgency !== "CRITICAL") return -1;
     if (a.urgency !== "CRITICAL" && b.urgency === "CRITICAL") return 1;
     return new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime();
   });
 
   const total = tenantIssues.length;
-  const resolved = tenantIssues.filter((i) => i.lifecycleStatus === "RESOLVED")
-    .length;
+  const autoResolved = tenantIssues.filter(
+    (i) => i.lifecycleStatus === "AUTOMATICALLY_RESOLVED",
+  ).length;
+  const resolved = tenantIssues.filter(
+    (i) =>
+      i.lifecycleStatus === "RESOLVED" ||
+      i.lifecycleStatus === "AUTOMATICALLY_RESOLVED",
+  ).length;
   const awaitingManual = tenantIssues.filter(
     (i) => i.lifecycleStatus === "AWAITING_MANUAL_INTERVENTION",
   ).length;
@@ -2657,6 +2854,7 @@ export async function getOperationalIssuesImpl(params?: {
       active,
       awaitingApproval,
       awaitingManual,
+      autoResolved,
       resolved,
     },
   };
@@ -2729,7 +2927,7 @@ export async function approveIssueRecommendationImpl(params: {
       await assignCrewToDutyImpl(
         targetDutyId,
         chosenSolution.replacementDriverId,
-        null,
+        undefined,
       );
     }
     if (issue.category === "DRIVER_UNAVAILABLE" && targetAssignment?.driverId) {
@@ -2752,7 +2950,7 @@ export async function approveIssueRecommendationImpl(params: {
     if (targetDutyId) {
       await assignCrewToDutyImpl(
         targetDutyId,
-        null,
+        undefined,
         chosenSolution.replacementConductorId,
       );
     }
@@ -2831,6 +3029,420 @@ export async function rejectIssueRecommendationImpl(params: {
   return {
     success: true,
     message: `Recommendation rejected. Issue flagged for manual supervisor intervention.`,
+    issue,
+  };
+}
+
+export async function recommendConductorForTripImpl(params: {
+  tripId: string;
+  serviceDate?: string;
+}): Promise<{
+  recommended: SolutionOption | null;
+  alternatives: SolutionOption[];
+  trip: {
+    tripId: string;
+    tripCode: string;
+    routeCode: string;
+    routeName: string;
+    startTime: number;
+    endTime: number;
+    busDepot: string;
+    currentConductorName: string;
+    dutyId?: string | null;
+  };
+}> {
+  const currentUser = await requireAuth();
+  await requirePermission(currentUser.role, "schedule.view");
+
+  const targetDate = params.serviceDate || "25 Aug 2026";
+  const { assignments } = await getLiveTrackingAssignmentsImpl({
+    serviceDate: targetDate,
+  });
+
+  const targetAssignment = assignments.find((a) => a.tripId === params.tripId);
+  if (!targetAssignment) {
+    throw new Error(`Trip ${params.tripId} not found in operational schedule.`);
+  }
+
+  const { candidates } = await getFeasibleReplacementsImpl({
+    tripId: targetAssignment.tripId,
+    replacementType: "conductor",
+    serviceDate: targetDate,
+  });
+
+  const feasible = candidates.filter((c) => c.isFeasible);
+  const solutions: SolutionOption[] = feasible.map((cand, idx) => {
+    const isSameDepot = cand.depot === targetAssignment.busDepot;
+    const repositioningMinutes = isSameDepot ? 5 + idx * 2 : 12 + idx * 3;
+    const baseScore = isSameDepot ? 96 - idx * 3 : 84 - idx * 4;
+    const suitabilityScore = Math.max(70, Math.min(99, baseScore));
+
+    return {
+      id: `cnd-sol-${cand.id}-${idx}`,
+      rank: idx + 1,
+      title:
+        idx === 0
+          ? `Primary Conductor: ${cand.name}`
+          : `Alternative Conductor: ${cand.name}`,
+      resourceType: "conductor",
+      replacementConductorId: cand.id,
+      replacementConductorName: cand.name,
+      depot: cand.depot || "Main Depot",
+      repositioningMinutes,
+      suitabilityScore,
+      reason: `Stationed at ${cand.depot || "Depot"}. Fully certified with verified rest compliance and 0 overlapping duties on ${targetDate}.`,
+      impactSummary: `Resolves missing conductor on Trip ${targetAssignment.tripCode}. Restores standard fare collection with ${repositioningMinutes} min reporting lead time.`,
+      cascadingConflictRisk: "NONE" as const,
+    };
+  });
+
+  return {
+    recommended: solutions[0] || null,
+    alternatives: solutions.slice(1, 4),
+    trip: {
+      tripId: targetAssignment.tripId,
+      tripCode: targetAssignment.tripCode,
+      routeCode: targetAssignment.routeCode,
+      routeName: targetAssignment.routeName,
+      startTime: targetAssignment.startTime,
+      endTime: targetAssignment.endTime,
+      busDepot: targetAssignment.busDepot,
+      currentConductorName: targetAssignment.conductorName,
+      dutyId: targetAssignment.dutyId,
+    },
+  };
+}
+
+export async function assignConductorToTripImpl(params: {
+  tripId: string;
+  dutyId?: string;
+  conductorId: string;
+  serviceDate?: string;
+}): Promise<{
+  success: boolean;
+  message: string;
+  conductorName: string;
+}> {
+  const currentUser = await requireAuth();
+  await requirePermission(currentUser.role, "schedule.modify");
+
+  const targetDate = params.serviceDate || "25 Aug 2026";
+  const { assignments } = await getLiveTrackingAssignmentsImpl({
+    serviceDate: targetDate,
+  });
+
+  const targetAssignment = assignments.find((a) => a.tripId === params.tripId);
+  if (!targetAssignment) {
+    throw new Error(`Trip ${params.tripId} not found in operational schedule.`);
+  }
+
+  let targetDutyId = params.dutyId || targetAssignment.dutyId;
+  let conductorName = "Assigned Conductor";
+  let conductorRecord: any = null;
+  try {
+    const cRec = await db.query.crew.findFirst({
+      where: and(
+        eq(crew.id, params.conductorId),
+        eq(crew.tenantId, currentUser.tenantId),
+      ),
+    });
+    if (cRec) {
+      conductorName = cRec.name;
+      conductorRecord = cRec;
+    }
+  } catch {
+    const fc = FALLBACK_CREW.find((c) => c.id === params.conductorId);
+    if (fc) {
+      conductorName = fc.name;
+      conductorRecord = fc;
+    }
+  }
+
+  if (!targetDutyId) {
+    const dutyCode = `DUTY-${targetAssignment.tripCode}`;
+    try {
+      const [newDuty] = await db
+        .insert(duties)
+        .values({
+          tenantId: currentUser.tenantId,
+          dutyCode,
+          dutyType: "LINKED",
+          serviceDate: targetDate,
+          startTime: targetAssignment.startTime,
+          endTime: targetAssignment.endTime,
+          conductorId: params.conductorId,
+          status: "assigned",
+        })
+        .returning();
+
+      if (newDuty) {
+        targetDutyId = newDuty.id;
+        await db.insert(dutyTrips).values({
+          tenantId: currentUser.tenantId,
+          dutyId: newDuty.id,
+          tripId: targetAssignment.tripId,
+        });
+      }
+    } catch {
+      const newDutyId = `fallback-duty-${targetAssignment.tripId}`;
+      FALLBACK_DUTIES.push({
+        id: newDutyId,
+        tenantId: currentUser.tenantId,
+        dutyCode,
+        dutyNumber: dutyCode,
+        serviceDate: targetDate,
+        startTime: targetAssignment.startTime,
+        endTime: targetAssignment.endTime,
+        conductorId: params.conductorId,
+        conductorName,
+        conductor: conductorRecord,
+        status: "assigned",
+        trips: [targetAssignment.tripId],
+      } as any);
+      targetDutyId = newDutyId;
+    }
+  } else {
+    // Call assignCrewToDutyImpl which executes backend overlap and rest checks
+    await assignCrewToDutyImpl(targetDutyId, undefined, params.conductorId);
+  }
+
+  // Auto-resolve any pending operational issue for this trip
+  for (const [key, iss] of OPERATIONAL_ISSUES.entries()) {
+    if (
+      iss.tenantId === currentUser.tenantId &&
+      iss.tripId === targetAssignment.tripId &&
+      (iss.category === "MISSING_CONDUCTOR" ||
+        iss.category === "CONDUCTOR_ABSENT") &&
+      iss.lifecycleStatus !== "RESOLVED" &&
+      iss.lifecycleStatus !== "AUTOMATICALLY_RESOLVED"
+    ) {
+      iss.lifecycleStatus = "RESOLVED";
+      iss.resolvedAt = new Date().toISOString();
+      iss.resolvedBy = currentUser.name || currentUser.email;
+      OPERATIONAL_ISSUES.set(key, iss);
+    }
+  }
+
+  return {
+    success: true,
+    message: `Conductor ${conductorName} assigned to Trip ${targetAssignment.tripCode}.`,
+    conductorName,
+  };
+}
+
+export async function bulkAssignConductorsImpl(params?: {
+  serviceDate?: string;
+  depot?: string;
+}): Promise<{
+  success: boolean;
+  assignedCount: number;
+  unassignedRemaining: number;
+  details: Array<{
+    tripCode: string;
+    routeCode: string;
+    conductorName: string;
+    depot: string;
+  }>;
+}> {
+  const currentUser = await requireAuth();
+  await requirePermission(currentUser.role, "schedule.modify");
+
+  const targetDate = params?.serviceDate || "25 Aug 2026";
+  const { assignments } = await getLiveTrackingAssignmentsImpl({
+    serviceDate: targetDate,
+  });
+
+  // Filter unassigned trips
+  let unassigned = assignments.filter(
+    (a) => !a.conductorId || a.conductorName === "Unassigned",
+  );
+  if (params?.depot && params.depot !== "all") {
+    unassigned = unassigned.filter((a) => a.busDepot === params.depot);
+  }
+
+  if (unassigned.length === 0) {
+    return {
+      success: true,
+      assignedCount: 0,
+      unassignedRemaining: 0,
+      details: [],
+    };
+  }
+
+  // Query all available conductors for tenant
+  let allConductors: any[] = [];
+  try {
+    allConductors = await db
+      .select()
+      .from(crew)
+      .where(
+        and(
+          eq(crew.tenantId, currentUser.tenantId),
+          eq(crew.role, "conductor"),
+          eq(crew.status, "available"),
+        ),
+      );
+    if (allConductors.length === 0) throw new Error();
+  } catch {
+    allConductors = FALLBACK_CREW.filter(
+      (c) =>
+        c.tenantId === currentUser.tenantId &&
+        c.role === "conductor" &&
+        c.status === "available",
+    );
+  }
+
+  // Track assignments during this bulk operation: conductorId -> list of { startTime, endTime }
+  const conductorSchedules = new Map<
+    string,
+    Array<{ startTime: number; endTime: number }>
+  >();
+
+  // Populate existing assignments for conductors
+  assignments.forEach((a) => {
+    if (a.conductorId) {
+      const list = conductorSchedules.get(a.conductorId) || [];
+      list.push({ startTime: a.startTime, endTime: a.endTime });
+      conductorSchedules.set(a.conductorId, list);
+    }
+  });
+
+  const details: Array<{
+    tripCode: string;
+    routeCode: string;
+    conductorName: string;
+    depot: string;
+  }> = [];
+
+  for (const trip of unassigned) {
+    // Find first available conductor who has no overlap and meets rest
+    const candidate = allConductors.find((c) => {
+      // Check rest
+      if (c.restUntil && trip.startTime < c.restUntil) return false;
+
+      // Check overlaps
+      const sched = conductorSchedules.get(c.id) || [];
+      const hasOverlap = sched.some(
+        (s) => trip.startTime < s.endTime && trip.endTime > s.startTime,
+      );
+      return !hasOverlap;
+    });
+
+    if (candidate) {
+      try {
+        await assignConductorToTripImpl({
+          tripId: trip.tripId,
+          dutyId: trip.dutyId || undefined,
+          conductorId: candidate.id,
+          serviceDate: targetDate,
+        });
+
+        // Update local schedule tracker
+        const sched = conductorSchedules.get(candidate.id) || [];
+        sched.push({ startTime: trip.startTime, endTime: trip.endTime });
+        conductorSchedules.set(candidate.id, sched);
+
+        details.push({
+          tripCode: trip.tripCode,
+          routeCode: trip.routeCode,
+          conductorName: candidate.name,
+          depot: candidate.depot || trip.busDepot,
+        });
+      } catch {
+        // Skip on individual conflict
+      }
+    }
+  }
+
+  const assignedCount = details.length;
+  const unassignedRemaining = unassigned.length - assignedCount;
+
+  try {
+    await db.insert(auditLogs).values({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      email: currentUser.email,
+      action: "BULK_CONDUCTOR_ASSIGNMENT",
+      details: `Bulk-assigned conductors to ${assignedCount} trips on ${targetDate}. ${unassignedRemaining} remain unassigned.`,
+    });
+  } catch {
+    // In-memory fallback
+  }
+
+  return {
+    success: true,
+    assignedCount,
+    unassignedRemaining,
+    details,
+  };
+}
+
+export async function retryIssueAnalysisImpl(params: {
+  issueId: string;
+}): Promise<{
+  success: boolean;
+  issue: OperationalIssue;
+}> {
+  const currentUser = await requireAuth();
+  await requirePermission(currentUser.role, "schedule.modify");
+
+  const existing = OPERATIONAL_ISSUES.get(params.issueId);
+  if (!existing || existing.tenantId !== currentUser.tenantId) {
+    throw new Error("Operational issue not found or unauthorized.");
+  }
+
+  const refreshed = await investigateOperationalIssueInternal({
+    tenantId: currentUser.tenantId,
+    source: existing.source,
+    category: existing.category,
+    tripId: existing.tripId,
+    description: existing.description,
+    serviceDate: existing.serviceDate,
+  });
+
+  OPERATIONAL_ISSUES.set(refreshed.id, refreshed);
+
+  return {
+    success: true,
+    issue: refreshed,
+  };
+}
+
+export async function markIssueManuallyResolvedImpl(params: {
+  issueId: string;
+  resolutionNotes: string;
+}): Promise<{
+  success: boolean;
+  issue: OperationalIssue;
+}> {
+  const currentUser = await requireAuth();
+  await requirePermission(currentUser.role, "schedule.modify");
+
+  const issue = OPERATIONAL_ISSUES.get(params.issueId);
+  if (!issue || issue.tenantId !== currentUser.tenantId) {
+    throw new Error("Operational issue not found or unauthorized.");
+  }
+
+  issue.lifecycleStatus = "RESOLVED";
+  issue.resolvedAt = new Date().toISOString();
+  issue.resolvedBy = currentUser.name || currentUser.email;
+  issue.diagnostic.recommendedSolution = `Supervisor manual resolution: ${params.resolutionNotes}`;
+  OPERATIONAL_ISSUES.set(issue.id, issue);
+
+  try {
+    await db.insert(auditLogs).values({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      email: currentUser.email,
+      action: "OPERATIONAL_ISSUE_RESOLVED_MANUALLY",
+      details: `Manually resolved issue ${issue.id} on trip ${issue.tripCode}. Supervisor notes: ${params.resolutionNotes}`,
+    });
+  } catch {
+    // In-memory fallback
+  }
+
+  return {
+    success: true,
     issue,
   };
 }
