@@ -1,4 +1,8 @@
-import { getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server";
+import {
+  getCookie,
+  setCookie,
+  deleteCookie,
+} from "@tanstack/react-start/server";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
@@ -6,7 +10,8 @@ import { db } from "./db";
 import { users, tenants, auditLogs } from "./db/schema";
 
 const SECRET =
-  process.env.SESSION_SECRET || "dev-session-secret-keys-for-transitos-platform-32-chars";
+  process.env.SESSION_SECRET ||
+  "dev-session-secret-keys-for-transitos-platform-32-chars";
 const COOKIE_NAME = "transitOS_session";
 
 export interface SessionPayload {
@@ -132,12 +137,15 @@ const DEMO_ACCOUNTS: Record<
  * Gets the currently authenticated user from the request session, and validates it against the DB.
  */
 export async function getCurrentUser() {
-  if ((globalThis as any).__TEST_USER__) return (globalThis as any).__TEST_USER__;
+  if ((globalThis as any).__TEST_USER__)
+    return (globalThis as any).__TEST_USER__;
   const session = getSessionFromRequest();
   if (!session) return null;
 
   const cleanTenantId =
-    !session.tenantId || session.tenantId === "ten-salem-transport" || session.tenantId.length < 30
+    !session.tenantId ||
+    session.tenantId === "ten-salem-transport" ||
+    session.tenantId.length < 30
       ? REAL_TENANT_ID
       : session.tenantId;
   const cleanUserId = OLD_USER_ID_MAP[session.userId] || session.userId;
@@ -174,7 +182,9 @@ export async function getCurrentUser() {
 
   // Resilient fallback using session payload and demo directory
   const demo = Object.values(DEMO_ACCOUNTS).find(
-    (u) => u.id === cleanUserId || u.email.toLowerCase() === session.email?.toLowerCase(),
+    (u) =>
+      u.id === cleanUserId ||
+      u.email.toLowerCase() === session.email?.toLowerCase(),
   );
   if (demo) return demo;
 
@@ -204,7 +214,10 @@ export async function requireAuth() {
 /**
  * Enforces permission verification for the authenticated user.
  */
-export async function requirePermission(roleOrPermission: string, permission?: string) {
+export async function requirePermission(
+  roleOrPermission: string,
+  permission?: string,
+) {
   const currentUser = await requireAuth();
   const perm = permission || roleOrPermission;
   if (!hasPermission(currentUser.role, perm)) {
@@ -225,7 +238,10 @@ export async function requireTenant() {
 // Server Functions for Authentication API
 // ----------------------------------------------------
 
-export async function loginFnImpl(credentials: { email: string; password?: string }) {
+export async function loginFnImpl(credentials: {
+  email: string;
+  password?: string;
+}) {
   const { email, password } = credentials;
   if (!email || !password) {
     throw new Error("Email and password are required.");

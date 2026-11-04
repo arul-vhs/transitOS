@@ -32,10 +32,15 @@ function FleetAnalyticsPage() {
   // Query
   const { data: fleetStats = [], isLoading } = useQuery({
     queryKey: ["fleet-analytics-data", depotFilter],
-    queryFn: () => getFleetAnalytics(depotFilter === "all" ? undefined : { depot: depotFilter }),
+    queryFn: () =>
+      getFleetAnalytics(
+        depotFilter === "all" ? undefined : { depot: depotFilter },
+      ),
   });
 
-  const filteredStats = fleetStats.filter((b) => depotFilter === "all" || b.depot === depotFilter);
+  const filteredStats = fleetStats.filter(
+    (b) => depotFilter === "all" || b.depot === depotFilter,
+  );
 
   return (
     <AppShell
@@ -55,7 +60,9 @@ function FleetAnalyticsPage() {
         {/* Filters Panel */}
         <section className="panel p-4 flex gap-4 items-end max-w-sm">
           <div className="space-y-1 flex-1">
-            <span className="text-xs font-semibold text-muted-foreground">Filter Depot</span>
+            <span className="text-xs font-semibold text-muted-foreground">
+              Filter Depot
+            </span>
             <Select value={depotFilter} onValueChange={setDepotFilter}>
               <SelectTrigger className="bg-background/50 h-9">
                 <SelectValue />
@@ -73,7 +80,8 @@ function FleetAnalyticsPage() {
         {/* Fleet Table */}
         <section className="panel p-5 space-y-4">
           <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            <BusIcon className="size-4 text-primary" /> Active Bus Performance & Utilization Metrics
+            <BusIcon className="size-4 text-primary" /> Active Bus Performance &
+            Utilization Metrics
           </h3>
 
           {isLoading ? (
@@ -102,9 +110,13 @@ function FleetAnalyticsPage() {
               <TableBody>
                 {filteredStats.map((b: any) => (
                   <TableRow key={b.busId}>
-                    <TableCell className="font-bold text-xs">{b.registrationNumber}</TableCell>
+                    <TableCell className="font-bold text-xs">
+                      {b.registrationNumber}
+                    </TableCell>
                     <TableCell className="text-xs">{b.depot}</TableCell>
-                    <TableCell className="text-xs uppercase font-mono">{b.status}</TableCell>
+                    <TableCell className="text-xs uppercase font-mono">
+                      {b.status}
+                    </TableCell>
                     <TableCell className="text-right text-xs font-mono">
                       {b.tripsOperated}
                     </TableCell>

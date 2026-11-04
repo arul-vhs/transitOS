@@ -384,14 +384,26 @@ async function main() {
     { name: "Elango N.", depot: "Hasthampatti Depot", status: "available" },
     { name: "Kumaravel S.", depot: "Hasthampatti Depot", status: "assigned" },
     { name: "Kandasamy R.", depot: "Hasthampatti Depot", status: "available" },
-    { name: "Sadasivam M.", depot: "Hasthampatti Depot", status: "unavailable" },
+    {
+      name: "Sadasivam M.",
+      depot: "Hasthampatti Depot",
+      status: "unavailable",
+    },
 
     // Steel Plant Depot
     { name: "Loganathan C.", depot: "Steel Plant Depot", status: "available" },
     { name: "Pandian M.", depot: "Steel Plant Depot", status: "available" },
     { name: "Vetrivel S.", depot: "Steel Plant Depot", status: "assigned" },
-    { name: "Vijayaraghavan R.", depot: "Steel Plant Depot", status: "assigned" },
-    { name: "Sengottaiyan P.", depot: "Steel Plant Depot", status: "available" },
+    {
+      name: "Vijayaraghavan R.",
+      depot: "Steel Plant Depot",
+      status: "assigned",
+    },
+    {
+      name: "Sengottaiyan P.",
+      depot: "Steel Plant Depot",
+      status: "available",
+    },
   ];
 
   const crewValues = [
@@ -428,7 +440,9 @@ async function main() {
   ];
 
   const seededCrew = await db.insert(crew).values(crewValues).returning();
-  console.log(`Seeded ${seededCrew.length} crew members (24 drivers, 24 conductors).`);
+  console.log(
+    `Seeded ${seededCrew.length} crew members (24 drivers, 24 conductors).`,
+  );
 
   // 6. High-Precision Salem Landmark Coordinates
   const STOP_COORDINATES: Record<string, { lat: number; lng: number }> = {
@@ -626,7 +640,10 @@ async function main() {
 
   for (const r of routeData) {
     const routeCoords = r.stops.map((stopName) => {
-      const coords = STOP_COORDINATES[stopName] || { lat: 11.6673, lng: 78.1424 };
+      const coords = STOP_COORDINATES[stopName] || {
+        lat: 11.6673,
+        lng: 78.1424,
+      };
       return [coords.lng, coords.lat]; // GeoJSON [longitude, latitude]
     });
 
@@ -658,7 +675,10 @@ async function main() {
 
     // Seed stops for this route
     const stopValues = r.stops.map((stopName, idx) => {
-      const coords = STOP_COORDINATES[stopName] || { lat: 11.6673, lng: 78.1424 };
+      const coords = STOP_COORDINATES[stopName] || {
+        lat: 11.6673,
+        lng: 78.1424,
+      };
       return {
         tenantId,
         routeId: route!.id,
@@ -670,67 +690,269 @@ async function main() {
     });
     await db.insert(stops).values(stopValues);
   }
-  console.log(`Seeded ${routeData.length} Salem routes with full GPS stop sequences.`);
+  console.log(
+    `Seeded ${routeData.length} Salem routes with full GPS stop sequences.`,
+  );
 
   // 8. Seed Realistic Trips
   console.log("Seeding scheduled Salem bus trips...");
   const serviceDate = "25 Aug 2026";
   const tripsData = [
     // Route 1 trips (Town Bus Stand ⇄ Salem Junction)
-    { code: "R1-0600", routeCode: "Route 1", start: minutes(6, 0), dir: "OUTBOUND" },
-    { code: "R1-0630", routeCode: "Route 1", start: minutes(6, 30), dir: "INBOUND" },
-    { code: "R1-0700", routeCode: "Route 1", start: minutes(7, 0), dir: "OUTBOUND" },
-    { code: "R1-0730", routeCode: "Route 1", start: minutes(7, 30), dir: "INBOUND" },
-    { code: "R1-0800", routeCode: "Route 1", start: minutes(8, 0), dir: "OUTBOUND" },
-    { code: "R1-0830", routeCode: "Route 1", start: minutes(8, 30), dir: "INBOUND" },
-    { code: "R1-0900", routeCode: "Route 1", start: minutes(9, 0), dir: "OUTBOUND" },
-    { code: "R1-0930", routeCode: "Route 1", start: minutes(9, 30), dir: "INBOUND" },
+    {
+      code: "R1-0600",
+      routeCode: "Route 1",
+      start: minutes(6, 0),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R1-0630",
+      routeCode: "Route 1",
+      start: minutes(6, 30),
+      dir: "INBOUND",
+    },
+    {
+      code: "R1-0700",
+      routeCode: "Route 1",
+      start: minutes(7, 0),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R1-0730",
+      routeCode: "Route 1",
+      start: minutes(7, 30),
+      dir: "INBOUND",
+    },
+    {
+      code: "R1-0800",
+      routeCode: "Route 1",
+      start: minutes(8, 0),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R1-0830",
+      routeCode: "Route 1",
+      start: minutes(8, 30),
+      dir: "INBOUND",
+    },
+    {
+      code: "R1-0900",
+      routeCode: "Route 1",
+      start: minutes(9, 0),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R1-0930",
+      routeCode: "Route 1",
+      start: minutes(9, 30),
+      dir: "INBOUND",
+    },
 
     // Route 13 trips (Town Bus Stand ⇄ Yercaud Foothills)
-    { code: "R13-0615", routeCode: "Route 13", start: minutes(6, 15), dir: "OUTBOUND" },
-    { code: "R13-0705", routeCode: "Route 13", start: minutes(7, 5), dir: "INBOUND" },
-    { code: "R13-0800", routeCode: "Route 13", start: minutes(8, 0), dir: "OUTBOUND" },
-    { code: "R13-0850", routeCode: "Route 13", start: minutes(8, 50), dir: "INBOUND" },
-    { code: "R13-0945", routeCode: "Route 13", start: minutes(9, 45), dir: "OUTBOUND" },
-    { code: "R13-1035", routeCode: "Route 13", start: minutes(10, 35), dir: "INBOUND" },
+    {
+      code: "R13-0615",
+      routeCode: "Route 13",
+      start: minutes(6, 15),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R13-0705",
+      routeCode: "Route 13",
+      start: minutes(7, 5),
+      dir: "INBOUND",
+    },
+    {
+      code: "R13-0800",
+      routeCode: "Route 13",
+      start: minutes(8, 0),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R13-0850",
+      routeCode: "Route 13",
+      start: minutes(8, 50),
+      dir: "INBOUND",
+    },
+    {
+      code: "R13-0945",
+      routeCode: "Route 13",
+      start: minutes(9, 45),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R13-1035",
+      routeCode: "Route 13",
+      start: minutes(10, 35),
+      dir: "INBOUND",
+    },
 
     // Route 4 trips (Town Bus Stand ⇄ Kondalampatti)
-    { code: "R4-0615", routeCode: "Route 4", start: minutes(6, 15), dir: "OUTBOUND" },
-    { code: "R4-0645", routeCode: "Route 4", start: minutes(6, 45), dir: "INBOUND" },
-    { code: "R4-0715", routeCode: "Route 4", start: minutes(7, 15), dir: "OUTBOUND" },
-    { code: "R4-0745", routeCode: "Route 4", start: minutes(7, 45), dir: "INBOUND" },
-    { code: "R4-0815", routeCode: "Route 4", start: minutes(8, 15), dir: "OUTBOUND" },
-    { code: "R4-0845", routeCode: "Route 4", start: minutes(8, 45), dir: "INBOUND" },
+    {
+      code: "R4-0615",
+      routeCode: "Route 4",
+      start: minutes(6, 15),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R4-0645",
+      routeCode: "Route 4",
+      start: minutes(6, 45),
+      dir: "INBOUND",
+    },
+    {
+      code: "R4-0715",
+      routeCode: "Route 4",
+      start: minutes(7, 15),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R4-0745",
+      routeCode: "Route 4",
+      start: minutes(7, 45),
+      dir: "INBOUND",
+    },
+    {
+      code: "R4-0815",
+      routeCode: "Route 4",
+      start: minutes(8, 15),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R4-0845",
+      routeCode: "Route 4",
+      start: minutes(8, 45),
+      dir: "INBOUND",
+    },
 
     // Route 33 trips (MGR Central Bus Stand ⇄ Steel Plant)
-    { code: "R33-0630", routeCode: "Route 33", start: minutes(6, 30), dir: "OUTBOUND" },
-    { code: "R33-0725", routeCode: "Route 33", start: minutes(7, 25), dir: "INBOUND" },
-    { code: "R33-0820", routeCode: "Route 33", start: minutes(8, 20), dir: "OUTBOUND" },
-    { code: "R33-0915", routeCode: "Route 33", start: minutes(9, 15), dir: "INBOUND" },
+    {
+      code: "R33-0630",
+      routeCode: "Route 33",
+      start: minutes(6, 30),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R33-0725",
+      routeCode: "Route 33",
+      start: minutes(7, 25),
+      dir: "INBOUND",
+    },
+    {
+      code: "R33-0820",
+      routeCode: "Route 33",
+      start: minutes(8, 20),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R33-0915",
+      routeCode: "Route 33",
+      start: minutes(9, 15),
+      dir: "INBOUND",
+    },
 
     // Route 8 trips (MGR Central Bus Stand ⇄ Ammapet Colony)
-    { code: "R8-0645", routeCode: "Route 8", start: minutes(6, 45), dir: "OUTBOUND" },
-    { code: "R8-0725", routeCode: "Route 8", start: minutes(7, 25), dir: "INBOUND" },
-    { code: "R8-0810", routeCode: "Route 8", start: minutes(8, 10), dir: "OUTBOUND" },
-    { code: "R8-0850", routeCode: "Route 8", start: minutes(8, 50), dir: "INBOUND" },
+    {
+      code: "R8-0645",
+      routeCode: "Route 8",
+      start: minutes(6, 45),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R8-0725",
+      routeCode: "Route 8",
+      start: minutes(7, 25),
+      dir: "INBOUND",
+    },
+    {
+      code: "R8-0810",
+      routeCode: "Route 8",
+      start: minutes(8, 10),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R8-0850",
+      routeCode: "Route 8",
+      start: minutes(8, 50),
+      dir: "INBOUND",
+    },
 
     // Route 74 trips (Town Bus Stand ⇄ Omalur Bus Stand)
-    { code: "R74-0645", routeCode: "Route 74", start: minutes(6, 45), dir: "OUTBOUND" },
-    { code: "R74-0745", routeCode: "Route 74", start: minutes(7, 45), dir: "INBOUND" },
-    { code: "R74-0850", routeCode: "Route 74", start: minutes(8, 50), dir: "OUTBOUND" },
-    { code: "R74-0950", routeCode: "Route 74", start: minutes(9, 50), dir: "INBOUND" },
+    {
+      code: "R74-0645",
+      routeCode: "Route 74",
+      start: minutes(6, 45),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R74-0745",
+      routeCode: "Route 74",
+      start: minutes(7, 45),
+      dir: "INBOUND",
+    },
+    {
+      code: "R74-0850",
+      routeCode: "Route 74",
+      start: minutes(8, 50),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R74-0950",
+      routeCode: "Route 74",
+      start: minutes(9, 50),
+      dir: "INBOUND",
+    },
 
     // Route 55 trips (MGR Central Bus Stand ⇄ Seelanaickenpatti)
-    { code: "R55-0700", routeCode: "Route 55", start: minutes(7, 0), dir: "OUTBOUND" },
-    { code: "R55-0735", routeCode: "Route 55", start: minutes(7, 35), dir: "INBOUND" },
-    { code: "R55-0815", routeCode: "Route 55", start: minutes(8, 15), dir: "OUTBOUND" },
-    { code: "R55-0850", routeCode: "Route 55", start: minutes(8, 50), dir: "INBOUND" },
+    {
+      code: "R55-0700",
+      routeCode: "Route 55",
+      start: minutes(7, 0),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R55-0735",
+      routeCode: "Route 55",
+      start: minutes(7, 35),
+      dir: "INBOUND",
+    },
+    {
+      code: "R55-0815",
+      routeCode: "Route 55",
+      start: minutes(8, 15),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R55-0850",
+      routeCode: "Route 55",
+      start: minutes(8, 50),
+      dir: "INBOUND",
+    },
 
     // Route 2A trips (Salem Junction ⇄ Ayothiapattinam)
-    { code: "R2A-0645", routeCode: "Route 2A", start: minutes(6, 45), dir: "OUTBOUND" },
-    { code: "R2A-0745", routeCode: "Route 2A", start: minutes(7, 45), dir: "INBOUND" },
-    { code: "R2A-0850", routeCode: "Route 2A", start: minutes(8, 50), dir: "OUTBOUND" },
-    { code: "R2A-0950", routeCode: "Route 2A", start: minutes(9, 50), dir: "INBOUND" },
+    {
+      code: "R2A-0645",
+      routeCode: "Route 2A",
+      start: minutes(6, 45),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R2A-0745",
+      routeCode: "Route 2A",
+      start: minutes(7, 45),
+      dir: "INBOUND",
+    },
+    {
+      code: "R2A-0850",
+      routeCode: "Route 2A",
+      start: minutes(8, 50),
+      dir: "OUTBOUND",
+    },
+    {
+      code: "R2A-0950",
+      routeCode: "Route 2A",
+      start: minutes(9, 50),
+      dir: "INBOUND",
+    },
   ];
 
   const seededTripsMap: Record<string, string> = {};
@@ -751,8 +973,14 @@ async function main() {
         endTime: end,
         durationMin: route.durationMin,
         distanceKm: route.lengthKm,
-        origin: t.dir === "OUTBOUND" ? route.stops[0]! : route.stops[route.stops.length - 1]!,
-        destination: t.dir === "OUTBOUND" ? route.stops[route.stops.length - 1]! : route.stops[0]!,
+        origin:
+          t.dir === "OUTBOUND"
+            ? route.stops[0]!
+            : route.stops[route.stops.length - 1]!,
+        destination:
+          t.dir === "OUTBOUND"
+            ? route.stops[route.stops.length - 1]!
+            : route.stops[0]!,
         status: "planned",
         serviceDate,
       })
@@ -847,9 +1075,27 @@ async function main() {
   const u1Trip3 = seededTripsMap["R13-0800"]!;
 
   await db.insert(dutyTrips).values([
-    { tenantId, dutyId: unlinkedDuty1!.id, tripId: u1Trip1, sequence: 1, handoverRequired: false },
-    { tenantId, dutyId: unlinkedDuty1!.id, tripId: u1Trip2, sequence: 2, handoverRequired: true }, // Handover at Town Bus Stand
-    { tenantId, dutyId: unlinkedDuty1!.id, tripId: u1Trip3, sequence: 3, handoverRequired: false },
+    {
+      tenantId,
+      dutyId: unlinkedDuty1!.id,
+      tripId: u1Trip1,
+      sequence: 1,
+      handoverRequired: false,
+    },
+    {
+      tenantId,
+      dutyId: unlinkedDuty1!.id,
+      tripId: u1Trip2,
+      sequence: 2,
+      handoverRequired: true,
+    }, // Handover at Town Bus Stand
+    {
+      tenantId,
+      dutyId: unlinkedDuty1!.id,
+      tripId: u1Trip3,
+      sequence: 3,
+      handoverRequired: false,
+    },
   ]);
 
   await db.insert(dutyCrewSegments).values([
@@ -893,8 +1139,20 @@ async function main() {
   const u2Trip2 = seededTripsMap["R2A-0745"]!;
 
   await db.insert(dutyTrips).values([
-    { tenantId, dutyId: unlinkedDuty2!.id, tripId: u2Trip1, sequence: 1, handoverRequired: true },
-    { tenantId, dutyId: unlinkedDuty2!.id, tripId: u2Trip2, sequence: 2, handoverRequired: false },
+    {
+      tenantId,
+      dutyId: unlinkedDuty2!.id,
+      tripId: u2Trip1,
+      sequence: 1,
+      handoverRequired: true,
+    },
+    {
+      tenantId,
+      dutyId: unlinkedDuty2!.id,
+      tripId: u2Trip2,
+      sequence: 2,
+      handoverRequired: false,
+    },
   ]);
 
   await db.insert(dutyCrewSegments).values([
@@ -938,8 +1196,20 @@ async function main() {
   const u3Trip2 = seededTripsMap["R33-0915"]!;
 
   await db.insert(dutyTrips).values([
-    { tenantId, dutyId: unlinkedDuty3!.id, tripId: u3Trip1, sequence: 1, handoverRequired: true },
-    { tenantId, dutyId: unlinkedDuty3!.id, tripId: u3Trip2, sequence: 2, handoverRequired: false },
+    {
+      tenantId,
+      dutyId: unlinkedDuty3!.id,
+      tripId: u3Trip1,
+      sequence: 1,
+      handoverRequired: true,
+    },
+    {
+      tenantId,
+      dutyId: unlinkedDuty3!.id,
+      tripId: u3Trip2,
+      sequence: 2,
+      handoverRequired: false,
+    },
   ]);
 
   await db.insert(dutyCrewSegments).values([
@@ -983,8 +1253,20 @@ async function main() {
   const u4Trip2 = seededTripsMap["R74-0950"]!;
 
   await db.insert(dutyTrips).values([
-    { tenantId, dutyId: unlinkedDuty4!.id, tripId: u4Trip1, sequence: 1, handoverRequired: true },
-    { tenantId, dutyId: unlinkedDuty4!.id, tripId: u4Trip2, sequence: 2, handoverRequired: false },
+    {
+      tenantId,
+      dutyId: unlinkedDuty4!.id,
+      tripId: u4Trip1,
+      sequence: 1,
+      handoverRequired: true,
+    },
+    {
+      tenantId,
+      dutyId: unlinkedDuty4!.id,
+      tripId: u4Trip2,
+      sequence: 2,
+      handoverRequired: false,
+    },
   ]);
 
   await db.insert(dutyCrewSegments).values([
@@ -1008,8 +1290,12 @@ async function main() {
     },
   ]);
 
-  console.log(`Seeded 18 duties (14 linked, 4 unlinked) with realistic crew handovers.`);
-  console.log("[SUCCESS] Real-world Salem City data seeding completed successfully!");
+  console.log(
+    `Seeded 18 duties (14 linked, 4 unlinked) with realistic crew handovers.`,
+  );
+  console.log(
+    "[SUCCESS] Real-world Salem City data seeding completed successfully!",
+  );
   await pool.end();
   process.exit(0);
 }
@@ -1021,6 +1307,4 @@ main().catch((err: any) => {
   console.error("2. Verify migrations have run first (npm run db:migrate).");
   console.error("3. Verify your DATABASE_URL in .env.");
   process.exit(1);
-
-
 });

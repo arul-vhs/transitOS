@@ -4,7 +4,9 @@ import { eq } from "drizzle-orm";
 import * as schema from "./schema";
 
 if (typeof window !== "undefined") {
-  throw new Error("CRITICAL: The database connection module must only be executed on the server!");
+  throw new Error(
+    "CRITICAL: The database connection module must only be executed on the server!",
+  );
 }
 
 // Load environment variables in Node runtime if not already loaded
@@ -17,7 +19,8 @@ if (typeof process.loadEnvFile === "function") {
 }
 
 const connectionString =
-  process.env.DATABASE_URL || "postgresql://postgres:1234@localhost:5432/postgres";
+  process.env.DATABASE_URL ||
+  "postgresql://postgres:1234@localhost:5432/postgres";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -41,7 +44,10 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 pool.on("error", (err) => {
-  console.error("[PostgreSQL Pool Error]: Unexpected client error", err.message);
+  console.error(
+    "[PostgreSQL Pool Error]: Unexpected client error",
+    err.message,
+  );
 });
 
 export const db: NodePgDatabase<typeof schema> =
@@ -56,7 +62,10 @@ export { pool };
 /**
  * Reusable server-side helper to enforce tenant-scoping on database queries.
  */
-export function withTenant<T extends { tenantId: any }>(table: T, tenantId: string) {
+export function withTenant<T extends { tenantId: any }>(
+  table: T,
+  tenantId: string,
+) {
   return eq(table.tenantId, tenantId);
 }
 
@@ -75,7 +84,8 @@ export function cleanUuid(val: unknown): string | null {
   ) {
     return null;
   }
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(trimmed) ? trimmed : null;
 }
 

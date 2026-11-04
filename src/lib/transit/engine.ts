@@ -33,7 +33,8 @@ import type {
   Schedule,
 } from "./types";
 
-const overlaps = (aS: number, aE: number, bS: number, bE: number) => aS < bE && bS < aE;
+const overlaps = (aS: number, aE: number, bS: number, bE: number) =>
+  aS < bE && bS < aE;
 
 /** Wave definition keeps the generator deterministic and demo-friendly. */
 const MORNING_BUSES = BUSES.slice(0, 10);
@@ -93,17 +94,23 @@ export function generateSchedule(dutyType: DutyType): Schedule {
 
 export function detectConflicts(duties: Duty[]): string[] {
   const issues: string[] = [];
-  const byResource = (key: "busId" | "driverId" | "conductorId", label: string) => {
+  const byResource = (
+    key: "busId" | "driverId" | "conductorId",
+    label: string,
+  ) => {
     for (let i = 0; i < duties.length; i++) {
       for (let j = i + 1; j < duties.length; j++) {
         const a = duties[i]!;
         const b = duties[j]!;
         if (a[key] !== b[key]) continue;
-        const gap = Math.max(a.startTime, b.startTime) - Math.min(a.endTime, b.endTime);
+        const gap =
+          Math.max(a.startTime, b.startTime) - Math.min(a.endTime, b.endTime);
         if (overlaps(a.startTime, a.endTime, b.startTime, b.endTime)) {
           issues.push(`${label} overlap between ${a.id} and ${b.id}`);
         } else if (key === "busId" && gap < CONSTRAINTS.turnaroundMinutes) {
-          issues.push(`Bus turnaround violation between ${a.id} and ${b.id} (${gap} min)`);
+          issues.push(
+            `Bus turnaround violation between ${a.id} and ${b.id} (${gap} min)`,
+          );
         } else if (key !== "busId" && gap < CONSTRAINTS.minRestMinutes) {
           issues.push(
             `Crew rest violation detected: only ${gap} minutes available, minimum required is ${CONSTRAINTS.minRestMinutes} minutes (${a.id} → ${b.id}).`,
@@ -127,7 +134,11 @@ export function detectConflicts(duties: Duty[]): string[] {
 export function validateSchedule(duties: Duty[]): ConstraintCheck[] {
   const issues = detectConflicts(duties);
   const has = (needle: string) => issues.filter((i) => i.includes(needle));
-  const mk = (id: string, label: string, matched: string[]): ConstraintCheck => ({
+  const mk = (
+    id: string,
+    label: string,
+    matched: string[],
+  ): ConstraintCheck => ({
     id,
     label,
     ok: matched.length === 0,
@@ -135,14 +146,19 @@ export function validateSchedule(duties: Duty[]): ConstraintCheck[] {
   });
   return [
     mk("bus", "Bus availability", has("Bus overlap")),
-    mk("crew", "Crew availability", [...has("Driver overlap"), ...has("Conductor overlap")]),
+    mk("crew", "Crew availability", [
+      ...has("Driver overlap"),
+      ...has("Conductor overlap"),
+    ]),
     mk("duration", "Maximum duty duration", has("Maximum duty duration")),
     mk("rest", "Minimum rest period", has("rest violation")),
     mk("turnaround", "Bus turnaround time", has("turnaround")),
     mk(
       "linked",
       "Linked duty consistency",
-      duties.some((d) => d.dutyType === "linked" && (!d.driverId || !d.conductorId))
+      duties.some(
+        (d) => d.dutyType === "linked" && (!d.driverId || !d.conductorId),
+      )
         ? ["Linked duty missing crew"]
         : [],
     ),
@@ -150,11 +166,16 @@ export function validateSchedule(duties: Duty[]): ConstraintCheck[] {
   ];
 }
 
-export function createIncident(kind: Incident["kind"], schedule: Schedule): Incident | null {
+export function createIncident(
+  kind: Incident["kind"],
+  schedule: Schedule,
+): Incident | null {
   if (kind === "bus-breakdown") {
     const busId = "B003";
     const time = minutes(9, 20);
-    const affected = schedule.duties.filter((d) => d.busId === busId && d.endTime > time);
+    const affected = schedule.duties.filter(
+      (d) => d.busId === busId && d.endTime > time,
+    );
     if (!affected.length) return null;
     return {
       id: "INC-001",
@@ -164,12 +185,16 @@ export function createIncident(kind: Incident["kind"], schedule: Schedule): Inci
       time,
       location: "Salem Junction",
       affectedDutyIds: affected.map((d) => d.id),
-      affectedCrewCount: new Set(affected.flatMap((d) => [d.driverId, d.conductorId])).size,
+      affectedCrewCount: new Set(
+        affected.flatMap((d) => [d.driverId, d.conductorId]),
+      ).size,
     };
   }
   const driverId = "DR005";
   const time = minutes(10, 15);
-  const affected = schedule.duties.filter((d) => d.driverId === driverId && d.endTime > time);
+  const affected = schedule.duties.filter(
+    (d) => d.driverId === driverId && d.endTime > time,
+  );
   if (!affected.length) return null;
   return {
     id: "INC-002",
@@ -183,29 +208,44 @@ export function createIncident(kind: Incident["kind"], schedule: Schedule): Inci
   };
 }
 
-const busFreeFor = (busId: string, duty: Duty, frozen: Duty[], blocked: Set<string>) => {
+const busFreeFor = (
+  busId: string,
+  duty: Duty,
+  frozen: Duty[],
+  blocked: Set<string>,
+) => {
   if (blocked.has(busId)) return false;
   return !frozen.some(
     (f) =>
       f.busId === busId &&
       (overlaps(f.startTime, f.endTime, duty.startTime, duty.endTime) ||
-        Math.max(f.startTime, duty.startTime) - Math.min(f.endTime, duty.endTime) <
+        Math.max(f.startTime, duty.startTime) -
+          Math.min(f.endTime, duty.endTime) <
           CONSTRAINTS.turnaroundMinutes),
   );
 };
 
-const driverFreeFor = (driverId: string, duty: Duty, frozen: Duty[], blocked: Set<string>) => {
+const driverFreeFor = (
+  driverId: string,
+  duty: Duty,
+  frozen: Duty[],
+  blocked: Set<string>,
+) => {
   if (blocked.has(driverId)) return false;
   return !frozen.some(
     (f) =>
       f.driverId === driverId &&
       (overlaps(f.startTime, f.endTime, duty.startTime, duty.endTime) ||
-        Math.max(f.startTime, duty.startTime) - Math.min(f.endTime, duty.endTime) <
+        Math.max(f.startTime, duty.startTime) -
+          Math.min(f.endTime, duty.endTime) <
           CONSTRAINTS.minRestMinutes),
   );
 };
 
-export function rescheduleAffectedDuties(schedule: Schedule, incident: Incident): RescheduleResult {
+export function rescheduleAffectedDuties(
+  schedule: Schedule,
+  incident: Incident,
+): RescheduleResult {
   const affectedIds = new Set(incident.affectedDutyIds);
   const frozen = schedule.duties.filter((d) => !affectedIds.has(d.id));
   const working = schedule.duties.map((d) => ({ ...d }));
@@ -223,7 +263,9 @@ export function rescheduleAffectedDuties(schedule: Schedule, incident: Incident)
     if (!affectedIds.has(duty.id)) continue;
 
     if (incident.kind === "bus-breakdown") {
-      const candidate = BUSES.find((b) => busFreeFor(b.id, duty, committed, blockedBuses));
+      const candidate = BUSES.find((b) =>
+        busFreeFor(b.id, duty, committed, blockedBuses),
+      );
       if (!candidate) {
         unserved += 1;
         duty.status = "conflict";
@@ -250,7 +292,9 @@ export function rescheduleAffectedDuties(schedule: Schedule, incident: Incident)
         ],
       });
     } else {
-      const candidate = DRIVERS.find((d) => driverFreeFor(d.id, duty, committed, blockedDrivers));
+      const candidate = DRIVERS.find((d) =>
+        driverFreeFor(d.id, duty, committed, blockedDrivers),
+      );
       if (!candidate) {
         unserved += 1;
         duty.status = "conflict";
@@ -298,7 +342,10 @@ export function rescheduleAffectedDuties(schedule: Schedule, incident: Incident)
 }
 
 /** Percentage of original assignment decisions retained. */
-export function calculateDisruptionScore(before: Schedule, after: Schedule): number {
+export function calculateDisruptionScore(
+  before: Schedule,
+  after: Schedule,
+): number {
   let total = 0;
   let same = 0;
   before.duties.forEach((b) => {

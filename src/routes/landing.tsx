@@ -27,7 +27,13 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Accordion,
   AccordionContent,
@@ -49,7 +55,10 @@ export const Route = createFileRoute("/landing")({
   },
   head: () => ({
     meta: [
-      { title: "TransitOS: Automated Bus Timetable & Crew Duty Scheduling System" },
+      {
+        title:
+          "TransitOS: Automated Bus Timetable & Crew Duty Scheduling System",
+      },
       {
         name: "description",
         content:
@@ -57,7 +66,8 @@ export const Route = createFileRoute("/landing")({
       },
       {
         property: "og:title",
-        content: "TransitOS: Automated Bus Timetable & Crew Duty Scheduling System",
+        content:
+          "TransitOS: Automated Bus Timetable & Crew Duty Scheduling System",
       },
       {
         property: "og:description",
@@ -74,25 +84,29 @@ const DEMO_ACCOUNTS = [
     role: "System Admin",
     email: "admin@salemtransport.demo",
     depot: "Central Operations",
-    description: "Multi-tenant tenant management, role configurations, and system-wide audit logs.",
+    description:
+      "Multi-tenant tenant management, role configurations, and system-wide audit logs.",
   },
   {
     role: "Chief Scheduler",
     email: "scheduler@salemtransport.demo",
     depot: "Meyyanur Depot",
-    description: "Automated duty generation, OR-Tools timetable optimizer, and crew rosters.",
+    description:
+      "Automated duty generation, OR-Tools timetable optimizer, and crew rosters.",
   },
   {
     role: "Depot Manager",
     email: "depot@salemtransport.demo",
     depot: "Meyyanur Depot",
-    description: "Vehicle bays, bus maintenance schedules, and standby unit dispatching.",
+    description:
+      "Vehicle bays, bus maintenance schedules, and standby unit dispatching.",
   },
   {
     role: "Route Planner",
     email: "planner@salemtransport.demo",
     depot: "Network GIS Cell",
-    description: "Corridor geometry, stop headway audits, and GeoJSON overlap detection.",
+    description:
+      "Corridor geometry, stop headway audits, and GeoJSON overlap detection.",
   },
 ];
 
@@ -102,7 +116,9 @@ export function LandingPage() {
   const currentUser = context?.user;
 
   const [loggingIn, setLoggingIn] = useState(false);
-  const [selectedDemoEmail, setSelectedDemoEmail] = useState(DEMO_ACCOUNTS[0]!.email);
+  const [selectedDemoEmail, setSelectedDemoEmail] = useState(
+    DEMO_ACCOUNTS[0]!.email,
+  );
 
   // Operational Estimator States
   const [fleetSize, setFleetSize] = useState<number[]>([45]);
@@ -121,10 +137,12 @@ export function LandingPage() {
   });
 
   // Disruption Demonstration States
-  const [disruptionState, setDisruptionState] = useState<"normal" | "breakdown" | "resolved">(
-    "normal",
-  );
-  const [selectedRecoveryOption, setSelectedRecoveryOption] = useState<"A" | "B" | "C">("A");
+  const [disruptionState, setDisruptionState] = useState<
+    "normal" | "breakdown" | "resolved"
+  >("normal");
+  const [selectedRecoveryOption, setSelectedRecoveryOption] = useState<
+    "A" | "B" | "C"
+  >("A");
 
   const handleQuickLogin = async (email: string) => {
     setLoggingIn(true);
@@ -139,7 +157,10 @@ export function LandingPage() {
         await router.navigate({ to: "/login" });
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Sign in failed. Redirecting to login page.";
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Sign in failed. Redirecting to login page.";
       toast.error(msg);
       await router.navigate({ to: "/login" });
     } finally {
@@ -186,8 +207,8 @@ export function LandingPage() {
             </span>
             <span className="text-slate-400 hidden sm:inline">|</span>
             <span className="text-slate-300 hidden sm:inline">
-              Seeded operational dataset: Salem Transport Corporation (24 buses, 48 crew, 8
-              corridors).
+              Seeded operational dataset: Salem Transport Corporation (24 buses,
+              48 crew, 8 corridors).
             </span>
           </div>
           <div className="flex items-center gap-4 text-slate-400">
@@ -320,10 +341,12 @@ export function LandingPage() {
               </h1>
 
               <p className="text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-                TransitOS is a multi-tenant operations platform designed for municipal bus
-                undertakings. It formulates vehicle-crew duty pairings using mathematical constraint
-                optimization, audits route overlap geometry, and provides real-time disruption
-                recovery workflows under statutory Motor Vehicle Act labor limits.
+                TransitOS is a multi-tenant operations platform designed for
+                municipal bus undertakings. It formulates vehicle-crew duty
+                pairings using mathematical constraint optimization, audits
+                route overlap geometry, and provides real-time disruption
+                recovery workflows under statutory Motor Vehicle Act labor
+                limits.
               </p>
 
               {/* Action Buttons */}
@@ -370,19 +393,25 @@ export function LandingPage() {
                   <span className="font-semibold text-slate-900 dark:text-white">
                     Optimization Engine:
                   </span>
-                  <p className="text-slate-500 font-mono">Google OR-Tools MILP</p>
+                  <p className="text-slate-500 font-mono">
+                    Google OR-Tools MILP
+                  </p>
                 </div>
                 <div>
                   <span className="font-semibold text-slate-900 dark:text-white">
                     Regulatory Ceiling:
                   </span>
-                  <p className="text-slate-500 font-mono">Motor Vehicle Act 1988</p>
+                  <p className="text-slate-500 font-mono">
+                    Motor Vehicle Act 1988
+                  </p>
                 </div>
                 <div>
                   <span className="font-semibold text-slate-900 dark:text-white">
                     Database Isolation:
                   </span>
-                  <p className="text-slate-500 font-mono">PostgreSQL Row Bounds</p>
+                  <p className="text-slate-500 font-mono">
+                    PostgreSQL Row Bounds
+                  </p>
                 </div>
               </div>
             </div>
@@ -393,7 +422,9 @@ export function LandingPage() {
                 <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                   <div className="flex items-center gap-2">
                     <Terminal className="size-4 text-slate-400" />
-                    <span className="font-bold text-slate-200">SALEM DISPATCH CONTROLLER</span>
+                    <span className="font-bold text-slate-200">
+                      SALEM DISPATCH CONTROLLER
+                    </span>
                   </div>
                   <span className="text-[11px] font-semibold text-emerald-400">
                     TELEMETRY CONNECTED
@@ -402,32 +433,48 @@ export function LandingPage() {
 
                 <div className="grid grid-cols-2 gap-3 text-slate-300">
                   <div className="rounded border border-slate-800 bg-slate-900 p-2.5">
-                    <span className="text-[10px] text-slate-400 uppercase">Registered Fleet</span>
-                    <div className="text-lg font-bold text-white mt-0.5">24 Buses</div>
+                    <span className="text-[10px] text-slate-400 uppercase">
+                      Registered Fleet
+                    </span>
+                    <div className="text-lg font-bold text-white mt-0.5">
+                      24 Buses
+                    </div>
                     <span className="text-[10px] text-slate-400">
                       18 In-service, 6 Maintenance/Standby
                     </span>
                   </div>
 
                   <div className="rounded border border-slate-800 bg-slate-900 p-2.5">
-                    <span className="text-[10px] text-slate-400 uppercase">Certified Crew</span>
-                    <div className="text-lg font-bold text-white mt-0.5">48 Personnel</div>
-                    <span className="text-[10px] text-slate-400">24 Drivers, 24 Conductors</span>
+                    <span className="text-[10px] text-slate-400 uppercase">
+                      Certified Crew
+                    </span>
+                    <div className="text-lg font-bold text-white mt-0.5">
+                      48 Personnel
+                    </div>
+                    <span className="text-[10px] text-slate-400">
+                      24 Drivers, 24 Conductors
+                    </span>
                   </div>
 
                   <div className="rounded border border-slate-800 bg-slate-900 p-2.5">
                     <span className="text-[10px] text-slate-400 uppercase">
                       Monitored Corridors
                     </span>
-                    <div className="text-lg font-bold text-white mt-0.5">8 Lines</div>
-                    <span className="text-[10px] text-slate-400">54 Bus Stops Mapped</span>
+                    <div className="text-lg font-bold text-white mt-0.5">
+                      8 Lines
+                    </div>
+                    <span className="text-[10px] text-slate-400">
+                      54 Bus Stops Mapped
+                    </span>
                   </div>
 
                   <div className="rounded border border-slate-800 bg-slate-900 p-2.5">
                     <span className="text-[10px] text-slate-400 uppercase">
                       Scheduled Departures
                     </span>
-                    <div className="text-lg font-bold text-white mt-0.5">40 Trips/Day</div>
+                    <div className="text-lg font-bold text-white mt-0.5">
+                      40 Trips/Day
+                    </div>
                     <span className="text-[10px] text-slate-400">
                       06:00 to 22:30 Service Window
                     </span>
@@ -438,19 +485,22 @@ export function LandingPage() {
                   <p className="flex items-start gap-1.5">
                     <span className="text-slate-500">[08:14:10]</span>
                     <span className="text-slate-300">
-                      Solver batch #9042 converged in 418ms: 40/40 duty shifts assigned.
+                      Solver batch #9042 converged in 418ms: 40/40 duty shifts
+                      assigned.
                     </span>
                   </p>
                   <p className="flex items-start gap-1.5">
                     <span className="text-slate-500">[08:14:25]</span>
                     <span className="text-slate-300">
-                      Vehicle TN-27-N-4012 (Corridor 1A) departed Old Bus Stand (+12s variance).
+                      Vehicle TN-27-N-4012 (Corridor 1A) departed Old Bus Stand
+                      (+12s variance).
                     </span>
                   </p>
                   <p className="flex items-start gap-1.5">
                     <span className="text-slate-500">[08:14:42]</span>
                     <span className="text-slate-300">
-                      Standby bus SB-04 fueled and positioned at Meyyanur Depot Bay 2.
+                      Standby bus SB-04 fueled and positioned at Meyyanur Depot
+                      Bay 2.
                     </span>
                   </p>
                 </div>
@@ -474,24 +524,37 @@ export function LandingPage() {
               System Demonstration: Core Computational Engines
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Test the mathematical duty solver, disruption recovery radar, corridor overlap
-              verification, and statutory rest rule auditing using the live modules below.
+              Test the mathematical duty solver, disruption recovery radar,
+              corridor overlap verification, and statutory rest rule auditing
+              using the live modules below.
             </p>
           </div>
 
           <div className="max-w-5xl">
             <Tabs defaultValue="solver" className="w-full">
               <TabsList className="grid grid-cols-2 md:grid-cols-4 h-auto p-1 rounded-md bg-white border border-slate-300 dark:bg-slate-900 dark:border-slate-800 mb-6">
-                <TabsTrigger value="solver" className="rounded py-2 text-xs font-semibold">
+                <TabsTrigger
+                  value="solver"
+                  className="rounded py-2 text-xs font-semibold"
+                >
                   Duty Pairing Solver
                 </TabsTrigger>
-                <TabsTrigger value="disruption" className="rounded py-2 text-xs font-semibold">
+                <TabsTrigger
+                  value="disruption"
+                  className="rounded py-2 text-xs font-semibold"
+                >
                   Disruption Radar
                 </TabsTrigger>
-                <TabsTrigger value="gis" className="rounded py-2 text-xs font-semibold">
+                <TabsTrigger
+                  value="gis"
+                  className="rounded py-2 text-xs font-semibold"
+                >
                   Corridor Overlap Audit
                 </TabsTrigger>
-                <TabsTrigger value="labor" className="rounded py-2 text-xs font-semibold">
+                <TabsTrigger
+                  value="labor"
+                  className="rounded py-2 text-xs font-semibold"
+                >
                   Labor Law Compliance
                 </TabsTrigger>
               </TabsList>
@@ -506,9 +569,10 @@ export function LandingPage() {
                           Mixed-Integer Linear Programming Duty Solver
                         </CardTitle>
                         <CardDescription className="text-xs mt-1">
-                          Calculates optimal vehicle and crew pairings while strictly enforcing
-                          Motor Vehicle Act continuous driving ceilings (&lt;= 4.5 hours) and
-                          minimizing empty deadhead kilometers.
+                          Calculates optimal vehicle and crew pairings while
+                          strictly enforcing Motor Vehicle Act continuous
+                          driving ceilings (&lt;= 4.5 hours) and minimizing
+                          empty deadhead kilometers.
                         </CardDescription>
                       </div>
                       <Button
@@ -516,7 +580,9 @@ export function LandingPage() {
                         disabled={solverRunning}
                         className="rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shrink-0 cursor-pointer"
                       >
-                        {solverRunning ? "Solving Model..." : "Execute OR-Tools Solver"}
+                        {solverRunning
+                          ? "Solving Model..."
+                          : "Execute OR-Tools Solver"}
                       </Button>
                     </div>
                   </CardHeader>
@@ -565,7 +631,9 @@ export function LandingPage() {
                         <div className="text-xl font-bold text-slate-900 dark:text-white mt-1">
                           {solverResult.runtimeMs} ms
                         </div>
-                        <span className="text-[10px] text-slate-500">Meyyanur Depot model</span>
+                        <span className="text-[10px] text-slate-500">
+                          Meyyanur Depot model
+                        </span>
                       </div>
                     </div>
 
@@ -596,7 +664,9 @@ export function LandingPage() {
                             <span className="text-slate-700 dark:text-slate-300">
                               Driver: K. Raja (DRV-001)
                             </span>
-                            <div className="text-[10px] text-slate-500">Conductor: M. Selvam</div>
+                            <div className="text-[10px] text-slate-500">
+                              Conductor: M. Selvam
+                            </div>
                           </div>
                           <div className="sm:text-right">
                             <span className="inline-block rounded border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
@@ -610,7 +680,9 @@ export function LandingPage() {
                             <span className="font-bold text-slate-900 dark:text-white">
                               Duty DT-102 (Corridor 4B)
                             </span>
-                            <div className="text-[10px] text-slate-500">Bus: TN-27-N-4015</div>
+                            <div className="text-[10px] text-slate-500">
+                              Bus: TN-27-N-4015
+                            </div>
                           </div>
                           <div>
                             <span className="text-slate-700 dark:text-slate-300">
@@ -624,7 +696,9 @@ export function LandingPage() {
                             <span className="text-slate-700 dark:text-slate-300">
                               Driver: S. Murugan (DRV-002)
                             </span>
-                            <div className="text-[10px] text-slate-500">Conductor: P. Ganesan</div>
+                            <div className="text-[10px] text-slate-500">
+                              Conductor: P. Ganesan
+                            </div>
                           </div>
                           <div className="sm:text-right">
                             <span className="inline-block rounded border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
@@ -648,8 +722,9 @@ export function LandingPage() {
                           Disruption Radar: Real-Time Incident Mitigation
                         </CardTitle>
                         <CardDescription className="text-xs mt-1">
-                          When a mechanical failure occurs, the engine maps the delay cascade across
-                          linked duties and presents structured recovery options.
+                          When a mechanical failure occurs, the engine maps the
+                          delay cascade across linked duties and presents
+                          structured recovery options.
                         </CardDescription>
                       </div>
                       <div className="flex gap-2">
@@ -692,8 +767,9 @@ export function LandingPage() {
                           All Corridors Operating to Timetable
                         </h4>
                         <p className="text-xs text-slate-500 max-w-md mx-auto">
-                          Click &quot;Simulate Vehicle Breakdown&quot; above to trigger an incident
-                          and review the automated recovery options.
+                          Click &quot;Simulate Vehicle Breakdown&quot; above to
+                          trigger an incident and review the automated recovery
+                          options.
                         </p>
                       </div>
                     )}
@@ -705,8 +781,10 @@ export function LandingPage() {
                             INCIDENT REPORT: BUS TN-27-N-4018 DISABLED
                           </span>
                           <p className="mt-1 text-slate-700 dark:text-slate-300">
-                            Location: Five Roads Junction. Corridor 2B. Projected downstream delay
-                            cascade: <strong>42 minutes</strong> across 3 return departures.
+                            Location: Five Roads Junction. Corridor 2B.
+                            Projected downstream delay cascade:{" "}
+                            <strong>42 minutes</strong> across 3 return
+                            departures.
                           </p>
                         </div>
 
@@ -732,8 +810,8 @@ export function LandingPage() {
                                 </span>
                               </div>
                               <p className="text-slate-600 dark:text-slate-400">
-                                Deploy Standby Bus SB-04 from Meyyanur Depot (6 minutes away).
-                                Transfer crew upon arrival.
+                                Deploy Standby Bus SB-04 from Meyyanur Depot (6
+                                minutes away). Transfer crew upon arrival.
                               </p>
                             </div>
 
@@ -754,8 +832,8 @@ export function LandingPage() {
                                 </span>
                               </div>
                               <p className="text-slate-600 dark:text-slate-400">
-                                Short-turn at Five Roads loop: cancel remaining outbound stops and
-                                turn bus into return trip.
+                                Short-turn at Five Roads loop: cancel remaining
+                                outbound stops and turn bus into return trip.
                               </p>
                             </div>
 
@@ -776,8 +854,9 @@ export function LandingPage() {
                                 </span>
                               </div>
                               <p className="text-slate-600 dark:text-slate-400">
-                                Adjust corridor headway: advance adjacent vehicle TN-27-N-4022 by 3
-                                minutes to bridge headway.
+                                Adjust corridor headway: advance adjacent
+                                vehicle TN-27-N-4022 by 3 minutes to bridge
+                                headway.
                               </p>
                             </div>
                           </div>
@@ -806,8 +885,9 @@ export function LandingPage() {
                           Option {selectedRecoveryOption} Successfully Executed
                         </h4>
                         <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-                          Instructions dispatched to driver terminal and Meyyanur depot board.
-                          Downstream passenger delay mitigated from 42 minutes to under 3 minutes.
+                          Instructions dispatched to driver terminal and
+                          Meyyanur depot board. Downstream passenger delay
+                          mitigated from 42 minutes to under 3 minutes.
                         </p>
                       </div>
                     )}
@@ -823,8 +903,9 @@ export function LandingPage() {
                       GIS Route Geometry and Corridor Headway Audits
                     </CardTitle>
                     <CardDescription className="text-xs mt-1">
-                      Maps stop coordinates to detect route duplication, headway bunching, and
-                      redundant deadhead routing across urban corridors.
+                      Maps stop coordinates to detect route duplication, headway
+                      bunching, and redundant deadhead routing across urban
+                      corridors.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-6 space-y-4 text-xs">
@@ -863,8 +944,12 @@ export function LandingPage() {
                             key={c.id}
                             className="p-3 grid grid-cols-1 sm:grid-cols-4 gap-2 items-center bg-white dark:bg-slate-900"
                           >
-                            <span className="font-bold text-slate-900 dark:text-white">{c.id}</span>
-                            <span className="text-slate-600 dark:text-slate-400">{c.route}</span>
+                            <span className="font-bold text-slate-900 dark:text-white">
+                              {c.id}
+                            </span>
+                            <span className="text-slate-600 dark:text-slate-400">
+                              {c.route}
+                            </span>
                             <span className="text-slate-600 dark:text-slate-400">
                               {c.stops} stops | Headway {c.headway}
                             </span>
@@ -889,8 +974,8 @@ export function LandingPage() {
                       Motor Vehicle Act 1988 Labor Guardrails
                     </CardTitle>
                     <CardDescription className="text-xs mt-1">
-                      Statutory constraint validation applied to every driver and conductor shift
-                      before timetable publication.
+                      Statutory constraint validation applied to every driver
+                      and conductor shift before timetable publication.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-6">
@@ -903,8 +988,8 @@ export function LandingPage() {
                           &lt;= 4.5 Hours
                         </div>
                         <p className="text-slate-500 mt-1 text-[11px]">
-                          Mandatory minimum 30-minute rest break required prior to subsequent
-                          driving segment.
+                          Mandatory minimum 30-minute rest break required prior
+                          to subsequent driving segment.
                         </p>
                       </div>
 
@@ -916,8 +1001,8 @@ export function LandingPage() {
                           &gt;= 12.0 Hours
                         </div>
                         <p className="text-slate-500 mt-1 text-[11px]">
-                          Guaranteed mandatory rest window between duty conclusion and next shift
-                          pull-out.
+                          Guaranteed mandatory rest window between duty
+                          conclusion and next shift pull-out.
                         </p>
                       </div>
 
@@ -929,8 +1014,8 @@ export function LandingPage() {
                           &lt;= 48.0 Hours
                         </div>
                         <p className="text-slate-500 mt-1 text-[11px]">
-                          Weekly hours ceiling strictly enforced to prevent fatigue and overtime
-                          violations.
+                          Weekly hours ceiling strictly enforced to prevent
+                          fatigue and overtime violations.
                         </p>
                       </div>
                     </div>
@@ -956,8 +1041,8 @@ export function LandingPage() {
               Operational Efficiency Estimator
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Calculate projected deadhead mileage reductions and scheduling hours saved based on
-              your authority fleet parameters.
+              Calculate projected deadhead mileage reductions and scheduling
+              hours saved based on your authority fleet parameters.
             </p>
           </div>
 
@@ -1039,19 +1124,24 @@ export function LandingPage() {
                     ₹{annualCostSavings.toLocaleString("en-IN")} / year
                   </div>
                   <p className="text-slate-500 text-[11px] mt-0.5">
-                    Calculated from 1.85 km average deadhead reduction per scheduled duty.
+                    Calculated from 1.85 km average deadhead reduction per
+                    scheduled duty.
                   </p>
                 </div>
 
                 <div className="border-t border-slate-200 dark:border-slate-800 pt-3 space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Deadhead Kilometers Eliminated:</span>
+                    <span className="text-slate-500">
+                      Deadhead Kilometers Eliminated:
+                    </span>
                     <span className="font-mono font-semibold text-slate-900 dark:text-white">
                       {deadheadKmSavedAnnual.toLocaleString()} km/yr
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Scheduler Time Recovered:</span>
+                    <span className="text-slate-500">
+                      Scheduler Time Recovered:
+                    </span>
                     <span className="font-mono font-semibold text-slate-900 dark:text-white">
                       {dispatcherHoursSaved.toLocaleString()} hrs/yr
                     </span>
@@ -1085,8 +1175,8 @@ export function LandingPage() {
               Core Capabilities for Transit Authorities
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Designed specifically for municipal depot operations, regulatory audits, and live
-              dispatch control rooms.
+              Designed specifically for municipal depot operations, regulatory
+              audits, and live dispatch control rooms.
             </p>
           </div>
 
@@ -1097,8 +1187,9 @@ export function LandingPage() {
                 1. Constraint Solver Engine
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Mixed-Integer Linear Programming solver using Google OR-Tools. Simultaneously solves
-                vehicle duty links, depot pull-outs, and driver rest constraints.
+                Mixed-Integer Linear Programming solver using Google OR-Tools.
+                Simultaneously solves vehicle duty links, depot pull-outs, and
+                driver rest constraints.
               </p>
             </div>
 
@@ -1108,8 +1199,9 @@ export function LandingPage() {
                 2. GIS Geometry and Overlap Audits
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Leaflet GeoJSON coordinate mapping for all bus stops and corridors. Detects corridor
-                redundancy and prevents headway bunching between parallel routes.
+                Leaflet GeoJSON coordinate mapping for all bus stops and
+                corridors. Detects corridor redundancy and prevents headway
+                bunching between parallel routes.
               </p>
             </div>
 
@@ -1119,8 +1211,9 @@ export function LandingPage() {
                 3. Disruption Recovery Radar
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Maps delay propagation across linked duty shifts during vehicle breakdown and
-                calculates structured recovery options in under 420 milliseconds.
+                Maps delay propagation across linked duty shifts during vehicle
+                breakdown and calculates structured recovery options in under
+                420 milliseconds.
               </p>
             </div>
 
@@ -1130,8 +1223,9 @@ export function LandingPage() {
                 4. Motor Vehicle Act Compliance
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Automated guardrails enforce statutory rest limits: max 4.5 continuous driving
-                hours, min 30 min breaks, and 12-hour mandatory inter-shift rest periods.
+                Automated guardrails enforce statutory rest limits: max 4.5
+                continuous driving hours, min 30 min breaks, and 12-hour
+                mandatory inter-shift rest periods.
               </p>
             </div>
 
@@ -1141,8 +1235,9 @@ export function LandingPage() {
                 5. Plan vs. Actual Variance Engine
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Compares published timetables with GPS departures. Tracks on-time rates within a
-                5-minute tolerance window with exportable audit logs.
+                Compares published timetables with GPS departures. Tracks
+                on-time rates within a 5-minute tolerance window with exportable
+                audit logs.
               </p>
             </div>
 
@@ -1152,8 +1247,9 @@ export function LandingPage() {
                 6. Multi-Tenant Enterprise Isolation
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Strict row-level multi-tenancy enforced at the database level. HTTP-only signed JWT
-                sessions, role-based access control, and tenant data isolation.
+                Strict row-level multi-tenancy enforced at the database level.
+                HTTP-only signed JWT sessions, role-based access control, and
+                tenant data isolation.
               </p>
             </div>
           </div>
@@ -1174,8 +1270,8 @@ export function LandingPage() {
               Salem Transport Corporation Operational Metrics
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Operational benchmark comparing manual dispatch spreadsheets with the TransitOS solver
-              across 8 urban corridors in Salem.
+              Operational benchmark comparing manual dispatch spreadsheets with
+              the TransitOS solver across 8 urban corridors in Salem.
             </p>
           </div>
 
@@ -1258,8 +1354,9 @@ export function LandingPage() {
               Custom Domain Connection and Production Deployment
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              TransitOS supports binding your authority custom domain (e.g., transit.salem.gov or
-              dispatch.citytransit.org) with automated TLS/SSL certificate issuance.
+              TransitOS supports binding your authority custom domain (e.g.,
+              transit.salem.gov or dispatch.citytransit.org) with automated
+              TLS/SSL certificate issuance.
             </p>
           </div>
 
@@ -1283,8 +1380,9 @@ export function LandingPage() {
                   Step 2: Automated TLS 1.3
                 </span>
                 <p className="text-slate-600 dark:text-slate-400">
-                  Edge routing verifies domain ownership and automatically provisions a Let&apos;s
-                  Encrypt TLS certificate within 60 seconds.
+                  Edge routing verifies domain ownership and automatically
+                  provisions a Let&apos;s Encrypt TLS certificate within 60
+                  seconds.
                 </p>
               </div>
 
@@ -1293,8 +1391,8 @@ export function LandingPage() {
                   Step 3: Tenant Boundary Lock
                 </span>
                 <p className="text-slate-600 dark:text-slate-400">
-                  Requests arriving on your custom domain are bound exclusively to your corporation
-                  tenant identifier in the database.
+                  Requests arriving on your custom domain are bound exclusively
+                  to your corporation tenant identifier in the database.
                 </p>
               </div>
             </div>
@@ -1326,8 +1424,8 @@ export function LandingPage() {
               Full-Stack System Architecture
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Built on React 19, TanStack Start, PostgreSQL with Drizzle ORM, Leaflet GIS, and
-              Edge-ready Nitro runtime.
+              Built on React 19, TanStack Start, PostgreSQL with Drizzle ORM,
+              Leaflet GIS, and Edge-ready Nitro runtime.
             </p>
           </div>
 
@@ -1337,7 +1435,8 @@ export function LandingPage() {
                 Frontend Runtime
               </span>
               <p className="text-slate-600 dark:text-slate-400">
-                React 19 with TanStack Start SSR and TanStack Router for type-safe route trees.
+                React 19 with TanStack Start SSR and TanStack Router for
+                type-safe route trees.
               </p>
             </div>
 
@@ -1346,8 +1445,8 @@ export function LandingPage() {
                 PostgreSQL and Drizzle ORM
               </span>
               <p className="text-slate-600 dark:text-slate-400">
-                Multi-tenant isolated tables with migration history and relational query
-                constraints.
+                Multi-tenant isolated tables with migration history and
+                relational query constraints.
               </p>
             </div>
 
@@ -1356,8 +1455,8 @@ export function LandingPage() {
                 Mathematical Solver
               </span>
               <p className="text-slate-600 dark:text-slate-400">
-                Google OR-Tools solver wrapper handling continuous driving constraints and vehicle
-                linkage.
+                Google OR-Tools solver wrapper handling continuous driving
+                constraints and vehicle linkage.
               </p>
             </div>
 
@@ -1366,8 +1465,8 @@ export function LandingPage() {
                 GIS Mapping Engine
               </span>
               <p className="text-slate-600 dark:text-slate-400">
-                Leaflet GeoJSON coordinate mapping for stop locations, route lines, and headway
-                corridors.
+                Leaflet GeoJSON coordinate mapping for stop locations, route
+                lines, and headway corridors.
               </p>
             </div>
           </div>
@@ -1388,8 +1487,8 @@ export function LandingPage() {
               Transit Authority Licensing Tiers
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Structured tiers for standalone bus depots, city transit undertakings, and state-wide
-              operations.
+              Structured tiers for standalone bus depots, city transit
+              undertakings, and state-wide operations.
             </p>
           </div>
 
@@ -1421,7 +1520,11 @@ export function LandingPage() {
                   </div>
                 </div>
               </div>
-              <Button asChild variant="outline" className="w-full rounded-md text-xs font-semibold">
+              <Button
+                asChild
+                variant="outline"
+                className="w-full rounded-md text-xs font-semibold"
+              >
                 <Link to="/login">Start Depot Evaluation</Link>
               </Button>
             </div>
@@ -1476,7 +1579,8 @@ export function LandingPage() {
                   Custom Procurement
                 </div>
                 <p className="text-slate-600 dark:text-slate-400">
-                  Large-scale state transport corporations with thousands of buses.
+                  Large-scale state transport corporations with thousands of
+                  buses.
                 </p>
                 <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                   <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
@@ -1493,7 +1597,11 @@ export function LandingPage() {
                   </div>
                 </div>
               </div>
-              <Button asChild variant="outline" className="w-full rounded-md text-xs font-semibold">
+              <Button
+                asChild
+                variant="outline"
+                className="w-full rounded-md text-xs font-semibold"
+              >
                 <Link to="/login">Contact Government Procurement</Link>
               </Button>
             </div>
@@ -1509,8 +1617,8 @@ export function LandingPage() {
               Authorized Demo Access
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-              Select an operational role below to sign in directly with pre-seeded Salem Transport
-              Corporation credentials:
+              Select an operational role below to sign in directly with
+              pre-seeded Salem Transport Corporation credentials:
             </p>
           </div>
 
@@ -1526,7 +1634,9 @@ export function LandingPage() {
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-slate-900 dark:text-white">{acc.role}</span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {acc.role}
+                  </span>
                   {selectedDemoEmail === acc.email && (
                     <CheckCircle2 className="size-4 text-blue-600" />
                   )}
@@ -1534,7 +1644,9 @@ export function LandingPage() {
                 <div className="font-mono text-[10px] text-blue-600 dark:text-blue-400 truncate mb-1">
                   {acc.email}
                 </div>
-                <p className="text-slate-500 line-clamp-2 text-[11px]">{acc.description}</p>
+                <p className="text-slate-500 line-clamp-2 text-[11px]">
+                  {acc.description}
+                </p>
               </div>
             ))}
           </div>
@@ -1609,11 +1721,12 @@ export function LandingPage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
             <div>
-              &copy; 2026 TransitOS. Licensed for municipal transit authorities and licensed bus
-              operators.
+              &copy; 2026 TransitOS. Licensed for municipal transit authorities
+              and licensed bus operators.
             </div>
             <div>
-              Custom domain deployment ready: TLS 1.3 encrypted, multi-tenant database isolation.
+              Custom domain deployment ready: TLS 1.3 encrypted, multi-tenant
+              database isolation.
             </div>
           </div>
         </div>

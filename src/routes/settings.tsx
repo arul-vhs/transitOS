@@ -19,6 +19,11 @@ import {
   Globe,
   Radio,
   Cpu,
+  Plus,
+  Check,
+  Layers,
+  Shield,
+  ArrowRight,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -34,13 +39,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
+import { useActiveTenant } from "@/lib/tenant-context";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings")({
   beforeLoad: ({ context }) => {
-    if (!context.user || !hasPermission(context.user.role, "organization.view")) {
+    if (
+      !context.user ||
+      !hasPermission(context.user.role, "organization.view")
+    ) {
       throw new Error("Forbidden");
     }
   },
@@ -49,7 +75,8 @@ export const Route = createFileRoute("/settings")({
       { title: "System & Depot Settings: TransitOS" },
       {
         name: "description",
-        content: "Depot rules, labor compliance limits and optimizer solver weights.",
+        content:
+          "Depot rules, labor compliance limits and optimizer solver weights.",
       },
     ],
   }),
@@ -60,6 +87,25 @@ function SettingsPage() {
   const context = RootRoute.useRouteContext();
   const user = context?.user;
   const canManage = hasPermission(user?.role || "", "organization.manage");
+
+  // Multi-Tenant context
+  const {
+    activeTenant,
+    activeDepot,
+    tenants,
+    setActiveTenantId,
+    setActiveDepotId,
+    registerTenant,
+  } = useActiveTenant();
+
+  // Register New Tenant Modal State
+  const [showNewTenantModal, setShowNewTenantModal] = useState(false);
+  const [newCorpName, setNewCorpName] = useState("");
+  const [newCorpCode, setNewCorpCode] = useState("");
+  const [newCorpRegion, setNewCorpRegion] = useState("");
+  const [newCorpDepotName, setNewCorpDepotName] = useState("");
+  const [newCorpDepotCode, setNewCorpDepotCode] = useState("");
+  const [newCorpFleet, setNewCorpFleet] = useState("32");
 
   // Organization state
   const [orgName, setOrgName] = useState("Salem Transport Corporation");
@@ -86,7 +132,9 @@ function SettingsPage() {
   // Notifications state
   const [incidentAlerts, setIncidentAlerts] = useState(true);
   const [smsDispatch, setSmsDispatch] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState("https://hooks.slack.com/services/T00/B00/XXXX");
+  const [webhookUrl, setWebhookUrl] = useState(
+    "https://hooks.slack.com/services/T00/B00/XXXX",
+  );
 
   const [saving, setSaving] = useState(false);
 
@@ -99,6 +147,40 @@ function SettingsPage() {
     }, 450);
   };
 
+  const handleRegisterCorporation = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCorpName.trim() || !newCorpCode.trim()) {
+      toast.error("Please enter a corporation name and short code.");
+      return;
+    }
+    const created = registerTenant({
+      name: newCorpName.trim(),
+      code: newCorpCode.trim().toUpperCase(),
+      region: newCorpRegion.trim() || "Tamil Nadu Transit Division",
+      fleetSize: parseInt(newCorpFleet, 10) || 28,
+      routesCount: 8,
+      depots: [
+        {
+          id: `depot-${Date.now()}`,
+          name: newCorpDepotName.trim() || `${newCorpName.trim()} Main Depot`,
+          code:
+            newCorpDepotCode.trim().toUpperCase() ||
+            `${newCorpCode.trim()}-MAIN-01`,
+          capacity: 45,
+          activeBuses: Math.floor((parseInt(newCorpFleet, 10) || 28) * 0.8),
+        },
+      ],
+    });
+    toast.success(`Corporation ${created.name} registered and activated.`);
+    setShowNewTenantModal(false);
+    setNewCorpName("");
+    setNewCorpCode("");
+    setNewCorpRegion("");
+    setNewCorpDepotName("");
+    setNewCorpDepotCode("");
+    setNewCorpFleet("32");
+  };
+
   return (
     <AppShell
       title="Depot & System Settings"
@@ -109,7 +191,7 @@ function SettingsPage() {
             onClick={handleSave}
             disabled={saving}
             size="sm"
-            className="bg-primary text-primary-foreground text-xs font-semibold shadow-md shadow-primary/20 hover:scale-[1.02] transition-all"
+            className="bg-primary text-primary-foreground text-xs font-semibold shadow-md shadow-primary/20 hover:scale-[1.02] transition-all rounded-lg"
           >
             <Save className="mr-1.5 size-3.5" />
             {saving ? "Saving Changes..." : "Save Configuration"}
@@ -126,16 +208,25 @@ function SettingsPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-foreground">{orgName}</h3>
+                <h3 className="text-sm font-bold text-foreground">
+                  {activeTenant.name}
+                </h3>
                 <Badge
                   variant="outline"
-                  className="text-[9px] font-mono border-primary/30 text-primary bg-primary/5"
+                  className="text-[9px] font-mono border-primary/30 text-primary bg-primary/5 rounded-md"
                 >
-                  Enterprise Tier
+                  {activeTenant.code}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="text-[9px] font-mono border-muted-foreground/30 text-muted-foreground bg-muted/20 rounded-md"
+                >
+                  {activeTenant.region}
                 </Badge>
               </div>
               <p className="text-[11px] text-muted-foreground font-mono">
-                Depot ID: {depotCode} · Dedicated PostgreSQL Schema
+                Active Depot: {activeDepot.name} ({activeDepot.code}) - Fleet
+                Quota: {activeTenant.fleetSize} Buses
               </p>
             </div>
           </div>
@@ -143,7 +234,7 @@ function SettingsPage() {
           <div className="flex items-center gap-2">
             <Badge
               variant="outline"
-              className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-xs font-mono"
+              className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-xs font-mono rounded-md"
             >
               ● Tenant Active
             </Badge>
@@ -151,39 +242,320 @@ function SettingsPage() {
         </div>
 
         {/* Settings Tabs */}
-        <Tabs defaultValue="rules" className="space-y-6">
+        <Tabs defaultValue="tenants" className="space-y-6">
           <TabsList className="bg-secondary/40 p-1 rounded-xl border border-border/60">
             <TabsTrigger
+              value="tenants"
+              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs rounded-md"
+            >
+              <Building2 className="size-3.5" /> Multi-Tenant Corporations
+            </TabsTrigger>
+            <TabsTrigger
               value="rules"
-              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs"
+              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs rounded-md"
             >
               <Clock className="size-3.5" /> Depot Rules & Buffers
             </TabsTrigger>
             <TabsTrigger
               value="labor"
-              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs"
+              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs rounded-md"
             >
               <ShieldCheck className="size-3.5" /> Labor & MV Act Limits
             </TabsTrigger>
             <TabsTrigger
               value="optimizer"
-              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs"
+              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs rounded-md"
             >
               <Cpu className="size-3.5" /> Solver Weights
             </TabsTrigger>
             <TabsTrigger
               value="organization"
-              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs"
+              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs rounded-md"
             >
-              <Building2 className="size-3.5" /> Organization Profile
+              <Globe className="size-3.5" /> Organization Profile
             </TabsTrigger>
             <TabsTrigger
               value="notifications"
-              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs"
+              className="text-xs gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-xs rounded-md"
             >
               <Bell className="size-3.5" /> Notifications & Webhooks
             </TabsTrigger>
           </TabsList>
+
+          {/* TAB 0: MULTI-TENANT CORPORATIONS */}
+          <TabsContent value="tenants" className="space-y-6">
+            <div className="glass-panel p-6 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <Building2 className="size-4 text-primary" /> State
+                    Transport Corporations & Multi-Tenant Divisions
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Manage transit authority partitions. Each corporation runs
+                    with strictly isolated fleet inventories, timetables, and
+                    driver rosters.
+                  </p>
+                </div>
+                <Dialog
+                  open={showNewTenantModal}
+                  onOpenChange={setShowNewTenantModal}
+                >
+                  <DialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      className="bg-primary text-primary-foreground font-semibold text-xs rounded-lg gap-1.5 shrink-0"
+                    >
+                      <Plus className="size-3.5" /> Register Corporation
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md bg-card border-border rounded-xl">
+                    <DialogHeader>
+                      <DialogTitle className="text-base font-bold flex items-center gap-2">
+                        <Building2 className="size-4 text-primary" /> Register
+                        New Transit Corporation
+                      </DialogTitle>
+                      <DialogDescription className="text-xs text-muted-foreground">
+                        Create an isolated multi-tenant corporation partition
+                        with dedicated depot allocations.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form
+                      onSubmit={handleRegisterCorporation}
+                      className="space-y-4 py-2"
+                    >
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">
+                          Corporation Name
+                        </Label>
+                        <Input
+                          placeholder="e.g. Tirunelveli Regional Transit"
+                          value={newCorpName}
+                          onChange={(e) => setNewCorpName(e.target.value)}
+                          className="text-xs bg-background/70"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold">
+                            Short Code
+                          </Label>
+                          <Input
+                            placeholder="TN-TRT-TNV"
+                            value={newCorpCode}
+                            onChange={(e) => setNewCorpCode(e.target.value)}
+                            className="text-xs font-mono uppercase bg-background/70"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold">
+                            Region / Division
+                          </Label>
+                          <Input
+                            placeholder="Tirunelveli South"
+                            value={newCorpRegion}
+                            onChange={(e) => setNewCorpRegion(e.target.value)}
+                            className="text-xs bg-background/70"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold">
+                            Primary Depot Name
+                          </Label>
+                          <Input
+                            placeholder="Vannarpettai Central Depot"
+                            value={newCorpDepotName}
+                            onChange={(e) =>
+                              setNewCorpDepotName(e.target.value)
+                            }
+                            className="text-xs bg-background/70"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold">
+                            Fleet Quota (Buses)
+                          </Label>
+                          <Input
+                            type="number"
+                            min="10"
+                            max="500"
+                            value={newCorpFleet}
+                            onChange={(e) => setNewCorpFleet(e.target.value)}
+                            className="text-xs font-mono bg-background/70"
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter className="pt-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowNewTenantModal(false)}
+                          className="text-xs rounded-lg"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          size="sm"
+                          className="bg-primary text-primary-foreground font-semibold text-xs rounded-lg"
+                        >
+                          Confirm & Activate Partition
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {/* Tenant Roster Table */}
+              <div className="border border-border/60 rounded-xl overflow-hidden bg-background/40">
+                <Table>
+                  <TableHeader className="bg-secondary/40 text-[11px]">
+                    <TableRow>
+                      <TableHead className="font-semibold text-foreground">
+                        Corporation Name
+                      </TableHead>
+                      <TableHead className="font-semibold text-foreground">
+                        Code
+                      </TableHead>
+                      <TableHead className="font-semibold text-foreground">
+                        Operating Region
+                      </TableHead>
+                      <TableHead className="font-semibold text-foreground text-center">
+                        Depots
+                      </TableHead>
+                      <TableHead className="font-semibold text-foreground text-center">
+                        Fleet Quota
+                      </TableHead>
+                      <TableHead className="font-semibold text-foreground text-center">
+                        Routes
+                      </TableHead>
+                      <TableHead className="font-semibold text-foreground text-center">
+                        Status
+                      </TableHead>
+                      <TableHead className="font-semibold text-foreground text-right">
+                        Switch Context
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="text-xs font-mono">
+                    {tenants.map((t) => {
+                      const isActive = t.id === activeTenant.id;
+                      return (
+                        <TableRow
+                          key={t.id}
+                          className={cn(isActive && "bg-primary/5")}
+                        >
+                          <TableCell className="font-sans font-semibold text-foreground">
+                            {t.name}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] rounded-md font-mono"
+                            >
+                              {t.code}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-sans text-muted-foreground">
+                            {t.region}
+                          </TableCell>
+                          <TableCell className="text-center font-bold">
+                            {t.depots.length}
+                          </TableCell>
+                          <TableCell className="text-center text-foreground font-bold">
+                            {t.fleetSize}
+                          </TableCell>
+                          <TableCell className="text-center text-muted-foreground">
+                            {t.routesCount}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {isActive ? (
+                              <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] rounded-md">
+                                ● Active
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] text-muted-foreground rounded-md"
+                              >
+                                Standby
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {isActive ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled
+                                className="h-7 text-[11px] font-sans rounded-md border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
+                              >
+                                <Check className="size-3 mr-1" /> Current
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => {
+                                  setActiveTenantId(t.id);
+                                  toast.success(
+                                    `Switched operating tenant to ${t.name}`,
+                                  );
+                                }}
+                                className="h-7 text-[11px] font-sans font-semibold rounded-md hover:bg-primary hover:text-primary-foreground transition-all"
+                              >
+                                Switch Context
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Multi-Tenant Security & Isolation Architecture Card */}
+              <div className="grid gap-4 sm:grid-cols-3 pt-2">
+                <div className="p-4 rounded-xl border border-border/60 bg-secondary/20 space-y-1.5">
+                  <div className="flex items-center gap-2 text-primary font-bold text-xs">
+                    <Shield className="size-4" /> Row-Level Tenant Isolation
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Database tables enforce tenant_id constraints so records for
+                    one corporation cannot be read or modified by another.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl border border-border/60 bg-secondary/20 space-y-1.5">
+                  <div className="flex items-center gap-2 text-primary font-bold text-xs">
+                    <Layers className="size-4" /> Multi-Depot Fleet Partitioning
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Each corporation manages its assigned depots, maintenance
+                    bays, and vehicle registration inventories independently.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl border border-border/60 bg-secondary/20 space-y-1.5">
+                  <div className="flex items-center gap-2 text-primary font-bold text-xs">
+                    <Users className="size-4" /> Labor Union Roster Scopes
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Crew assignments, driver overtime calculation, and rest
+                    rules adhere strictly to the active corporation
+                    jurisdiction.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
 
           {/* TAB 1: DEPOT RULES */}
           <TabsContent value="rules" className="space-y-6">
@@ -193,13 +565,16 @@ function SettingsPage() {
                   Turnaround & Headway Parameters
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Define depot buffer intervals applied during automatic schedule generation
+                  Define depot buffer intervals applied during automatic
+                  schedule generation
                 </p>
               </div>
 
               <div className="grid gap-5 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Terminal Turnaround Buffer</Label>
+                  <Label className="text-xs font-semibold">
+                    Terminal Turnaround Buffer
+                  </Label>
                   <div className="relative">
                     <Input
                       type="number"
@@ -217,7 +592,9 @@ function SettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Relief Handover Window</Label>
+                  <Label className="text-xs font-semibold">
+                    Relief Handover Window
+                  </Label>
                   <div className="relative">
                     <Input
                       type="number"
@@ -235,7 +612,9 @@ function SettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Garage Pull-Out Buffer</Label>
+                  <Label className="text-xs font-semibold">
+                    Garage Pull-Out Buffer
+                  </Label>
                   <div className="relative">
                     <Input
                       type="number"
@@ -266,7 +645,8 @@ function SettingsPage() {
                   </h3>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Hard and soft constraint thresholds enforced across duty builders and optimizer
+                  Hard and soft constraint thresholds enforced across duty
+                  builders and optimizer
                 </p>
               </div>
 
@@ -295,7 +675,8 @@ function SettingsPage() {
                     </span>
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    Section 13: Drivers must not exceed 4 continuous hours (240 min) without rest
+                    Section 13: Drivers must not exceed 4 continuous hours (240
+                    min) without rest
                   </p>
                 </div>
 
@@ -323,7 +704,8 @@ function SettingsPage() {
                     </span>
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    Minimum 8 hours (480 min) off-duty rest required before next sign-on
+                    Minimum 8 hours (480 min) off-duty rest required before next
+                    sign-on
                   </p>
                 </div>
 
@@ -363,7 +745,8 @@ function SettingsPage() {
                     </span>
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    Total elapsed time from first sign-on to final sign-off (max 12 hours)
+                    Total elapsed time from first sign-on to final sign-off (max
+                    12 hours)
                   </p>
                 </div>
               </div>
@@ -381,13 +764,16 @@ function SettingsPage() {
                   </h3>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Tune MILP cost coefficients to prioritize minimal fleet count or crew continuity
+                  Tune MILP cost coefficients to prioritize minimal fleet count
+                  or crew continuity
                 </p>
               </div>
 
               <div className="grid gap-5 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Deadhead Distance Penalty</Label>
+                  <Label className="text-xs font-semibold">
+                    Deadhead Distance Penalty
+                  </Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -401,7 +787,9 @@ function SettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Relief Handover Cost</Label>
+                  <Label className="text-xs font-semibold">
+                    Relief Handover Cost
+                  </Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -415,7 +803,9 @@ function SettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Solver Timeout Limit</Label>
+                  <Label className="text-xs font-semibold">
+                    Solver Timeout Limit
+                  </Label>
                   <div className="relative">
                     <Input
                       type="number"
@@ -439,7 +829,9 @@ function SettingsPage() {
           <TabsContent value="organization" className="space-y-6">
             <div className="glass-panel p-6 space-y-5">
               <div className="border-b border-border/60 pb-3">
-                <h3 className="text-sm font-bold text-foreground">Organization & Tenant Profile</h3>
+                <h3 className="text-sm font-bold text-foreground">
+                  Organization & Tenant Profile
+                </h3>
                 <p className="text-xs text-muted-foreground">
                   Core transit authority details and geographic locality
                 </p>
@@ -447,7 +839,9 @@ function SettingsPage() {
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Tenant Corporation Name</Label>
+                  <Label className="text-xs font-semibold">
+                    Tenant Corporation Name
+                  </Label>
                   <Input
                     value={orgName}
                     onChange={(e) => setOrgName(e.target.value)}
@@ -456,7 +850,9 @@ function SettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Primary Depot Code</Label>
+                  <Label className="text-xs font-semibold">
+                    Primary Depot Code
+                  </Label>
                   <Input
                     value={depotCode}
                     onChange={(e) => setDepotCode(e.target.value)}
@@ -465,7 +861,9 @@ function SettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Operational Timezone</Label>
+                  <Label className="text-xs font-semibold">
+                    Operational Timezone
+                  </Label>
                   <Input
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
@@ -474,7 +872,9 @@ function SettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Operations Contact Email</Label>
+                  <Label className="text-xs font-semibold">
+                    Operations Contact Email
+                  </Label>
                   <Input
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
@@ -489,7 +889,9 @@ function SettingsPage() {
           <TabsContent value="notifications" className="space-y-6">
             <div className="glass-panel p-6 space-y-5">
               <div className="border-b border-border/60 pb-3">
-                <h3 className="text-sm font-bold text-foreground">Incident Telemetry & Webhooks</h3>
+                <h3 className="text-sm font-bold text-foreground">
+                  Incident Telemetry & Webhooks
+                </h3>
                 <p className="text-xs text-muted-foreground">
                   Automated dispatches to operations rooms and field supervisors
                 </p>

@@ -40,7 +40,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { hasPermission } from "@/lib/auth-shared";
-import { getRoutes, createRoute, createStop, analyzeRouteOverlap } from "@/lib/routes-gis-fns";
+import {
+  getRoutes,
+  createRoute,
+  createStop,
+  analyzeRouteOverlap,
+} from "@/lib/routes-gis-fns";
 
 export const Route = createFileRoute("/network/planner")({
   beforeLoad: ({ context }) => {
@@ -90,7 +95,9 @@ function RoutePlannerPage() {
 
   // Stop Form Input State (for marking coordinates as stops)
   const [stopNameInput, setStopNameInput] = useState("");
-  const [selectedCoordIndex, setSelectedCoordIndex] = useState<number | null>(null);
+  const [selectedCoordIndex, setSelectedCoordIndex] = useState<number | null>(
+    null,
+  );
 
   // Fetch Existing Active Routes for Map Reference & Overlap
   const { data: activeRoutes = [] } = useQuery<any[]>({
@@ -129,7 +136,10 @@ function RoutePlannerPage() {
 
       const a =
         Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-        Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+        Math.cos(lat1) *
+          Math.cos(lat2) *
+          Math.sin(deltaLng / 2) *
+          Math.sin(deltaLng / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       distMeters += R * c;
     }
@@ -213,7 +223,10 @@ function RoutePlannerPage() {
     existingRoutesGroupRef.current.clearLayers();
     activeRoutes.forEach((r: any) => {
       if (r.geometryGeojson?.coordinates?.length > 1) {
-        const latlngs = r.geometryGeojson.coordinates.map((c: any) => [c[1], c[0]]);
+        const latlngs = r.geometryGeojson.coordinates.map((c: any) => [
+          c[1],
+          c[0],
+        ]);
         const polyline = L.polyline(latlngs, {
           color: r.color || "#9CA3AF",
           weight: 3,
@@ -288,14 +301,18 @@ function RoutePlannerPage() {
     mutationFn: async () => {
       if (!code) throw new Error("Route code is required");
       if (!name) throw new Error("Route name is required");
-      if (drawnCoords.length < 2) throw new Error("Please draw at least 2 points on the map");
+      if (drawnCoords.length < 2)
+        throw new Error("Please draw at least 2 points on the map");
 
       // 1. Create Route
       const newRoute: any = await createRoute({
         code,
         name,
         origin: origin || localStops[0]?.name || "Salem Origin",
-        destination: destination || localStops[localStops.length - 1]?.name || "Salem Destination",
+        destination:
+          destination ||
+          localStops[localStops.length - 1]?.name ||
+          "Salem Destination",
         lengthKm: calculatedLength,
         durationMin: Number(durationMin),
         direction,
@@ -347,7 +364,9 @@ function RoutePlannerPage() {
     setLocalStops((prev) => [...prev, newStop]);
     setStopNameInput("");
     setSelectedCoordIndex(null);
-    toast.success(`Marked Vertex ${selectedCoordIndex + 1} as Stop: "${stopNameInput}"`);
+    toast.success(
+      `Marked Vertex ${selectedCoordIndex + 1} as Stop: "${stopNameInput}"`,
+    );
   };
 
   const handleClearDraw = () => {
@@ -359,7 +378,10 @@ function RoutePlannerPage() {
 
   // Severity Recommendation engine
   const getRecommendation = (results: any[]) => {
-    const maxOverlap = results.reduce((max, r) => Math.max(max, r.overlapPercentage), 0);
+    const maxOverlap = results.reduce(
+      (max, r) => Math.max(max, r.overlapPercentage),
+      0,
+    );
     if (maxOverlap > 40) {
       return {
         severity: "HIGH",
@@ -390,13 +412,23 @@ function RoutePlannerPage() {
       subtitle="Interactive corridor sketching, stop sequencing and topological overlap calculations."
       actions={
         <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="hidden sm:inline-flex text-xs"
+          >
             <Link to="/network/routes">
               <Map className="mr-1.5 size-3.5 text-primary" />
               Route Network
             </Link>
           </Button>
-          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="hidden sm:inline-flex text-xs"
+          >
             <Link to="/scheduling/optimizer">
               <Sparkles className="mr-1.5 size-3.5 text-primary" />
               Schedule Optimizer
@@ -411,7 +443,8 @@ function RoutePlannerPage() {
           {/* Metadata Section */}
           <section className="glass-panel p-5 space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 border-b border-border/60 pb-2.5">
-              <Compass className="size-4 text-primary" /> Corridor Specifications
+              <Compass className="size-4 text-primary" /> Corridor
+              Specifications
             </h3>
 
             <div className="space-y-3.5">
@@ -433,7 +466,10 @@ function RoutePlannerPage() {
                     Direction
                   </Label>
                   <Select value={direction} onValueChange={setDirection}>
-                    <SelectTrigger id="direction" className="text-xs font-mono bg-background/60">
+                    <SelectTrigger
+                      id="direction"
+                      className="text-xs font-mono bg-background/60"
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -474,7 +510,10 @@ function RoutePlannerPage() {
                     id="destination"
                     value={destination}
                     onChange={(e) => setDestination(e.target.value)}
-                    placeholder={localStops[localStops.length - 1]?.name || "Last Stop Node"}
+                    placeholder={
+                      localStops[localStops.length - 1]?.name ||
+                      "Last Stop Node"
+                    }
                   />
                 </div>
               </div>
@@ -541,22 +580,25 @@ function RoutePlannerPage() {
             <section className="panel p-4 space-y-3">
               <div className="flex justify-between items-center border-b pb-2">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
-                  <Waypoints className="size-4 text-primary" /> Route Overlap Analysis
+                  <Waypoints className="size-4 text-primary" /> Route Overlap
+                  Analysis
                 </h3>
                 <Button
                   size="sm"
                   onClick={() => analyzeMutation.mutate()}
                   disabled={analyzeMutation.isPending}
                 >
-                  {analyzeMutation.isPending ? "Analyzing..." : "Analyze Overlap"}
+                  {analyzeMutation.isPending
+                    ? "Analyzing..."
+                    : "Analyze Overlap"}
                 </Button>
               </div>
 
               {analyzeMutation.data ? (
                 overlapList.length === 0 ? (
                   <div className="flex items-center gap-2 rounded-lg border border-success/20 bg-success/5 px-4 py-3 text-xs font-semibold text-success">
-                    <CheckCircle2 className="size-4" /> Minimal corridor overlap. Proposed corridor
-                    is independent.
+                    <CheckCircle2 className="size-4" /> Minimal corridor
+                    overlap. Proposed corridor is independent.
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -565,8 +607,12 @@ function RoutePlannerPage() {
                     >
                       <AlertTriangle className="size-4 mt-0.5 shrink-0" />
                       <div>
-                        <p className="font-bold">Severity: {recommendation.severity}</p>
-                        <p className="font-normal mt-0.5">{recommendation.text}</p>
+                        <p className="font-bold">
+                          Severity: {recommendation.severity}
+                        </p>
+                        <p className="font-normal mt-0.5">
+                          {recommendation.text}
+                        </p>
                       </div>
                     </div>
 
@@ -577,7 +623,9 @@ function RoutePlannerPage() {
                           className="flex justify-between items-center text-xs p-2 rounded bg-secondary/10 border"
                         >
                           <div>
-                            <span className="font-semibold text-foreground">{res.routeCode}</span>
+                            <span className="font-semibold text-foreground">
+                              {res.routeCode}
+                            </span>
                             <span className="text-muted-foreground ml-1 font-normal">
                               ({res.routeName})
                             </span>
@@ -629,7 +677,9 @@ function RoutePlannerPage() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 bg-secondary/15">
               <div className="flex items-center gap-2">
                 <Map className="size-4 text-primary" />
-                <span className="text-sm font-semibold">Corridor Sketching Canvas</span>
+                <span className="text-sm font-semibold">
+                  Corridor Sketching Canvas
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -637,7 +687,9 @@ function RoutePlannerPage() {
                   variant={isDrawing ? "destructive" : "default"}
                   onClick={() => setIsDrawing(!isDrawing)}
                 >
-                  {isDrawing ? "Pause Drawing Mode" : "Enable Map Click Drawing"}
+                  {isDrawing
+                    ? "Pause Drawing Mode"
+                    : "Enable Map Click Drawing"}
                 </Button>
                 <Badge variant="outline">OSM tiles</Badge>
               </div>
@@ -653,7 +705,8 @@ function RoutePlannerPage() {
                     <span>Drawing Mode Active</span>
                   </div>
                   <p className="text-muted-foreground font-normal">
-                    Click coordinates on the map to add proposed corridor vertex points.
+                    Click coordinates on the map to add proposed corridor vertex
+                    points.
                   </p>
                 </div>
               )}
@@ -664,7 +717,8 @@ function RoutePlannerPage() {
           {drawnCoords.length > 0 && (
             <section className="panel p-4 space-y-4">
               <h3 className="text-sm font-semibold flex items-center gap-2 border-b pb-2">
-                <MapPin className="size-4 text-primary" /> Drawn Vertices & Stops Mapping
+                <MapPin className="size-4 text-primary" /> Drawn Vertices &
+                Stops Mapping
               </h3>
 
               <div className="grid gap-6 md:grid-cols-2">
@@ -675,14 +729,17 @@ function RoutePlannerPage() {
                   </p>
                   <div className="max-h-[220px] overflow-y-auto space-y-1 border rounded-md p-1.5 bg-background/50">
                     {drawnCoords.map((c, idx) => {
-                      const isStop = localStops.some((s) => s.lat === c[1] && s.lng === c[0]);
+                      const isStop = localStops.some(
+                        (s) => s.lat === c[1] && s.lng === c[0],
+                      );
                       return (
                         <div
                           key={idx}
                           className="flex justify-between items-center text-xs p-1.5 rounded border border-transparent hover:bg-secondary"
                         >
                           <span className="font-mono">
-                            Point {idx + 1}: {c[1].toFixed(5)}, {c[0].toFixed(5)}
+                            Point {idx + 1}: {c[1].toFixed(5)},{" "}
+                            {c[0].toFixed(5)}
                           </span>
                           <div className="flex gap-2">
                             {isStop ? (
@@ -772,7 +829,11 @@ function RoutePlannerPage() {
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setSelectedCoordIndex(null)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSelectedCoordIndex(null)}
+              >
                 Cancel
               </Button>
               <Button type="submit">Assign Stop</Button>

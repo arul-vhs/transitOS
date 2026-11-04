@@ -1,6 +1,12 @@
 import { eq, and, desc } from "drizzle-orm";
 import { db, cleanUuid, cleanString } from "../db";
-import { incidents, incidentImpacts, auditLogs, users, reschedulingRuns } from "../db/schema";
+import {
+  incidents,
+  incidentImpacts,
+  auditLogs,
+  users,
+  reschedulingRuns,
+} from "../db/schema";
 import { requireAuth, requirePermission } from "../auth";
 import { IncidentType, IncidentStatus } from "./types";
 import { analyzeIncidentImpactImpl } from "./impact-analysis";
@@ -48,7 +54,9 @@ export async function createIncidentImpl(data: {
       routeId: cleanedRouteId,
       reportedBy: cleanUuid(currentUser.id),
       startTime: Number(data.startTime) || 0,
-      expectedEndTime: data.expectedEndTime ? Number(data.expectedEndTime) : null,
+      expectedEndTime: data.expectedEndTime
+        ? Number(data.expectedEndTime)
+        : null,
       location: cleanedLocation,
       description: cleanedDescription,
     })
@@ -133,7 +141,10 @@ export async function getIncidentDetailsImpl(incidentId: string) {
   await requirePermission(currentUser.role, "schedule.view");
 
   const incidentObj = await db.query.incidents.findFirst({
-    where: and(eq(incidents.id, incidentId), eq(incidents.tenantId, currentUser.tenantId)),
+    where: and(
+      eq(incidents.id, incidentId),
+      eq(incidents.tenantId, currentUser.tenantId),
+    ),
     with: {
       reporter: true,
       impacts: {

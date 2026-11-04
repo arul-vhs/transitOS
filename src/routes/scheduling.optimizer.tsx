@@ -62,7 +62,10 @@ import { Route as RootRoute } from "@/routes/__root";
 import { hasPermission } from "@/lib/auth-shared";
 import { getBuses, getDrivers, getConductors } from "@/lib/fleet-crew";
 import { getTrips, getDuties } from "@/lib/scheduling-fns";
-import { generateOptimizedSchedule, publishSchedule } from "@/lib/optimization-fns";
+import {
+  generateOptimizedSchedule,
+  publishSchedule,
+} from "@/lib/optimization-fns";
 import type { OptimizerResult } from "@/server/scheduling/types";
 import { cn, formatMinutesToTime } from "@/lib/utils";
 
@@ -114,7 +117,9 @@ function OptimizerPage() {
   const [runId, setRunId] = useState<string | null>(null);
   const [proposal, setProposal] = useState<OptimizerResult | null>(null);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
-  const [activeGanttView, setActiveGanttView] = useState<"proposal" | "live">("proposal");
+  const [activeGanttView, setActiveGanttView] = useState<"proposal" | "live">(
+    "proposal",
+  );
   const [selectedRouteFilter, setSelectedRouteFilter] = useState<string>("all");
 
   // Restore persisted optimization proposal if user previously ran it
@@ -156,9 +161,12 @@ function OptimizerPage() {
 
   // Calculate baseline metrics
   const baselineUnassigned = currentTrips.filter(
-    (t) => !currentDuties.some((d) => d.trips?.some((dt: any) => dt.id === t.id)),
+    (t) =>
+      !currentDuties.some((d) => d.trips?.some((dt: any) => dt.id === t.id)),
   ).length;
-  const baselineBuses = new Set(currentDuties.map((d) => d.busId).filter(Boolean)).size;
+  const baselineBuses = new Set(
+    currentDuties.map((d) => d.busId).filter(Boolean),
+  ).size;
   const baselineDuties = currentDuties.length;
   let baselineHandovers = 0;
   currentDuties.forEach((d) => {
@@ -259,29 +267,21 @@ function OptimizerPage() {
 
   return (
     <AppShell
-      title="Schedule Optimizer"
-      subtitle="Constraint satisfaction scheduling with multi-tenant isolation, labor compliance & explainability."
+      title="Automatic Schedule Optimizer"
+      subtitle="Automatically group daily trips into compliant driver shifts and bus assignments."
       actions={
         <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="text-xs rounded-md border-border hover:bg-muted"
+          >
             <Link to="/operations/duties">
               <CalendarClock className="mr-1.5 size-3.5 text-primary" />
-              Duty Builder
+              View Shifts
             </Link>
           </Button>
-          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex text-xs">
-            <Link to="/network/routes">
-              <Map className="mr-1.5 size-3.5 text-primary" />
-              Route Network
-            </Link>
-          </Button>
-          <Badge
-            variant="outline"
-            className="hidden sm:flex items-center gap-1.5 font-mono text-xs py-1 px-2.5 bg-primary/5 text-primary border-primary/20"
-          >
-            <Cpu className="size-3.5" />
-            <span>MILP Solver Ready</span>
-          </Badge>
         </div>
       }
     >
@@ -304,8 +304,8 @@ function OptimizerPage() {
                   </Badge>
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  Follow this automated pipeline to generate legally compliant, cost-optimized bus
-                  and crew shifts.
+                  Follow this automated pipeline to generate legally compliant,
+                  cost-optimized bus and crew shifts.
                 </p>
               </div>
             </div>
@@ -403,7 +403,8 @@ function OptimizerPage() {
               {/* Mode Selector Radio-style Buttons with Detailed Descriptions */}
               <div className="space-y-2">
                 <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                  <Layers className="size-3.5 text-primary" /> Duty Strategy Mode
+                  <Layers className="size-3.5 text-primary" /> Duty Strategy
+                  Mode
                 </Label>
                 <div className="grid gap-2">
                   {[
@@ -441,12 +442,17 @@ function OptimizerPage() {
                         <span
                           className={cn(
                             "text-xs font-bold",
-                            mode === item.id ? "text-primary" : "text-foreground",
+                            mode === item.id
+                              ? "text-primary"
+                              : "text-foreground",
                           )}
                         >
                           {item.label}
                         </span>
-                        <Badge variant="outline" className="text-[9px] font-mono px-1 py-0">
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] font-mono px-1 py-0"
+                        >
                           {item.badge}
                         </Badge>
                       </div>
@@ -468,15 +474,21 @@ function OptimizerPage() {
                 </div>
                 <div className="flex items-center justify-between pt-0.5">
                   <span>Max Continuous Driving:</span>
-                  <span className="font-mono font-semibold text-foreground">240 min (4 hrs)</span>
+                  <span className="font-mono font-semibold text-foreground">
+                    240 min (4 hrs)
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Min Terminal Turnaround:</span>
-                  <span className="font-mono font-semibold text-foreground">15 min buffer</span>
+                  <span className="font-mono font-semibold text-foreground">
+                    15 min buffer
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Mandatory Shift Rest:</span>
-                  <span className="font-mono font-semibold text-foreground">480 min (8 hrs)</span>
+                  <span className="font-mono font-semibold text-foreground">
+                    480 min (8 hrs)
+                  </span>
                 </div>
               </div>
 
@@ -536,7 +548,9 @@ function OptimizerPage() {
                   <span className="text-2xl font-bold font-mono text-foreground">
                     {currentTrips.length}
                   </span>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Corridor departures</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Corridor departures
+                  </p>
                 </div>
               </div>
 
@@ -550,8 +564,10 @@ function OptimizerPage() {
                 <div className="mt-2">
                   <span className="text-2xl font-bold font-mono text-foreground">
                     {
-                      busesList.filter((b) => b.status === "available" || b.status === "assigned")
-                        .length
+                      busesList.filter(
+                        (b) =>
+                          b.status === "available" || b.status === "assigned",
+                      ).length
                     }
                   </span>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -571,7 +587,9 @@ function OptimizerPage() {
                   <span className="text-2xl font-bold font-mono text-foreground">
                     {driversList.filter((d) => d.status === "available").length}
                   </span>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">HPV licensed crew</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    HPV licensed crew
+                  </p>
                 </div>
               </div>
 
@@ -584,9 +602,14 @@ function OptimizerPage() {
                 </div>
                 <div className="mt-2">
                   <span className="text-2xl font-bold font-mono text-foreground">
-                    {conductorsList.filter((c) => c.status === "available").length}
+                    {
+                      conductorsList.filter((c) => c.status === "available")
+                        .length
+                    }
                   </span>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">ETM rostered staff</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    ETM rostered staff
+                  </p>
                 </div>
               </div>
             </div>
@@ -595,8 +618,9 @@ function OptimizerPage() {
               <div className="flex items-center gap-2 text-primary font-medium">
                 <Sparkles className="size-4 shrink-0 text-amber-400" />
                 <span>
-                  Current baseline: <strong>{baselineUnassigned}</strong> unassigned trips across{" "}
-                  <strong>{baselineDuties}</strong> existing duties.
+                  Current baseline: <strong>{baselineUnassigned}</strong>{" "}
+                  unassigned trips across <strong>{baselineDuties}</strong>{" "}
+                  existing duties.
                 </span>
               </div>
               <Badge
@@ -658,9 +682,10 @@ function OptimizerPage() {
                   </div>
                   <p className="text-xs text-muted-foreground mt-1 max-w-2xl leading-relaxed">
                     Google OR-Tools analyzed all departures and generated{" "}
-                    <strong>{proposal.dutiesCreated} optimal duties</strong> using only{" "}
-                    <strong>{proposal.busesUsed} buses</strong>. All continuous driving limits
-                    (&lt;240 mins) and mandatory 8-hour rest breaks are fully verified.
+                    <strong>{proposal.dutiesCreated} optimal duties</strong>{" "}
+                    using only <strong>{proposal.busesUsed} buses</strong>. All
+                    continuous driving limits (&lt;240 mins) and mandatory
+                    8-hour rest breaks are fully verified.
                   </p>
                 </div>
               </div>
@@ -700,7 +725,8 @@ function OptimizerPage() {
                 <div className="flex items-baseline gap-1 mt-1.5">
                   <span className="text-2xl font-bold font-mono text-primary">
                     {Math.round(
-                      (proposal.tripsCovered / (proposal.tripsCovered + proposal.tripsUnassigned)) *
+                      (proposal.tripsCovered /
+                        (proposal.tripsCovered + proposal.tripsUnassigned)) *
                         100,
                     )}
                     %
@@ -718,7 +744,9 @@ function OptimizerPage() {
                 <span className="text-2xl font-bold font-mono mt-1.5 text-foreground">
                   {proposal.busesUsed}
                 </span>
-                <span className="text-[10px] text-muted-foreground">Fleet efficiency +18%</span>
+                <span className="text-[10px] text-muted-foreground">
+                  Fleet efficiency +18%
+                </span>
               </div>
 
               <div className="glass-card p-4 rounded-xl border-l-4 border-l-secondary flex flex-col justify-between">
@@ -728,7 +756,9 @@ function OptimizerPage() {
                 <span className="text-2xl font-bold font-mono mt-1.5 text-foreground">
                   {proposal.dutiesCreated}
                 </span>
-                <span className="text-[10px] text-muted-foreground">{mode} structure</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {mode} structure
+                </span>
               </div>
 
               <div className="glass-card p-4 rounded-xl border-l-4 border-l-warning flex flex-col justify-between">
@@ -738,7 +768,9 @@ function OptimizerPage() {
                 <span className="text-2xl font-bold font-mono mt-1.5 text-warning font-semibold">
                   {proposal.handovers}
                 </span>
-                <span className="text-[10px] text-muted-foreground">Zero deadhead idle</span>
+                <span className="text-[10px] text-muted-foreground">
+                  Zero deadhead idle
+                </span>
               </div>
 
               <div className="glass-card p-4 rounded-xl border-l-4 border-l-destructive flex flex-col justify-between">
@@ -748,13 +780,17 @@ function OptimizerPage() {
                 <span
                   className={cn(
                     "text-2xl font-bold font-mono mt-1.5",
-                    proposal.tripsUnassigned > 0 ? "text-destructive" : "text-success",
+                    proposal.tripsUnassigned > 0
+                      ? "text-destructive"
+                      : "text-success",
                   )}
                 >
                   {proposal.tripsUnassigned}
                 </span>
                 <span className="text-[10px] text-muted-foreground">
-                  {proposal.tripsUnassigned === 0 ? "100% Fulfilled" : "Capacity bottleneck"}
+                  {proposal.tripsUnassigned === 0
+                    ? "100% Fulfilled"
+                    : "Capacity bottleneck"}
                 </span>
               </div>
             </div>
@@ -764,13 +800,18 @@ function OptimizerPage() {
               {/* Diff Table */}
               <section className="glass-panel p-5 md:col-span-5 space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 border-b border-border/60 pb-2.5">
-                  <ArrowRightLeft className="size-4 text-primary" /> Current vs Optimized Proposal
+                  <ArrowRightLeft className="size-4 text-primary" /> Current vs
+                  Optimized Proposal
                 </h3>
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/60">
-                      <TableHead className="text-xs">Operational Metric</TableHead>
-                      <TableHead className="text-right text-xs">Current</TableHead>
+                      <TableHead className="text-xs">
+                        Operational Metric
+                      </TableHead>
+                      <TableHead className="text-right text-xs">
+                        Current
+                      </TableHead>
                       <TableHead className="text-right text-xs font-bold text-primary">
                         Proposed
                       </TableHead>
@@ -778,7 +819,9 @@ function OptimizerPage() {
                   </TableHeader>
                   <TableBody>
                     <TableRow className="border-border/40">
-                      <TableCell className="text-xs font-medium">Unassigned Trips</TableCell>
+                      <TableCell className="text-xs font-medium">
+                        Unassigned Trips
+                      </TableCell>
                       <TableCell className="text-right font-mono text-xs">
                         {baselineUnassigned}
                       </TableCell>
@@ -787,7 +830,9 @@ function OptimizerPage() {
                       </TableCell>
                     </TableRow>
                     <TableRow className="border-border/40">
-                      <TableCell className="text-xs font-medium">Active Vehicles</TableCell>
+                      <TableCell className="text-xs font-medium">
+                        Active Vehicles
+                      </TableCell>
                       <TableCell className="text-right font-mono text-xs">
                         {baselineBuses}
                       </TableCell>
@@ -796,7 +841,9 @@ function OptimizerPage() {
                       </TableCell>
                     </TableRow>
                     <TableRow className="border-border/40">
-                      <TableCell className="text-xs font-medium">Duty Blocks</TableCell>
+                      <TableCell className="text-xs font-medium">
+                        Duty Blocks
+                      </TableCell>
                       <TableCell className="text-right font-mono text-xs">
                         {baselineDuties}
                       </TableCell>
@@ -805,7 +852,9 @@ function OptimizerPage() {
                       </TableCell>
                     </TableRow>
                     <TableRow className="border-border/40">
-                      <TableCell className="text-xs font-medium">Relief Handovers</TableCell>
+                      <TableCell className="text-xs font-medium">
+                        Relief Handovers
+                      </TableCell>
                       <TableCell className="text-right font-mono text-xs">
                         {baselineHandovers}
                       </TableCell>
@@ -821,16 +870,20 @@ function OptimizerPage() {
               <section className="glass-panel p-5 md:col-span-7 space-y-4 flex flex-col justify-between">
                 <div className="space-y-3.5">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 border-b border-border/60 pb-2.5">
-                    <ShieldCheck className="size-4 text-success" /> Regulatory Compliance Check
+                    <ShieldCheck className="size-4 text-success" /> Regulatory
+                    Compliance Check
                   </h3>
 
                   <div className="grid gap-2.5 sm:grid-cols-2">
                     <div className="p-3 rounded-lg border border-success/30 bg-success/5 flex items-start gap-2.5">
                       <CheckCircle2 className="size-4 text-success shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-xs font-bold text-success">MV Act Continuous Driving</p>
+                        <p className="text-xs font-bold text-success">
+                          MV Act Continuous Driving
+                        </p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          All driver segments under 240 mins maximum continuous stretch.
+                          All driver segments under 240 mins maximum continuous
+                          stretch.
                         </p>
                       </div>
                     </div>
@@ -838,7 +891,9 @@ function OptimizerPage() {
                     <div className="p-3 rounded-lg border border-success/30 bg-success/5 flex items-start gap-2.5">
                       <CheckCircle2 className="size-4 text-success shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-xs font-bold text-success">Mandatory Rest Windows</p>
+                        <p className="text-xs font-bold text-success">
+                          Mandatory Rest Windows
+                        </p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
                           8-hour mandatory recovery break strictly satisfied.
                         </p>
@@ -859,7 +914,8 @@ function OptimizerPage() {
                       onClick={() => setPublishDialogOpen(true)}
                       className="bg-primary text-primary-foreground text-xs font-semibold shadow-md shadow-primary/20 hover:scale-[1.02] transition-all"
                     >
-                      <Check className="size-4 mr-1.5" /> Review & Publish Schedule
+                      <Check className="size-4 mr-1.5" /> Review & Publish
+                      Schedule
                     </Button>
                   ) : (
                     <p className="text-xs text-muted-foreground italic">
@@ -874,8 +930,12 @@ function OptimizerPage() {
 
         {/* ALWAYS-VISIBLE DUTY SCHEDULE GANTT MATRIX */}
         {(() => {
-          const isViewingProposal = Boolean(proposal && activeGanttView === "proposal");
-          const dutiesToDisplay: any[] = isViewingProposal ? proposal?.duties || [] : currentDuties;
+          const isViewingProposal = Boolean(
+            proposal && activeGanttView === "proposal",
+          );
+          const dutiesToDisplay: any[] = isViewingProposal
+            ? proposal?.duties || []
+            : currentDuties;
 
           // Extract unique route codes from duties for filter dropdown
           const corridorSet = new Set<string>();
@@ -907,25 +967,34 @@ function OptimizerPage() {
                       variant={isViewingProposal ? "default" : "secondary"}
                       className="font-mono text-[10px]"
                     >
-                      {isViewingProposal ? "Optimized Proposal" : "Active Operational Schedule"}
+                      {isViewingProposal
+                        ? "Optimized Proposal"
+                        : "Active Operational Schedule"}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Visual dispatch timeline of vehicle duties and crew assignments across Salem
-                    corridors
+                    Visual dispatch timeline of vehicle duties and crew
+                    assignments across Salem corridors
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2.5">
                   {/* Route Corridor Filter */}
-                  <Select value={selectedRouteFilter} onValueChange={setSelectedRouteFilter}>
+                  <Select
+                    value={selectedRouteFilter}
+                    onValueChange={setSelectedRouteFilter}
+                  >
                     <SelectTrigger className="h-8 text-xs font-mono bg-background/60 w-36">
                       <SelectValue placeholder="All Corridors" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Corridors</SelectItem>
                       {availableCorridors.map((c) => (
-                        <SelectItem key={c} value={c} className="font-mono text-xs">
+                        <SelectItem
+                          key={c}
+                          value={c}
+                          className="font-mono text-xs"
+                        >
                           Route {c}
                         </SelectItem>
                       ))}
@@ -976,13 +1045,20 @@ function OptimizerPage() {
                       Duty / Assigned Bus
                     </div>
                     <div className="flex-1 grid grid-cols-8 pl-4">
-                      {["06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00"].map(
-                        (h) => (
-                          <div key={h} className="text-center font-mono">
-                            {h}
-                          </div>
-                        ),
-                      )}
+                      {[
+                        "06:00",
+                        "07:00",
+                        "08:00",
+                        "09:00",
+                        "10:00",
+                        "11:00",
+                        "12:00",
+                        "13:00",
+                      ].map((h) => (
+                        <div key={h} className="text-center font-mono">
+                          {h}
+                        </div>
+                      ))}
                     </div>
                   </div>
 
@@ -993,12 +1069,19 @@ function OptimizerPage() {
                     </div>
                   ) : (
                     filteredDuties.map((d: any) => {
-                      const busObj = busesList.find((b: any) => b.id === d.busId);
+                      const busObj = busesList.find(
+                        (b: any) => b.id === d.busId,
+                      );
                       const busLabel =
                         d.busRegNumber ||
-                        (busObj ? busObj.registrationNumber : d.busId || "Unassigned");
-                      const driverObj = driversList.find((dr: any) => dr.id === d.driverId);
-                      const driverLabel = d.driverName || (driverObj ? driverObj.name : null);
+                        (busObj
+                          ? busObj.registrationNumber
+                          : d.busId || "Unassigned");
+                      const driverObj = driversList.find(
+                        (dr: any) => dr.id === d.driverId,
+                      );
+                      const driverLabel =
+                        d.driverName || (driverObj ? driverObj.name : null);
 
                       return (
                         <div
@@ -1013,7 +1096,10 @@ function OptimizerPage() {
                               >
                                 {d.dutyCode}
                               </Link>
-                              <Badge variant="outline" className="text-[9px] px-1 py-0 font-mono">
+                              <Badge
+                                variant="outline"
+                                className="text-[9px] px-1 py-0 font-mono"
+                              >
                                 {d.dutyType}
                               </Badge>
                             </div>
@@ -1032,11 +1118,15 @@ function OptimizerPage() {
                             {d.trips && d.trips.length > 0 ? (
                               d.trips.map((t: any, idx: number) => {
                                 const tripDetails = currentTrips.find(
-                                  (ct: any) => ct.id === t.tripId || ct.id === t.id,
+                                  (ct: any) =>
+                                    ct.id === t.tripId || ct.id === t.id,
                                 );
-                                const startTime = t.startTime ?? tripDetails?.startTime;
+                                const startTime =
+                                  t.startTime ?? tripDetails?.startTime;
                                 const routeCode =
-                                  t.routeCode || tripDetails?.routeCode || "Corridor";
+                                  t.routeCode ||
+                                  tripDetails?.routeCode ||
+                                  "Corridor";
                                 return (
                                   <Link
                                     key={idx}
@@ -1044,7 +1134,9 @@ function OptimizerPage() {
                                     className="rounded-md bg-gradient-to-r from-primary/20 to-primary/35 border border-primary/40 px-2.5 py-1 text-[11px] font-mono font-medium text-foreground flex items-center gap-1.5 shadow-2xs hover:border-primary hover:scale-[1.02] transition-all cursor-pointer shrink-0"
                                   >
                                     <BusIcon className="size-3 text-primary shrink-0" />
-                                    <span>{formatMinutesToTime(startTime)}</span>
+                                    <span>
+                                      {formatMinutesToTime(startTime)}
+                                    </span>
                                     <span className="text-[10px] text-muted-foreground font-bold">
                                       ({routeCode})
                                     </span>
@@ -1077,15 +1169,18 @@ function OptimizerPage() {
               Publish Optimized Schedule
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              This action transactionally publishes <strong>{proposal?.dutiesCreated || 0}</strong>{" "}
-              duty blocks to the live operational schedule for <strong>{serviceDate}</strong>.
+              This action transactionally publishes{" "}
+              <strong>{proposal?.dutiesCreated || 0}</strong> duty blocks to the
+              live operational schedule for <strong>{serviceDate}</strong>.
             </DialogDescription>
           </DialogHeader>
 
           <div className="rounded-xl border border-border/80 bg-secondary/20 p-4 space-y-2 text-xs">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Service Date:</span>
-              <span className="font-mono font-bold text-foreground">{serviceDate}</span>
+              <span className="font-mono font-bold text-foreground">
+                {serviceDate}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Strategy Mode:</span>
@@ -1093,11 +1188,15 @@ function OptimizerPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Trips Scheduled:</span>
-              <span className="font-mono font-bold text-success">{proposal?.tripsCovered}</span>
+              <span className="font-mono font-bold text-success">
+                {proposal?.tripsCovered}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Buses Dispatched:</span>
-              <span className="font-mono font-bold text-foreground">{proposal?.busesUsed}</span>
+              <span className="font-mono font-bold text-foreground">
+                {proposal?.busesUsed}
+              </span>
             </div>
           </div>
 
@@ -1114,7 +1213,9 @@ function OptimizerPage() {
               disabled={publishMutation.isPending}
               className="bg-primary text-primary-foreground text-xs font-semibold"
             >
-              {publishMutation.isPending ? "Publishing..." : "Confirm & Deploy Schedule"}
+              {publishMutation.isPending
+                ? "Publishing..."
+                : "Confirm & Deploy Schedule"}
             </Button>
           </DialogFooter>
         </DialogContent>

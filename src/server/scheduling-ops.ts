@@ -13,7 +13,11 @@ import {
 } from "./db/schema";
 import { requireAuth, requirePermission } from "./auth";
 import { SCHEDULING_CONFIG } from "../lib/transit/config";
-import { FALLBACK_TRIPS, FALLBACK_DUTIES, FALLBACK_ROUTES } from "./db/fallback-data";
+import {
+  FALLBACK_TRIPS,
+  FALLBACK_DUTIES,
+  FALLBACK_ROUTES,
+} from "./db/fallback-data";
 
 // ----------------------------------------------------
 // Time Helpers
@@ -130,11 +134,15 @@ export async function createTripImpl(data: {
 
   if (!data.routeId) throw new Error("Route is required");
   if (!data.serviceDate) throw new Error("Service date is required");
-  if (data.startTime === undefined || data.startTime < 0) throw new Error("Start time is required");
+  if (data.startTime === undefined || data.startTime < 0)
+    throw new Error("Start time is required");
 
   // Fetch active route details
   const route = await db.query.routes.findFirst({
-    where: and(eq(routes.id, data.routeId), eq(routes.tenantId, currentUser.tenantId)),
+    where: and(
+      eq(routes.id, data.routeId),
+      eq(routes.tenantId, currentUser.tenantId),
+    ),
   });
 
   if (!route) throw new Error("Selected route not found");
@@ -153,7 +161,12 @@ export async function createTripImpl(data: {
   const existingTrips = await db
     .select()
     .from(trips)
-    .where(and(eq(trips.tenantId, currentUser.tenantId), like(trips.tripCode, `${baseCode}%`)));
+    .where(
+      and(
+        eq(trips.tenantId, currentUser.tenantId),
+        like(trips.tripCode, `${baseCode}%`),
+      ),
+    );
 
   let finalCode = baseCode;
   if (existingTrips.length > 0) {
@@ -278,7 +291,8 @@ export async function generateTripsImpl(data: {
 
   if (!data.routeId) throw new Error("Route is required");
   if (!data.serviceDate) throw new Error("Service date is required");
-  if (!data.frequency || data.frequency <= 0) throw new Error("Frequency must be greater than 0");
+  if (!data.frequency || data.frequency <= 0)
+    throw new Error("Frequency must be greater than 0");
   if (
     data.startTime === undefined ||
     data.endTime === undefined ||
@@ -318,7 +332,10 @@ export async function generateTripsImpl(data: {
 // Duty Server Implementations
 // ----------------------------------------------------
 
-export async function getDutiesImpl(filters?: { serviceDate?: string; status?: string }) {
+export async function getDutiesImpl(filters?: {
+  serviceDate?: string;
+  status?: string;
+}) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "schedule.view");
 
@@ -355,7 +372,12 @@ export async function getDutiesImpl(filters?: { serviceDate?: string; status?: s
           .from(dutyTrips)
           .innerJoin(trips, eq(dutyTrips.tripId, trips.id))
           .innerJoin(routes, eq(trips.routeId, routes.id))
-          .where(and(eq(dutyTrips.dutyId, d.id), eq(dutyTrips.tenantId, currentUser.tenantId)))
+          .where(
+            and(
+              eq(dutyTrips.dutyId, d.id),
+              eq(dutyTrips.tenantId, currentUser.tenantId),
+            ),
+          )
           .orderBy(asc(dutyTrips.sequence));
 
         const crewSegmentsList = await db
@@ -382,17 +404,23 @@ export async function getDutiesImpl(filters?: { serviceDate?: string; status?: s
         let baseDriverName = "Unassigned";
         let baseConductorName = "Unassigned";
         if (d.driverId) {
-          const dr = await db.query.crew.findFirst({ where: eq(crew.id, d.driverId) });
+          const dr = await db.query.crew.findFirst({
+            where: eq(crew.id, d.driverId),
+          });
           if (dr) baseDriverName = dr.name;
         }
         if (d.conductorId) {
-          const cn = await db.query.crew.findFirst({ where: eq(crew.id, d.conductorId) });
+          const cn = await db.query.crew.findFirst({
+            where: eq(crew.id, d.conductorId),
+          });
           if (cn) baseConductorName = cn.name;
         }
 
         let busRegNumber = "Unassigned";
         if (d.busId) {
-          const b = await db.query.buses.findFirst({ where: eq(buses.id, d.busId) });
+          const b = await db.query.buses.findFirst({
+            where: eq(buses.id, d.busId),
+          });
           if (b) busRegNumber = b.registrationNumber;
         }
 
@@ -469,7 +497,12 @@ export async function getDutyImpl(id: string) {
     .from(dutyTrips)
     .innerJoin(trips, eq(dutyTrips.tripId, trips.id))
     .innerJoin(routes, eq(trips.routeId, routes.id))
-    .where(and(eq(dutyTrips.dutyId, id), eq(dutyTrips.tenantId, currentUser.tenantId)))
+    .where(
+      and(
+        eq(dutyTrips.dutyId, id),
+        eq(dutyTrips.tenantId, currentUser.tenantId),
+      ),
+    )
     .orderBy(asc(dutyTrips.sequence));
 
   const crewSegmentsList = await db
@@ -485,7 +518,10 @@ export async function getDutyImpl(id: string) {
     .from(dutyCrewSegments)
     .leftJoin(crew, eq(dutyCrewSegments.driverId, crew.id))
     .where(
-      and(eq(dutyCrewSegments.dutyId, id), eq(dutyCrewSegments.tenantId, currentUser.tenantId)),
+      and(
+        eq(dutyCrewSegments.dutyId, id),
+        eq(dutyCrewSegments.tenantId, currentUser.tenantId),
+      ),
     )
     .orderBy(asc(dutyCrewSegments.sequence));
 
@@ -509,7 +545,10 @@ export async function createDutyImpl(data: {
 
   // Validate unique code
   const existing = await db.query.duties.findFirst({
-    where: and(eq(duties.dutyCode, data.dutyCode), eq(duties.tenantId, currentUser.tenantId)),
+    where: and(
+      eq(duties.dutyCode, data.dutyCode),
+      eq(duties.tenantId, currentUser.tenantId),
+    ),
   });
   if (existing) {
     throw new Error(`Duty code ${data.dutyCode} already exists.`);
@@ -562,7 +601,10 @@ export async function updateDutyImpl(
 
   if (data.dutyCode !== duty.dutyCode) {
     const existing = await db.query.duties.findFirst({
-      where: and(eq(duties.dutyCode, data.dutyCode), eq(duties.tenantId, currentUser.tenantId)),
+      where: and(
+        eq(duties.dutyCode, data.dutyCode),
+        eq(duties.tenantId, currentUser.tenantId),
+      ),
     });
     if (existing) {
       throw new Error(`Duty code ${data.dutyCode} already exists.`);
@@ -624,7 +666,9 @@ export async function deleteDutyImpl(id: string) {
   });
   if (!duty) throw new Error("Duty not found");
 
-  await db.delete(duties).where(and(eq(duties.id, id), eq(duties.tenantId, currentUser.tenantId)));
+  await db
+    .delete(duties)
+    .where(and(eq(duties.id, id), eq(duties.tenantId, currentUser.tenantId)));
 
   // Audit log
   await db.insert(auditLogs).values({
@@ -648,14 +692,20 @@ async function recalculateDutyTimes(dutyId: string, tenantId: string) {
     .orderBy(asc(trips.startTime));
 
   if (assignedTrips.length === 0) {
-    await db.update(duties).set({ startTime: 0, endTime: 0 }).where(eq(duties.id, dutyId));
+    await db
+      .update(duties)
+      .set({ startTime: 0, endTime: 0 })
+      .where(eq(duties.id, dutyId));
     return;
   }
 
   const start = assignedTrips[0]!.startTime;
   const end = assignedTrips[assignedTrips.length - 1]!.endTime;
 
-  await db.update(duties).set({ startTime: start, endTime: end }).where(eq(duties.id, dutyId));
+  await db
+    .update(duties)
+    .set({ startTime: start, endTime: end })
+    .where(eq(duties.id, dutyId));
 }
 
 export async function addTripToDutyImpl(dutyId: string, tripId: string) {
@@ -663,7 +713,10 @@ export async function addTripToDutyImpl(dutyId: string, tripId: string) {
   await requirePermission(currentUser.role, "schedule.modify");
 
   const duty = await db.query.duties.findFirst({
-    where: and(eq(duties.id, dutyId), eq(duties.tenantId, currentUser.tenantId)),
+    where: and(
+      eq(duties.id, dutyId),
+      eq(duties.tenantId, currentUser.tenantId),
+    ),
   });
   if (!duty) throw new Error("Duty not found");
 
@@ -729,11 +782,16 @@ export async function removeTripFromDutyImpl(dutyId: string, tripId: string) {
   await requirePermission(currentUser.role, "schedule.modify");
 
   const duty = await db.query.duties.findFirst({
-    where: and(eq(duties.id, dutyId), eq(duties.tenantId, currentUser.tenantId)),
+    where: and(
+      eq(duties.id, dutyId),
+      eq(duties.tenantId, currentUser.tenantId),
+    ),
   });
   if (!duty) throw new Error("Duty not found");
 
-  await db.delete(dutyTrips).where(and(eq(dutyTrips.dutyId, dutyId), eq(dutyTrips.tripId, tripId)));
+  await db
+    .delete(dutyTrips)
+    .where(and(eq(dutyTrips.dutyId, dutyId), eq(dutyTrips.tripId, tripId)));
 
   // Re-sequence
   const allTrips = await db
@@ -764,16 +822,25 @@ export async function removeTripFromDutyImpl(dutyId: string, tripId: string) {
   return { success: true };
 }
 
-export async function assignBusToDutyImpl(dutyId: string, busId: string | null) {
+export async function assignBusToDutyImpl(
+  dutyId: string,
+  busId: string | null,
+) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "schedule.modify");
 
   const duty = await db.query.duties.findFirst({
-    where: and(eq(duties.id, dutyId), eq(duties.tenantId, currentUser.tenantId)),
+    where: and(
+      eq(duties.id, dutyId),
+      eq(duties.tenantId, currentUser.tenantId),
+    ),
   });
   if (!duty) throw new Error("Duty not found");
 
-  await db.update(duties).set({ busId, updatedAt: new Date() }).where(eq(duties.id, dutyId));
+  await db
+    .update(duties)
+    .set({ busId, updatedAt: new Date() })
+    .where(eq(duties.id, dutyId));
 
   // Audit log
   await db.insert(auditLogs).values({
@@ -796,7 +863,10 @@ export async function assignCrewToDutyImpl(
   await requirePermission(currentUser.role, "schedule.modify");
 
   const duty = await db.query.duties.findFirst({
-    where: and(eq(duties.id, dutyId), eq(duties.tenantId, currentUser.tenantId)),
+    where: and(
+      eq(duties.id, dutyId),
+      eq(duties.tenantId, currentUser.tenantId),
+    ),
   });
   if (!duty) throw new Error("Duty not found");
 
@@ -828,7 +898,10 @@ export async function createCrewHandoverImpl(data: {
   await requirePermission(currentUser.role, "schedule.modify");
 
   const duty = await db.query.duties.findFirst({
-    where: and(eq(duties.id, data.dutyId), eq(duties.tenantId, currentUser.tenantId)),
+    where: and(
+      eq(duties.id, data.dutyId),
+      eq(duties.tenantId, currentUser.tenantId),
+    ),
   });
   if (!duty) throw new Error("Duty not found");
 
@@ -869,7 +942,10 @@ export async function clearHandoverSegmentsImpl(dutyId: string) {
   await db
     .delete(dutyCrewSegments)
     .where(
-      and(eq(dutyCrewSegments.dutyId, dutyId), eq(dutyCrewSegments.tenantId, currentUser.tenantId)),
+      and(
+        eq(dutyCrewSegments.dutyId, dutyId),
+        eq(dutyCrewSegments.tenantId, currentUser.tenantId),
+      ),
     );
 
   return { success: true };
@@ -892,14 +968,20 @@ export async function validateDutyImpl(
   await requirePermission(currentUser.role, "schedule.view");
 
   const duty = await db.query.duties.findFirst({
-    where: and(eq(duties.id, dutyId), eq(duties.tenantId, currentUser.tenantId)),
+    where: and(
+      eq(duties.id, dutyId),
+      eq(duties.tenantId, currentUser.tenantId),
+    ),
   });
   if (!duty) throw new Error("Duty not found");
 
   const busId = overrides?.busId !== undefined ? overrides.busId : duty.busId;
-  const driverId = overrides?.driverId !== undefined ? overrides.driverId : duty.driverId;
+  const driverId =
+    overrides?.driverId !== undefined ? overrides.driverId : duty.driverId;
   const conductorId =
-    overrides?.conductorId !== undefined ? overrides.conductorId : duty.conductorId;
+    overrides?.conductorId !== undefined
+      ? overrides.conductorId
+      : duty.conductorId;
   const dutyType = overrides?.dutyType || duty.dutyType;
 
   // Load trips associated with this duty
@@ -915,7 +997,12 @@ export async function validateDutyImpl(
     .from(dutyTrips)
     .innerJoin(trips, eq(dutyTrips.tripId, trips.id))
     .innerJoin(routes, eq(trips.routeId, routes.id))
-    .where(and(eq(dutyTrips.dutyId, dutyId), eq(dutyTrips.tenantId, currentUser.tenantId)))
+    .where(
+      and(
+        eq(dutyTrips.dutyId, dutyId),
+        eq(dutyTrips.tenantId, currentUser.tenantId),
+      ),
+    )
     .orderBy(asc(trips.startTime));
 
   const issues: string[] = [];
@@ -929,8 +1016,14 @@ export async function validateDutyImpl(
 
   // 1. Bus Conflict Checking
   if (busId) {
-    const activeBus = await db.query.buses.findFirst({ where: eq(buses.id, busId) });
-    if (activeBus && activeBus.status !== "available" && activeBus.status !== "assigned") {
+    const activeBus = await db.query.buses.findFirst({
+      where: eq(buses.id, busId),
+    });
+    if (
+      activeBus &&
+      activeBus.status !== "available" &&
+      activeBus.status !== "assigned"
+    ) {
       issues.push(
         `Bus ${activeBus.registrationNumber} is marked "${activeBus.status}" and unavailable.`,
       );
@@ -938,7 +1031,11 @@ export async function validateDutyImpl(
 
     // Check overlaps with other duties on same service day
     const otherDutiesWithBus = await db
-      .select({ dutyCode: duties.dutyCode, startTime: duties.startTime, endTime: duties.endTime })
+      .select({
+        dutyCode: duties.dutyCode,
+        startTime: duties.startTime,
+        endTime: duties.endTime,
+      })
       .from(duties)
       .where(
         and(
@@ -967,11 +1064,15 @@ export async function validateDutyImpl(
     cStart: number,
     cEnd: number,
   ) => {
-    const member = await db.query.crew.findFirst({ where: eq(crew.id, crewId) });
+    const member = await db.query.crew.findFirst({
+      where: eq(crew.id, crewId),
+    });
     if (!member) return;
 
     if (member.status === "leave" || member.status === "unavailable") {
-      issues.push(`${label} ${member.name} is on ${member.status} status and unavailable.`);
+      issues.push(
+        `${label} ${member.name} is on ${member.status} status and unavailable.`,
+      );
     }
 
     if (cStart < member.restUntil) {
@@ -982,7 +1083,11 @@ export async function validateDutyImpl(
 
     // Overlap checks with other duties (for linked duties)
     const otherCrewDuties = await db
-      .select({ dutyCode: duties.dutyCode, startTime: duties.startTime, endTime: duties.endTime })
+      .select({
+        dutyCode: duties.dutyCode,
+        startTime: duties.startTime,
+        endTime: duties.endTime,
+      })
       .from(duties)
       .where(
         and(
@@ -1016,7 +1121,10 @@ export async function validateDutyImpl(
         and(
           eq(dutyCrewSegments.tenantId, currentUser.tenantId),
           eq(duties.serviceDate, duty.serviceDate),
-          or(eq(dutyCrewSegments.driverId, crewId), eq(dutyCrewSegments.conductorId, crewId))!,
+          or(
+            eq(dutyCrewSegments.driverId, crewId),
+            eq(dutyCrewSegments.conductorId, crewId),
+          )!,
           ne(dutyCrewSegments.dutyId, dutyId),
         ),
       );
@@ -1054,7 +1162,9 @@ export async function validateDutyImpl(
       .orderBy(asc(dutyCrewSegments.sequence));
 
     if (segments.length === 0) {
-      issues.push("Unlinked duties require crew segments configured for handovers.");
+      issues.push(
+        "Unlinked duties require crew segments configured for handovers.",
+      );
     } else {
       // Validate that crew segments cover the trips times span
       const segmentsStart = segments[0]!.startTime;
@@ -1082,10 +1192,20 @@ export async function validateDutyImpl(
       // Validate crew availability in each segment
       for (const seg of segments) {
         if (seg.driverId) {
-          await validateCrewMember(seg.driverId, "Driver", seg.startTime, seg.endTime);
+          await validateCrewMember(
+            seg.driverId,
+            "Driver",
+            seg.startTime,
+            seg.endTime,
+          );
         }
         if (seg.conductorId) {
-          await validateCrewMember(seg.conductorId, "Conductor", seg.startTime, seg.endTime);
+          await validateCrewMember(
+            seg.conductorId,
+            "Conductor",
+            seg.startTime,
+            seg.endTime,
+          );
         }
       }
     }
@@ -1097,7 +1217,9 @@ export async function validateDutyImpl(
     const tripB = assignedTrips[i + 1]!;
 
     if (tripA.endTime > tripB.startTime) {
-      issues.push(`Trip conflict: trip ${tripA.tripCode} overlaps with trip ${tripB.tripCode}.`);
+      issues.push(
+        `Trip conflict: trip ${tripA.tripCode} overlaps with trip ${tripB.tripCode}.`,
+      );
     } else {
       const turnaroundGap = tripB.startTime - tripA.endTime;
       // If routes are different, enforce turnaround buffer

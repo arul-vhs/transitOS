@@ -8,7 +8,12 @@ import { FALLBACK_ROUTES, FALLBACK_STOPS } from "./db/fallback-data";
 // GIS & Distance Helpers
 // ----------------------------------------------------
 
-function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+function getDistanceMeters(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
   const R = 6371e3; // Earth radius in meters
   const phi1 = (lat1 * Math.PI) / 180;
   const phi2 = (lat2 * Math.PI) / 180;
@@ -17,7 +22,10 @@ function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: numbe
 
   const a =
     Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+    Math.cos(phi1) *
+      Math.cos(phi2) *
+      Math.sin(deltaLambda / 2) *
+      Math.sin(deltaLambda / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c;
@@ -110,7 +118,12 @@ export async function getRoutesImpl(filters?: {
         const routeStops = await db
           .select()
           .from(stops)
-          .where(and(eq(stops.routeId, r.id), eq(stops.tenantId, currentUser.tenantId)));
+          .where(
+            and(
+              eq(stops.routeId, r.id),
+              eq(stops.tenantId, currentUser.tenantId),
+            ),
+          );
         return {
           ...r,
           stopsCount: routeStops.length,
@@ -154,7 +167,9 @@ export async function getRouteImpl(id: string) {
       const routeStops = await db
         .select()
         .from(stops)
-        .where(and(eq(stops.routeId, id), eq(stops.tenantId, currentUser.tenantId)))
+        .where(
+          and(eq(stops.routeId, id), eq(stops.tenantId, currentUser.tenantId)),
+        )
         .orderBy(asc(stops.sequence));
 
       return {
@@ -197,10 +212,15 @@ export async function createRouteImpl(data: {
 
   // Validate code uniqueness within tenant
   const existing = await db.query.routes.findFirst({
-    where: and(eq(routes.code, data.code), eq(routes.tenantId, currentUser.tenantId)),
+    where: and(
+      eq(routes.code, data.code),
+      eq(routes.tenantId, currentUser.tenantId),
+    ),
   });
   if (existing) {
-    throw new Error(`Route code ${data.code} already exists in this organization.`);
+    throw new Error(
+      `Route code ${data.code} already exists in this organization.`,
+    );
   }
 
   const [newRoute] = await db
@@ -261,7 +281,10 @@ export async function updateRouteImpl(
 
   if (data.code !== route.code) {
     const existing = await db.query.routes.findFirst({
-      where: and(eq(routes.code, data.code), eq(routes.tenantId, currentUser.tenantId)),
+      where: and(
+        eq(routes.code, data.code),
+        eq(routes.tenantId, currentUser.tenantId),
+      ),
     });
     if (existing) {
       throw new Error(`Route code ${data.code} already exists.`);
@@ -336,7 +359,9 @@ export async function deleteRouteImpl(id: string) {
   });
   if (!route) throw new Error("Route not found");
 
-  await db.delete(routes).where(and(eq(routes.id, id), eq(routes.tenantId, currentUser.tenantId)));
+  await db
+    .delete(routes)
+    .where(and(eq(routes.id, id), eq(routes.tenantId, currentUser.tenantId)));
 
   // Audit log
   await db.insert(auditLogs).values({
@@ -362,7 +387,12 @@ export async function getRouteStopsImpl(routeId: string) {
     return await db
       .select()
       .from(stops)
-      .where(and(eq(stops.routeId, routeId), eq(stops.tenantId, currentUser.tenantId)))
+      .where(
+        and(
+          eq(stops.routeId, routeId),
+          eq(stops.tenantId, currentUser.tenantId),
+        ),
+      )
       .orderBy(asc(stops.sequence));
   } catch (err) {
     const fallback = FALLBACK_STOPS.filter((s) => s.routeId === routeId).sort(
@@ -402,13 +432,19 @@ export async function createStopImpl(data: {
     throw new Error("Latitude must be between -90 and 90");
   if (isNaN(lngNum) || lngNum < -180 || lngNum > 180)
     throw new Error("Longitude must be between -180 and 180");
-  if (!data.sequence || data.sequence <= 0) throw new Error("Sequence must be a positive integer");
+  if (!data.sequence || data.sequence <= 0)
+    throw new Error("Sequence must be a positive integer");
 
   // Check for duplicate sequence and reorder if needed to make space
   const existingStops = await db
     .select()
     .from(stops)
-    .where(and(eq(stops.routeId, data.routeId), eq(stops.tenantId, currentUser.tenantId)))
+    .where(
+      and(
+        eq(stops.routeId, data.routeId),
+        eq(stops.tenantId, currentUser.tenantId),
+      ),
+    )
     .orderBy(asc(stops.sequence));
 
   const duplicate = existingStops.find((s) => s.sequence === data.sequence);
@@ -506,13 +542,20 @@ export async function deleteStopImpl(id: string) {
   });
   if (!stopRecord) throw new Error("Stop not found");
 
-  await db.delete(stops).where(and(eq(stops.id, id), eq(stops.tenantId, currentUser.tenantId)));
+  await db
+    .delete(stops)
+    .where(and(eq(stops.id, id), eq(stops.tenantId, currentUser.tenantId)));
 
   // Renumber remaining stops sequence sequentially
   const remainingStops = await db
     .select()
     .from(stops)
-    .where(and(eq(stops.routeId, stopRecord.routeId), eq(stops.tenantId, currentUser.tenantId)))
+    .where(
+      and(
+        eq(stops.routeId, stopRecord.routeId),
+        eq(stops.tenantId, currentUser.tenantId),
+      ),
+    )
     .orderBy(asc(stops.sequence));
 
   let index = 1;
@@ -582,7 +625,11 @@ export async function analyzeRouteOverlapImpl(proposedGeojson: any) {
   const currentUser = await requireAuth();
   await requirePermission(currentUser.role, "routes.view");
 
-  if (!proposedGeojson || proposedGeojson.type !== "LineString" || !proposedGeojson.coordinates) {
+  if (
+    !proposedGeojson ||
+    proposedGeojson.type !== "LineString" ||
+    !proposedGeojson.coordinates
+  ) {
     return [];
   }
 
@@ -636,7 +683,9 @@ export async function analyzeRouteOverlapImpl(proposedGeojson: any) {
     for (const p of proposedPoints) {
       let isOverlapping = false;
       for (const e of existingPoints) {
-        if (getDistanceMeters(p[1], p[0], e[1], e[0]) <= overlapThresholdMeters) {
+        if (
+          getDistanceMeters(p[1], p[0], e[1], e[0]) <= overlapThresholdMeters
+        ) {
           isOverlapping = true;
           break;
         }

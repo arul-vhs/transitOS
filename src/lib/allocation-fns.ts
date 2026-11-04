@@ -16,9 +16,8 @@ const _getAllocationPlan = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ data }) => {
-    const { generateFleetAllocationPlan } = await import(
-      "../server/allocation/demand-engine"
-    );
+    const { generateFleetAllocationPlan } =
+      await import("../server/allocation/demand-engine");
     return await generateFleetAllocationPlan(
       data.strategy,
       data.periodId,
@@ -38,15 +37,12 @@ export const getAllocationPlan = async (data?: {
 
 const _getCorridorDemandProfiles = createServerFn({ method: "POST" })
   .validator(
-    (data: {
-      periodId?: TimePeriodId;
-      customSurges?: SurgeScenarioInput[];
-    }) => data,
+    (data: { periodId?: TimePeriodId; customSurges?: SurgeScenarioInput[] }) =>
+      data,
   )
   .handler(async ({ data }) => {
-    const { buildCorridorProfiles } = await import(
-      "../server/allocation/demand-engine"
-    );
+    const { buildCorridorProfiles } =
+      await import("../server/allocation/demand-engine");
     return buildCorridorProfiles(data.periodId, data.customSurges);
   });
 
@@ -83,9 +79,8 @@ const _dispatchFleetAllocation = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ data }) => {
-    const { dispatchAllocationImpl } = await import(
-      "../server/allocation/demand-engine"
-    );
+    const { dispatchAllocationImpl } =
+      await import("../server/allocation/demand-engine");
     return await dispatchAllocationImpl(data);
   });
 
@@ -95,9 +90,8 @@ export const dispatchFleetAllocation = async (data: any) => {
 
 const _getRecentAllocations = createServerFn({ method: "GET" }).handler(
   async () => {
-    const { getRecentAllocationsImpl } = await import(
-      "../server/allocation/demand-engine"
-    );
+    const { getRecentAllocationsImpl } =
+      await import("../server/allocation/demand-engine");
     return await getRecentAllocationsImpl();
   },
 );

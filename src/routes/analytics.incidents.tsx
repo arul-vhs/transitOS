@@ -13,7 +13,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getIncidentAnalytics, getRecoveryAnalytics } from "@/lib/analytics-fns";
+import {
+  getIncidentAnalytics,
+  getRecoveryAnalytics,
+} from "@/lib/analytics-fns";
 
 export const Route = createFileRoute("/analytics/incidents")({
   component: IncidentsAnalyticsPage,
@@ -21,10 +24,12 @@ export const Route = createFileRoute("/analytics/incidents")({
 
 function IncidentsAnalyticsPage() {
   // Queries
-  const { data: incidentStats = {} as any, isLoading: statsLoading } = useQuery({
-    queryKey: ["incidents-analytics-details"],
-    queryFn: () => getIncidentAnalytics(),
-  });
+  const { data: incidentStats = {} as any, isLoading: statsLoading } = useQuery(
+    {
+      queryKey: ["incidents-analytics-details"],
+      queryFn: () => getIncidentAnalytics(),
+    },
+  );
 
   const { data: recoveryStats = [], isLoading: runsLoading } = useQuery({
     queryKey: ["recovery-runs-details"],
@@ -49,7 +54,8 @@ function IncidentsAnalyticsPage() {
         {/* Incident Summary Card */}
         <section className="panel p-5 space-y-4">
           <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            <AlertTriangle className="size-4 text-primary" /> Incident Hotspots & Types
+            <AlertTriangle className="size-4 text-primary" /> Incident Hotspots
+            & Types
           </h3>
 
           {statsLoading ? (
@@ -83,7 +89,10 @@ function IncidentsAnalyticsPage() {
                 <p className="font-semibold">Incidents by Type:</p>
                 <div className="space-y-1.5 font-mono">
                   {incidentStats.typesSummary?.map((t: any) => (
-                    <div key={t.type} className="flex justify-between py-1 border-b">
+                    <div
+                      key={t.type}
+                      className="flex justify-between py-1 border-b"
+                    >
                       <span>{t.type}</span>
                       <span className="font-bold">{t.count}</span>
                     </div>
@@ -128,7 +137,9 @@ function IncidentsAnalyticsPage() {
                       : 100;
                   return (
                     <TableRow key={r.runId}>
-                      <TableCell className="text-xs font-mono">{r.serviceDate}</TableCell>
+                      <TableCell className="text-xs font-mono">
+                        {r.serviceDate}
+                      </TableCell>
                       <TableCell className="text-xs uppercase font-mono">
                         {r.incidentType}
                       </TableCell>

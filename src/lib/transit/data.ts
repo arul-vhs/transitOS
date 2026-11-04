@@ -93,7 +93,12 @@ const busRegistrations = [
   "TN-30-AA-4201",
 ];
 
-const depots = ["Meyyanur Depot", "Johnsonpet Depot", "Hasthampatti Depot", "Steel Plant Depot"];
+const depots = [
+  "Meyyanur Depot",
+  "Johnsonpet Depot",
+  "Hasthampatti Depot",
+  "Steel Plant Depot",
+];
 
 export const BUSES: Bus[] = busRegistrations.map((reg, i) => ({
   id: `B${String(i + 1).padStart(3, "0")}`,
@@ -113,7 +118,13 @@ export const DRIVERS: Crew[] = driverNames.map((name, i) => ({
   id: `DR${String(i + 1).padStart(3, "0")}`,
   name,
   role: "driver" as const,
-  status: (i === 6 ? "resting" : i === 7 ? "leave" : i === 18 ? "unavailable" : "available") as any,
+  status: (i === 6
+    ? "resting"
+    : i === 7
+      ? "leave"
+      : i === 18
+        ? "unavailable"
+        : "available") as any,
   availableFrom: minutes(5, 30),
   restUntil: minutes(5, 30),
 }));
@@ -122,12 +133,19 @@ export const CONDUCTORS: Crew[] = conductorNames.map((name, i) => ({
   id: `CN${String(i + 1).padStart(3, "0")}`,
   name,
   role: "conductor" as const,
-  status: (i === 6 ? "resting" : i === 7 ? "leave" : i === 18 ? "unavailable" : "available") as any,
+  status: (i === 6
+    ? "resting"
+    : i === 7
+      ? "leave"
+      : i === 18
+        ? "unavailable"
+        : "available") as any,
   availableFrom: minutes(5, 30),
   restUntil: minutes(5, 30),
 }));
 
-const stops = (names: string[]) => names.map((n, i) => ({ id: `S${i}-${n}`, name: n }));
+const stops = (names: string[]) =>
+  names.map((n, i) => ({ id: `S${i}-${n}`, name: n }));
 
 export const ROUTES: TransitRoute[] = [
   {
@@ -267,7 +285,8 @@ export const ROUTES: TransitRoute[] = [
 ];
 
 export const busById = (id: string) => BUSES.find((b) => b.id === id);
-export const crewById = (id: string) => [...DRIVERS, ...CONDUCTORS].find((c) => c.id === id);
+export const crewById = (id: string) =>
+  [...DRIVERS, ...CONDUCTORS].find((c) => c.id === id);
 export const routeById = (id: string) => ROUTES.find((r) => r.id === id);
 
 export const busLabel = (id: string) => busById(id)?.registrationNumber ?? id;

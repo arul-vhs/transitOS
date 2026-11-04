@@ -204,18 +204,28 @@ function PlanVsActualPage() {
 
                     return (
                       <TableRow key={t.tripId}>
-                        <TableCell className="font-bold text-xs">{t.tripCode}</TableCell>
+                        <TableCell className="font-bold text-xs">
+                          {t.tripCode}
+                        </TableCell>
                         <TableCell className="text-xs">{t.routeCode}</TableCell>
                         <TableCell className="text-[10px] uppercase font-mono">
                           {t.direction}
                         </TableCell>
-                        <TableCell className="text-xs font-mono">{t.plannedStart}</TableCell>
-                        <TableCell className="text-xs font-mono">{t.actualStart}</TableCell>
+                        <TableCell className="text-xs font-mono">
+                          {t.plannedStart}
+                        </TableCell>
+                        <TableCell className="text-xs font-mono">
+                          {t.actualStart}
+                        </TableCell>
                         <TableCell className={`text-xs font-mono ${varColor}`}>
                           {t.departureVariance}
                         </TableCell>
-                        <TableCell className="text-xs font-mono">{t.plannedEnd}</TableCell>
-                        <TableCell className="text-xs font-mono">{t.actualEnd}</TableCell>
+                        <TableCell className="text-xs font-mono">
+                          {t.plannedEnd}
+                        </TableCell>
+                        <TableCell className="text-xs font-mono">
+                          {t.actualEnd}
+                        </TableCell>
                         <TableCell>
                           <Badge
                             variant={

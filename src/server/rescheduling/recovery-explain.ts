@@ -4,7 +4,10 @@ import { IncidentRecord } from "./types";
 export function generateRecoveryExplanation(
   proposedDuties: ProposedDuty[],
   unassignedTrips: { tripId: string; tripCode: string; reason: string }[],
-  originalAssignmentsMap: Map<string, { busId: string; driverId: string; conductorId: string }>,
+  originalAssignmentsMap: Map<
+    string,
+    { busId: string; driverId: string; conductorId: string }
+  >,
   incident: IncidentRecord,
 ): string {
   const parts: string[] = [];
@@ -31,14 +34,18 @@ export function generateRecoveryExplanation(
   if (totalReassignedTrips > 0) {
     const summaryList: string[] = [];
     if (busChangeCount > 0) {
-      summaryList.push(`reassigned ${busChangeCount} trip(s) to available reserve vehicles`);
+      summaryList.push(
+        `reassigned ${busChangeCount} trip(s) to available reserve vehicles`,
+      );
     }
     if (crewChangeCount > 0) {
       summaryList.push(`adjusted crew pairings for ${crewChangeCount} trip(s)`);
     }
     parts.push(`Modified schedule: ${summaryList.join(" and ")}.`);
   } else {
-    parts.push("Maintains existing vehicle and crew assignments for operational stability.");
+    parts.push(
+      "Maintains existing vehicle and crew assignments for operational stability.",
+    );
   }
 
   if (unassignedTrips.length > 0) {
@@ -46,8 +53,11 @@ export function generateRecoveryExplanation(
       .map((u) => u.tripCode)
       .slice(0, 3)
       .join(", ");
-    const moreText = unassignedTrips.length > 3 ? ` +${unassignedTrips.length - 3} more` : "";
-    parts.push(`${unassignedTrips.length} trip(s) cancelled (${cancelledCodes}${moreText}).`);
+    const moreText =
+      unassignedTrips.length > 3 ? ` +${unassignedTrips.length - 3} more` : "";
+    parts.push(
+      `${unassignedTrips.length} trip(s) cancelled (${cancelledCodes}${moreText}).`,
+    );
   } else {
     parts.push("100% service recovery achieved with 0 cancellations.");
   }

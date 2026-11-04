@@ -56,7 +56,8 @@ export const Route = createFileRoute("/fleet/maintenance")({
       { title: "Fleet Maintenance Bays: TransitOS" },
       {
         name: "description",
-        content: "Scheduled servicing, docking bay tracking and defect remediation.",
+        content:
+          "Scheduled servicing, docking bay tracking and defect remediation.",
       },
     ],
   }),
@@ -80,10 +81,17 @@ function MaintenancePage() {
   });
 
   // Filters
-  const busesInMaintenance = busesList.filter((b) => b.status === "maintenance");
-  const busesRequiringMaintenance = busesList.filter((b) => b.status === "breakdown");
+  const busesInMaintenance = busesList.filter(
+    (b) => b.status === "maintenance",
+  );
+  const busesRequiringMaintenance = busesList.filter(
+    (b) => b.status === "breakdown",
+  );
   const availableBuses = busesList.filter(
-    (b) => b.status === "available" || b.status === "assigned" || b.status === "in-service",
+    (b) =>
+      b.status === "available" ||
+      b.status === "assigned" ||
+      b.status === "in-service",
   );
 
   // Filter available buses for the selection dialog
@@ -113,7 +121,9 @@ function MaintenancePage() {
   });
 
   const fleetHealthPercent =
-    busesList.length > 0 ? Math.round((availableBuses.length / busesList.length) * 100) : 100;
+    busesList.length > 0
+      ? Math.round((availableBuses.length / busesList.length) * 100)
+      : 100;
 
   return (
     <AppShell
@@ -146,7 +156,9 @@ function MaintenancePage() {
               <span className="text-2xl font-bold font-mono text-primary">
                 {fleetHealthPercent}%
               </span>
-              <span className="text-[10px] text-muted-foreground">operational rate</span>
+              <span className="text-[10px] text-muted-foreground">
+                operational rate
+              </span>
             </div>
           </div>
 
@@ -248,7 +260,12 @@ function MaintenancePage() {
                   {canManage && (
                     <Button
                       size="sm"
-                      onClick={() => statusMutation.mutate({ id: bus.id, status: "maintenance" })}
+                      onClick={() =>
+                        statusMutation.mutate({
+                          id: bus.id,
+                          status: "maintenance",
+                        })
+                      }
                       disabled={statusMutation.isPending}
                       className="bg-warning text-warning-foreground text-[11px] h-7 px-2.5 font-semibold"
                     >
@@ -291,7 +308,8 @@ function MaintenancePage() {
               <ShieldCheck className="size-8 text-emerald-500/60 mb-2" />
               <p className="font-semibold text-foreground">All Bays Clear</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                No vehicles currently docked for scheduled or emergency overhaul.
+                No vehicles currently docked for scheduled or emergency
+                overhaul.
               </p>
             </div>
           ) : (
@@ -299,12 +317,18 @@ function MaintenancePage() {
               <TableHeader>
                 <TableRow className="border-border/60">
                   <TableHead className="text-xs font-bold">Fleet No</TableHead>
-                  <TableHead className="text-xs font-bold">Registration</TableHead>
+                  <TableHead className="text-xs font-bold">
+                    Registration
+                  </TableHead>
                   <TableHead className="text-xs font-bold">Bus Type</TableHead>
-                  <TableHead className="text-xs font-bold">Depot Location</TableHead>
+                  <TableHead className="text-xs font-bold">
+                    Depot Location
+                  </TableHead>
                   <TableHead className="text-xs font-bold">Status</TableHead>
                   {canManage && (
-                    <TableHead className="text-right text-xs font-bold">Actions</TableHead>
+                    <TableHead className="text-right text-xs font-bold">
+                      Actions
+                    </TableHead>
                   )}
                 </TableRow>
               </TableHeader>
@@ -321,7 +345,9 @@ function MaintenancePage() {
                       {bus.registrationNumber}
                     </TableCell>
                     <TableCell className="text-xs">{bus.busType}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{bus.depot}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {bus.depot}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
@@ -336,7 +362,12 @@ function MaintenancePage() {
                           variant="outline"
                           size="sm"
                           className="h-7 text-xs border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold"
-                          onClick={() => statusMutation.mutate({ id: bus.id, status: "available" })}
+                          onClick={() =>
+                            statusMutation.mutate({
+                              id: bus.id,
+                              status: "available",
+                            })
+                          }
                           disabled={statusMutation.isPending}
                         >
                           <CheckCircle className="mr-1 size-3.5" />
@@ -361,7 +392,8 @@ function MaintenancePage() {
               Dock Vehicle in Maintenance Bay
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Select an available bus to transition to maintenance docking status.
+              Select an available bus to transition to maintenance docking
+              status.
             </DialogDescription>
           </DialogHeader>
 
@@ -393,7 +425,12 @@ function MaintenancePage() {
                   </div>
                   <Button
                     size="sm"
-                    onClick={() => statusMutation.mutate({ id: bus.id, status: "maintenance" })}
+                    onClick={() =>
+                      statusMutation.mutate({
+                        id: bus.id,
+                        status: "maintenance",
+                      })
+                    }
                     disabled={statusMutation.isPending}
                     className="h-7 text-[11px] bg-warning text-warning-foreground font-semibold"
                   >
@@ -405,7 +442,11 @@ function MaintenancePage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsScheduleOpen(false)} className="text-xs">
+            <Button
+              variant="outline"
+              onClick={() => setIsScheduleOpen(false)}
+              className="text-xs"
+            >
               Close
             </Button>
           </DialogFooter>

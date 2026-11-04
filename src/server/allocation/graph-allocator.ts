@@ -55,16 +55,22 @@ function simulateBusAddition(
   );
 
   const tripsPerHourAfter = 60 / headwayAfterMin;
-  const newCapacityPaxPerHour = Math.round(tripsPerHourAfter * target.busCapacity);
+  const newCapacityPaxPerHour = Math.round(
+    tripsPerHourAfter * target.busCapacity,
+  );
 
   const loadFactorAfter = Number(
-    (target.sensedDemandPaxPerHour / Math.max(1, newCapacityPaxPerHour)).toFixed(2),
+    (
+      target.sensedDemandPaxPerHour / Math.max(1, newCapacityPaxPerHour)
+    ).toFixed(2),
   );
 
   // Transit wait time formula: (Headway / 2) * max(1, LoadFactor)
   // Overcrowded routes create skipped-stop queues, multiplying effective wait time
   const waitMultiplier = Math.max(1, loadFactorAfter);
-  const waitTimeAfterMin = Number(((headwayAfterMin / 2) * waitMultiplier).toFixed(1));
+  const waitTimeAfterMin = Number(
+    ((headwayAfterMin / 2) * waitMultiplier).toFixed(1),
+  );
   const waitTimeReductionMin = Number(
     Math.max(0, target.passengerWaitTimeMin - waitTimeAfterMin).toFixed(1),
   );
@@ -101,7 +107,8 @@ function validateDonorFeasibility(
   // Rule 2: Resulting headway must not exceed allowable SLA ceiling (25 minutes)
   const remainingBuses = donorProfile.activeBusesCount - 1;
   const simulatedHeadway = Math.round(
-    donorProfile.scheduledHeadwayMin * (donorProfile.activeBusesCount / Math.max(1, remainingBuses)),
+    donorProfile.scheduledHeadwayMin *
+      (donorProfile.activeBusesCount / Math.max(1, remainingBuses)),
   );
   if (simulatedHeadway > 25) {
     return false;
@@ -110,7 +117,8 @@ function validateDonorFeasibility(
   // Rule 3: Resulting load factor on donor must remain under 75%
   const simulatedTripsPerHour = 60 / simulatedHeadway;
   const simulatedCapacity = simulatedTripsPerHour * donorProfile.busCapacity;
-  const simulatedLoadFactor = donorProfile.sensedDemandPaxPerHour / simulatedCapacity;
+  const simulatedLoadFactor =
+    donorProfile.sensedDemandPaxPerHour / simulatedCapacity;
   if (simulatedLoadFactor > 0.75) {
     return false;
   }
@@ -191,8 +199,10 @@ export function solveFleetAllocation(
 
   // Sort shortage corridors by urgency (Critical first, then highest deficit)
   shortageRoutes.sort((a, b) => {
-    if (a.shortageSeverity === "CRITICAL" && b.shortageSeverity !== "CRITICAL") return -1;
-    if (b.shortageSeverity === "CRITICAL" && a.shortageSeverity !== "CRITICAL") return 1;
+    if (a.shortageSeverity === "CRITICAL" && b.shortageSeverity !== "CRITICAL")
+      return -1;
+    if (b.shortageSeverity === "CRITICAL" && a.shortageSeverity !== "CRITICAL")
+      return 1;
     return b.capacityDeficitPaxPerHour - a.capacityDeficitPaxPerHour;
   });
 
@@ -218,7 +228,10 @@ export function solveFleetAllocation(
       }
 
       // Proximity & deadhead calculation
-      const fromLoc = supply.sourceType === "DEPOT_RESERVE" ? supply.depot : supply.donorRouteCode || supply.depot;
+      const fromLoc =
+        supply.sourceType === "DEPOT_RESERVE"
+          ? supply.depot
+          : supply.donorRouteCode || supply.depot;
       const toLoc = target.origin;
       const metrics = getDeadheadMetrics(fromLoc, toLoc);
 
@@ -318,7 +331,9 @@ export function solveFleetAllocation(
 
   // 4. Update route profiles with after-allocation status
   const updatedProfiles: RouteDemandProfile[] = routes.map((orig) => {
-    const allocs = recommendations.filter((r) => r.targetRouteId === orig.routeId);
+    const allocs = recommendations.filter(
+      (r) => r.targetRouteId === orig.routeId,
+    );
     if (allocs.length === 0) {
       return { ...orig };
     }
@@ -327,41 +342,70 @@ export function solveFleetAllocation(
       ...orig,
       scheduledHeadwayMin: lastAlloc.headwayAfterMin,
       scheduledTripsPerHour: Math.round(60 / lastAlloc.headwayAfterMin),
-      scheduledCapacityPaxPerHour: Math.round((60 / lastAlloc.headwayAfterMin) * orig.busCapacity),
+      scheduledCapacityPaxPerHour: Math.round(
+        (60 / lastAlloc.headwayAfterMin) * orig.busCapacity,
+      ),
       loadFactor: lastAlloc.loadFactorAfter,
       passengerWaitTimeMin: lastAlloc.waitTimeAfterMin,
       activeBusesCount: orig.activeBusesCount + allocs.length,
-      shortageSeverity: lastAlloc.loadFactorAfter > 1.0 ? "MODERATE" : "OPTIMAL",
+      shortageSeverity:
+        lastAlloc.loadFactorAfter > 1.0 ? "MODERATE" : "OPTIMAL",
       capacityDeficitPaxPerHour: Math.max(
         0,
-        orig.sensedDemandPaxPerHour - Math.round((60 / lastAlloc.headwayAfterMin) * orig.busCapacity),
+        orig.sensedDemandPaxPerHour -
+          Math.round((60 / lastAlloc.headwayAfterMin) * orig.busCapacity),
       ),
     };
   });
 
   // 5. Aggregate KPI Plan Metrics
   const totalSurgeDemand = routes.reduce(
-    (sum, r) => sum + (r.sensedDemandPaxPerHour > r.baselineDemandPaxPerHour ? r.sensedDemandPaxPerHour - r.baselineDemandPaxPerHour : 0),
+    (sum, r) =>
+      sum +
+      (r.sensedDemandPaxPerHour > r.baselineDemandPaxPerHour
+        ? r.sensedDemandPaxPerHour - r.baselineDemandPaxPerHour
+        : 0),
     0,
   );
-  const totalDeadheadKm = recommendations.reduce((sum, r) => sum + r.deadheadKm, 0);
-  const totalOperatingCost = recommendations.reduce((sum, r) => sum + r.estimatedCost, 0);
+  const totalDeadheadKm = recommendations.reduce(
+    (sum, r) => sum + r.deadheadKm,
+    0,
+  );
+  const totalOperatingCost = recommendations.reduce(
+    (sum, r) => sum + r.estimatedCost,
+    0,
+  );
   const avgWaitTimeReduction =
     recommendations.length > 0
       ? Number(
           (
-            recommendations.reduce((sum, r) => sum + r.waitTimeReductionMin, 0) /
-            recommendations.length
+            recommendations.reduce(
+              (sum, r) => sum + r.waitTimeReductionMin,
+              0,
+            ) / recommendations.length
           ).toFixed(1),
         )
       : 0;
 
-  const totalDemand = routes.reduce((sum, r) => sum + r.sensedDemandPaxPerHour, 0);
-  const totalCapacityBefore = routes.reduce((sum, r) => sum + r.scheduledCapacityPaxPerHour, 0);
-  const totalCapacityAfter = updatedProfiles.reduce((sum, r) => sum + r.scheduledCapacityPaxPerHour, 0);
+  const totalDemand = routes.reduce(
+    (sum, r) => sum + r.sensedDemandPaxPerHour,
+    0,
+  );
+  const totalCapacityBefore = routes.reduce(
+    (sum, r) => sum + r.scheduledCapacityPaxPerHour,
+    0,
+  );
+  const totalCapacityAfter = updatedProfiles.reduce(
+    (sum, r) => sum + r.scheduledCapacityPaxPerHour,
+    0,
+  );
 
-  const networkLoadFactorBefore = Number((totalDemand / Math.max(1, totalCapacityBefore)).toFixed(2));
-  const networkLoadFactorAfter = Number((totalDemand / Math.max(1, totalCapacityAfter)).toFixed(2));
+  const networkLoadFactorBefore = Number(
+    (totalDemand / Math.max(1, totalCapacityBefore)).toFixed(2),
+  );
+  const networkLoadFactorAfter = Number(
+    (totalDemand / Math.max(1, totalCapacityAfter)).toFixed(2),
+  );
 
   return {
     id: `plan-${Date.now()}`,

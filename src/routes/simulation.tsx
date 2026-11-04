@@ -374,7 +374,10 @@ const INITIAL_FLEET: SimBus[] = [
 ];
 
 // Helper: interpolate between coordinate pairs along polyline
-function getInterpolatedPosition(coords: number[][], progress: number): [number, number] {
+function getInterpolatedPosition(
+  coords: number[][],
+  progress: number,
+): [number, number] {
   if (!coords || coords.length === 0) return [11.6673, 78.1424];
   if (coords.length === 1) return [coords[0][0], coords[0][1]];
 
@@ -400,7 +403,9 @@ function SimulationPage() {
   const [fleet, setFleet] = useState<SimBus[]>(INITIAL_FLEET);
   const [selectedBusId, setSelectedBusId] = useState<string>("b3"); // Bus SLM-MY-104 selected by default
   const [activeScenario, setActiveScenario] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"controls" | "walkthrough" | "telemetry">("controls");
+  const [activeTab, setActiveTab] = useState<
+    "controls" | "walkthrough" | "telemetry"
+  >("controls");
 
   // Radio Dispatch / Event Ticker Logs
   const [eventLogs, setEventLogs] = useState<
@@ -514,16 +519,21 @@ function SimulationPage() {
 
           // Active coordinates & stops based on current direction
           const activeCoords =
-            newDirection === "outbound" ? corridor.coords : [...corridor.coords].reverse();
+            newDirection === "outbound"
+              ? corridor.coords
+              : [...corridor.coords].reverse();
 
           const activeStops =
-            newDirection === "outbound" ? corridor.stops : [...corridor.stops].reverse();
+            newDirection === "outbound"
+              ? corridor.stops
+              : [...corridor.stops].reverse();
 
           const newPos = getInterpolatedPosition(activeCoords, newProgress);
 
           // Calculate next stop name along the active direction
           const stopIdx = Math.floor(newProgress * (activeStops.length - 1));
-          const nextStop = activeStops[Math.min(stopIdx + 1, activeStops.length - 1)];
+          const nextStop =
+            activeStops[Math.min(stopIdx + 1, activeStops.length - 1)];
 
           return {
             ...bus,
@@ -534,7 +544,10 @@ function SimulationPage() {
             progressAlongRoute: newProgress,
             currentPosition: newPos,
             nextStop,
-            driverDrivingMinutes: Math.min(360, bus.driverDrivingMinutes + simSpeed * 0.05),
+            driverDrivingMinutes: Math.min(
+              360,
+              bus.driverDrivingMinutes + simSpeed * 0.05,
+            ),
           };
         });
 
@@ -670,7 +683,9 @@ function SimulationPage() {
     });
   }, [L, fleet, selectedBusId]);
 
-  const selectedBus = (fleet.find((b) => b.id === selectedBusId) || fleet[0] || INITIAL_FLEET[0])!;
+  const selectedBus = (fleet.find((b) => b.id === selectedBusId) ||
+    fleet[0] ||
+    INITIAL_FLEET[0])!;
 
   // Simulation Time Phase description
   const timePhase = useMemo(() => {
@@ -712,13 +727,18 @@ function SimulationPage() {
     setIsPlaying(false); // Pause so the user can inspect the incident
     setFleet((prev) =>
       prev.map((b) =>
-        b.id === "b3" ? { ...b, status: "breakdown", speedKmH: 0, varianceMinutes: 18 } : b,
+        b.id === "b3"
+          ? { ...b, status: "breakdown", speedKmH: 0, varianceMinutes: 18 }
+          : b,
       ),
     );
     setSelectedBusId("b3");
-    toast.error("[EMERGENCY] Bus SLM-MY-104 reported engine temperature failure at Five Roads!", {
-      duration: 6000,
-    });
+    toast.error(
+      "[EMERGENCY] Bus SLM-MY-104 reported engine temperature failure at Five Roads!",
+      {
+        duration: 6000,
+      },
+    );
     setEventLogs((prev) => [
       {
         id: String(Date.now()),
@@ -735,7 +755,11 @@ function SimulationPage() {
     setFleet((prev) =>
       prev.map((b) => {
         if (b.id === "b3") {
-          return { ...b, status: "standby", routeName: "Towed to Meyyanur Bay 2" };
+          return {
+            ...b,
+            status: "standby",
+            routeName: "Towed to Meyyanur Bay 2",
+          };
         }
         if (b.id === "b7") {
           // Standby bus deploys to cover the route!
@@ -784,7 +808,9 @@ function SimulationPage() {
   const triggerTrafficScenario = () => {
     setActiveScenario("traffic");
     setFleet((prev) =>
-      prev.map((b) => (b.id === "b1" ? { ...b, speedKmH: 12, varianceMinutes: 14 } : b)),
+      prev.map((b) =>
+        b.id === "b1" ? { ...b, speedKmH: 12, varianceMinutes: 14 } : b,
+      ),
     );
     setSelectedBusId("b1");
     toast.warning(
@@ -807,7 +833,11 @@ function SimulationPage() {
   // SCENARIO 3: Trigger Driver Fatigue / Rest Handover
   const triggerDriverRestScenario = () => {
     setActiveScenario("driver-rest");
-    setFleet((prev) => prev.map((b) => (b.id === "b1" ? { ...b, driverDrivingMinutes: 245 } : b)));
+    setFleet((prev) =>
+      prev.map((b) =>
+        b.id === "b1" ? { ...b, driverDrivingMinutes: 245 } : b,
+      ),
+    );
     setSelectedBusId("b1");
     toast.info(
       "[COMPLIANCE ALERT] Driver Murugesan K. reached 240 mins continuous driving limit!",
@@ -831,14 +861,21 @@ function SimulationPage() {
     setFleet((prev) =>
       prev.map((b) =>
         b.id === "b1"
-          ? { ...b, driver: "Palanisamy M. (Relief Driver)", driverDrivingMinutes: 15 }
+          ? {
+              ...b,
+              driver: "Palanisamy M. (Relief Driver)",
+              driverDrivingMinutes: 15,
+            }
           : b,
       ),
     );
     setActiveScenario(null);
-    toast.success("[HANDOVER COMPLETED] Driver Palanisamy M. took over at Town Bus Stand.", {
-      duration: 5000,
-    });
+    toast.success(
+      "[HANDOVER COMPLETED] Driver Palanisamy M. took over at Town Bus Stand.",
+      {
+        duration: 5000,
+      },
+    );
     setEventLogs((prev) => [
       {
         id: String(Date.now()),
@@ -862,22 +899,22 @@ function SimulationPage() {
 
   return (
     <AppShell
-      title="Interactive Operations Simulator"
-      subtitle="Experience TransitOS in action: real-time vehicle dispatch, telemetry streaming, and automated disruption healing."
+      title="Corridor Simulation Deck"
+      subtitle="Interactive test of Salem City corridors, vehicle movements, and standby bus replacements."
       actions={
         <div className="flex items-center gap-2">
           <Badge
             variant="outline"
-            className="font-mono text-xs border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 gap-1.5"
+            className="font-mono text-xs border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/10 gap-1.5 rounded"
           >
-            <span className="size-2 rounded-full bg-indigo-500 animate-ping"></span>
+            <span className="size-2 rounded bg-blue-500"></span>
             Simulation Deck
           </Badge>
           <Button
             variant="outline"
             size="sm"
             onClick={resetSimulation}
-            className="text-xs h-8 gap-1.5 cursor-pointer"
+            className="text-xs h-8 gap-1.5 cursor-pointer rounded-md"
           >
             <RotateCcw className="size-3.5" />
             Reset 08:30 AM
@@ -887,12 +924,12 @@ function SimulationPage() {
     >
       <div className="space-y-6">
         {/* 1. MASTER SIMULATION CONTROLLER & CLOCK DECK */}
-        <div className="glass-panel p-4 sm:p-5 rounded-3xl bg-linear-to-r from-card via-card to-primary/5 border border-border/80 shadow-md">
+        <div className="glass-panel p-4 sm:p-5 rounded-lg border border-border shadow-xs">
           <div className="flex flex-wrap items-center justify-between gap-4">
             {/* Clock & Phase */}
             <div className="flex items-center gap-3">
-              <div className="size-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs">
-                <Clock className="size-6 animate-pulse" />
+              <div className="size-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs">
+                <Clock className="size-6" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -901,23 +938,28 @@ function SimulationPage() {
                   </span>
                   <Badge
                     variant="outline"
-                    className={cn("text-[11px] font-semibold px-2 py-0.5", timePhase.color)}
+                    className={cn(
+                      "text-[11px] font-semibold px-2 py-0.5 rounded",
+                      timePhase.color,
+                    )}
                   >
                     {timePhase.badge}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">{timePhase.title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {timePhase.title}
+                </p>
               </div>
             </div>
 
             {/* Play / Pause & Speed Controls */}
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center bg-muted/60 p-1 rounded-xl border border-border/60">
+              <div className="flex items-center bg-muted/60 p-1 rounded-md border border-border/60">
                 <Button
                   variant={isPlaying ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setIsPlaying(!isPlaying)}
-                  className="h-8 px-3 rounded-lg text-xs gap-1.5 font-semibold cursor-pointer"
+                  className="h-8 px-3 rounded-md text-xs gap-1.5 font-semibold cursor-pointer"
                 >
                   {isPlaying ? (
                     <>
@@ -979,7 +1021,7 @@ function SimulationPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* MAP CANVAS (7 COLS) */}
           <div className="lg:col-span-7 space-y-3">
-            <div className="glass-panel p-4 rounded-3xl relative overflow-hidden flex flex-col h-[520px]">
+            <div className="glass-panel p-4 rounded-lg relative overflow-hidden flex flex-col h-[520px]">
               {/* Map Header Bar */}
               <div className="flex items-center justify-between pb-3 border-b border-border/50 z-10">
                 <div className="flex items-center gap-2">
@@ -989,14 +1031,21 @@ function SimulationPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
-                  <span>{fleet.filter((b) => b.status === "on-route").length} Moving</span>
+                  <span>
+                    {fleet.filter((b) => b.status === "on-route").length} Moving
+                  </span>
                   <span>•</span>
-                  <span>{fleet.filter((b) => b.status === "standby").length} Standby</span>
+                  <span>
+                    {fleet.filter((b) => b.status === "standby").length} Standby
+                  </span>
                 </div>
               </div>
 
               {/* Leaflet DOM Node */}
-              <div ref={mapRef} className="flex-1 w-full rounded-2xl z-0 mt-2" />
+              <div
+                ref={mapRef}
+                className="flex-1 w-full rounded-2xl z-0 mt-2"
+              />
 
               {/* Active Route Legend Bar */}
               <div className="mt-2 pt-2 border-t border-border/50 flex flex-wrap items-center gap-3 text-[11px] font-mono">
@@ -1061,7 +1110,9 @@ function SimulationPage() {
                         <span
                           className={cn(
                             "font-mono text-[9px] font-bold ml-1",
-                            bus.direction === "return" ? "text-amber-500" : "text-emerald-500",
+                            bus.direction === "return"
+                              ? "text-amber-500"
+                              : "text-emerald-500",
                           )}
                         >
                           {bus.direction === "return" ? "◀" : "▶"}
@@ -1120,7 +1171,7 @@ function SimulationPage() {
             {activeTab === "controls" && (
               <div className="space-y-4">
                 {/* ACTIVE SELECTED BUS TELEMETRY CARD */}
-                <div className="glass-panel p-4 rounded-3xl border-primary/30 relative overflow-hidden">
+                <div className="glass-panel p-4 rounded-lg border-primary/30 relative overflow-hidden">
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
@@ -1165,7 +1216,9 @@ function SimulationPage() {
                       <span className="text-xs font-bold font-mono text-foreground">
                         {selectedBus.speedKmH} km/h
                       </span>
-                      <p className="text-[10px] text-muted-foreground">Speed Telemetry</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Speed Telemetry
+                      </p>
                     </div>
                   </div>
 
@@ -1182,7 +1235,10 @@ function SimulationPage() {
                             {selectedBus.destination}
                           </span>
                         </div>
-                        <Badge variant="secondary" className="text-[10px] font-mono shrink-0">
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] font-mono shrink-0"
+                        >
                           Trip #{selectedBus.completedTrips + 1}
                         </Badge>
                       </div>
@@ -1190,15 +1246,20 @@ function SimulationPage() {
                       {/* Progress Bar of current trip leg */}
                       <div className="space-y-1">
                         <Progress
-                          value={Math.round(selectedBus.progressAlongRoute * 100)}
+                          value={Math.round(
+                            selectedBus.progressAlongRoute * 100,
+                          )}
                           className="h-1.5"
                         />
                         <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono">
                           <span>Dep: {selectedBus.origin.split(" ")[0]}</span>
                           <span>
-                            {Math.round(selectedBus.progressAlongRoute * 100)}% route complete
+                            {Math.round(selectedBus.progressAlongRoute * 100)}%
+                            route complete
                           </span>
-                          <span>Term: {selectedBus.destination.split(" ")[0]}</span>
+                          <span>
+                            Term: {selectedBus.destination.split(" ")[0]}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1207,29 +1268,41 @@ function SimulationPage() {
                   {/* Telemetry Metrics Grid */}
                   <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-border/50 text-xs">
                     <div className="p-2 rounded-xl bg-muted/40">
-                      <p className="text-[10px] text-muted-foreground">Next Stop</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Next Stop
+                      </p>
                       <p className="font-semibold text-foreground truncate mt-0.5">
                         {selectedBus.nextStop}
                       </p>
                     </div>
 
                     <div className="p-2 rounded-xl bg-muted/40">
-                      <p className="text-[10px] text-muted-foreground">Passenger Load</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Passenger Load
+                      </p>
                       <p className="font-semibold text-foreground mt-0.5">
                         {selectedBus.passengerCount} / {selectedBus.capacity} (
-                        {Math.round((selectedBus.passengerCount / selectedBus.capacity) * 100)}%)
+                        {Math.round(
+                          (selectedBus.passengerCount / selectedBus.capacity) *
+                            100,
+                        )}
+                        %)
                       </p>
                     </div>
 
                     <div className="p-2 rounded-xl bg-muted/40">
-                      <p className="text-[10px] text-muted-foreground">Driver</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Driver
+                      </p>
                       <p className="font-semibold text-foreground truncate mt-0.5">
                         {selectedBus.driver}
                       </p>
                     </div>
 
                     <div className="p-2 rounded-xl bg-muted/40">
-                      <p className="text-[10px] text-muted-foreground">Continuous Driving</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Continuous Driving
+                      </p>
                       <p
                         className={cn(
                           "font-semibold mt-0.5 font-mono",
@@ -1239,7 +1312,8 @@ function SimulationPage() {
                         )}
                       >
                         {Math.floor(selectedBus.driverDrivingMinutes)} mins{" "}
-                        {selectedBus.driverDrivingMinutes >= 240 && "[REST EXCEEDED]"}
+                        {selectedBus.driverDrivingMinutes >= 240 &&
+                          "[REST EXCEEDED]"}
                       </p>
                     </div>
                   </div>
@@ -1263,8 +1337,9 @@ function SimulationPage() {
                   </div>
 
                   <p className="text-xs text-muted-foreground">
-                    Click any real-world incident below to see how TransitOS's AI Disruption Radar
-                    and Rescheduling Engine respond in real-time:
+                    Click any real-world incident below to see how TransitOS's
+                    AI Disruption Radar and Rescheduling Engine respond in
+                    real-time:
                   </p>
 
                   <div className="space-y-2">
@@ -1279,7 +1354,8 @@ function SimulationPage() {
                             </span>
                           </div>
                           <p className="text-[11px] text-muted-foreground mt-0.5">
-                            Bus SLM-MY-104 suffers engine failure on Route 1 at Five Roads.
+                            Bus SLM-MY-104 suffers engine failure on Route 1 at
+                            Five Roads.
                           </p>
                         </div>
                         {activeScenario === "breakdown" ? (
@@ -1315,7 +1391,8 @@ function SimulationPage() {
                             </span>
                           </div>
                           <p className="text-[11px] text-muted-foreground mt-0.5">
-                            Spikes arrival variance by +14 min on Salem Junction corridor.
+                            Spikes arrival variance by +14 min on Salem Junction
+                            corridor.
                           </p>
                         </div>
                         <Button
@@ -1340,8 +1417,8 @@ function SimulationPage() {
                             </span>
                           </div>
                           <p className="text-[11px] text-muted-foreground mt-0.5">
-                            Driver hits 240 mins continuous steering limit; mandates relief
-                            handover.
+                            Driver hits 240 mins continuous steering limit;
+                            mandates relief handover.
                           </p>
                         </div>
                         {activeScenario === "driver-rest" ? (
@@ -1372,7 +1449,7 @@ function SimulationPage() {
 
             {/* TAB 2: GUIDED 4-ACT OPERATIONAL TOUR */}
             {activeTab === "walkthrough" && (
-              <div className="glass-panel p-5 rounded-3xl space-y-4">
+              <div className="glass-panel p-5 rounded-lg space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="size-7 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
                     1
@@ -1387,15 +1464,17 @@ function SimulationPage() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed pl-9">
-                  Operators configure routes (like Route 1: Town ⇄ Junction), geo-located bus stops,
-                  and generate the daily departure timetable.
+                  Operators configure routes (like Route 1: Town ⇄ Junction),
+                  geo-located bus stops, and generate the daily departure
+                  timetable.
                 </p>
                 <div className="pl-9">
                   <Link
                     to="/operations/trips"
                     className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
                   >
-                    Open Timetable & Departures <ArrowRight className="size-3" />
+                    Open Timetable & Departures{" "}
+                    <ArrowRight className="size-3" />
                   </Link>
                 </div>
 
@@ -1413,9 +1492,9 @@ function SimulationPage() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed pl-9">
-                  Instead of manual guesswork, the AI solver batches trips into legal shifts,
-                  guaranteeing drivers never exceed 240 mins continuous driving and get 8h mandatory
-                  rest.
+                  Instead of manual guesswork, the AI solver batches trips into
+                  legal shifts, guaranteeing drivers never exceed 240 mins
+                  continuous driving and get 8h mandatory rest.
                 </p>
                 <div className="pl-9">
                   <Link
@@ -1440,8 +1519,9 @@ function SimulationPage() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed pl-9">
-                  The operations desk tracks buses moving across Salem corridors, alerting
-                  dispatchers if a bus falls behind schedule by more than 5 minutes.
+                  The operations desk tracks buses moving across Salem
+                  corridors, alerting dispatchers if a bus falls behind schedule
+                  by more than 5 minutes.
                 </p>
                 <div className="pl-9">
                   <Link
@@ -1466,8 +1546,9 @@ function SimulationPage() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed pl-9">
-                  When a breakdown occurs, Disruption Radar generates candidate recovery plans,
-                  automatically recommending the lowest-delay standby vehicle dispatch.
+                  When a breakdown occurs, Disruption Radar generates candidate
+                  recovery plans, automatically recommending the lowest-delay
+                  standby vehicle dispatch.
                 </p>
                 <div className="pl-9">
                   <Link
@@ -1482,7 +1563,7 @@ function SimulationPage() {
 
             {/* TAB 3: RADIO LOGS & EVENT STREAM */}
             {activeTab === "telemetry" && (
-              <div className="glass-panel p-4 rounded-3xl space-y-3">
+              <div className="glass-panel p-4 rounded-lg space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <Radio className="size-4 text-emerald-500 animate-pulse" />
@@ -1515,7 +1596,9 @@ function SimulationPage() {
                     >
                       <div className="flex items-center justify-between font-mono text-[10px] text-muted-foreground mb-1">
                         <span>{log.time}</span>
-                        <span className="uppercase font-semibold tracking-wider">{log.type}</span>
+                        <span className="uppercase font-semibold tracking-wider">
+                          {log.type}
+                        </span>
                       </div>
                       <p className="font-sans text-xs">{log.text}</p>
                     </div>
