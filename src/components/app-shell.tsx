@@ -326,133 +326,135 @@ export function AppShell({
       <div className="lg:pl-64 flex flex-col min-h-screen">
         {/* Sticky Top Header */}
         <header className="sticky top-0 z-20 border-b border-border/80 bg-background/85 backdrop-blur-md transition-all">
-          <div className="flex items-center gap-3 px-4 py-3 sm:px-6">
-            <Sheet open={open} onOpenChange={setOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="lg:hidden shrink-0 rounded-md"
-                >
-                  <Menu className="size-4" />
-                  <span className="sr-only">Open navigation</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-64 border-0 p-0">
-                <SidebarContent onNavigate={() => setOpen(false)} />
-              </SheetContent>
-            </Sheet>
-
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="truncate text-base font-bold tracking-tight sm:text-lg text-foreground">
-                  {title}
-                </h1>
-
-                {/* Multi-Tenant Corporation & Depot Switcher */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-primary/25 bg-primary/10 hover:bg-primary/15 px-2.5 py-1 text-xs font-semibold text-primary transition-colors cursor-pointer"
-                      title="Switch Operating Corporation & Depot"
-                    >
-                      <Building2 className="size-3.5" />
-                      <span className="font-mono text-[10px] truncate max-w-[140px] md:max-w-[200px]">
-                        {currentTenant.name.replace(" Corporation", "").replace(" Transit", "")}: {currentDepot}
-                      </span>
-                      <ChevronDown className="size-3 opacity-60" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="w-80 shadow-lg border-border rounded-lg"
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+            {/* Header Left: Mobile menu & Title + Tenant Selector */}
+            <div className="flex items-center gap-2.5 shrink-0 min-w-0">
+              <Sheet open={open} onOpenChange={setOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="lg:hidden shrink-0 rounded-md size-8"
                   >
-                    <DropdownMenuLabel className="text-[11px] text-muted-foreground uppercase tracking-wider font-mono">
-                      Switch Transport Corporation
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {allTenants.map((t) => (
-                      <DropdownMenuItem
-                        key={t.id}
-                        onClick={() => {
-                          switchTenant(t.id);
-                          toast.success(
-                            `Switched to ${t.name} (${t.activeDepot})`,
-                          );
-                        }}
-                        className="flex items-center justify-between cursor-pointer py-2 rounded-md"
+                    <Menu className="size-4" />
+                    <span className="sr-only">Open navigation</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-64 border-0 p-0">
+                  <SidebarContent onNavigate={() => setOpen(false)} />
+                </SheetContent>
+              </Sheet>
+
+              <div className="min-w-0 flex flex-col justify-center">
+                <div className="flex items-center gap-2">
+                  <h1 className="truncate text-sm sm:text-base font-bold tracking-tight text-foreground">
+                    {title}
+                  </h1>
+
+                  {/* Multi-Tenant Corporation & Depot Switcher */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="inline-flex items-center gap-1.5 rounded-md border border-primary/25 bg-primary/10 hover:bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary transition-colors cursor-pointer shrink-0"
+                        title="Switch Operating Corporation & Depot"
                       >
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-xs text-foreground truncate">
-                            {t.name}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground font-mono">
-                            {t.region} · {t.fleetCount} Buses · {t.routesCount} Routes
-                          </p>
-                        </div>
-                        {t.id === currentTenant.id && (
-                          <Check className="size-4 text-primary ml-2 shrink-0" />
-                        )}
-                      </DropdownMenuItem>
-                    ))}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="text-[11px] text-muted-foreground uppercase tracking-wider font-mono">
-                      Depot Selection ({currentTenant.name})
-                    </DropdownMenuLabel>
-                    {currentTenant.depots.map(
-                      (
-                        d: string | { id: string; name: string; code?: string },
-                      ) => {
-                        const depotName = typeof d === "string" ? d : d.name;
-                        const depotCode = typeof d === "string" ? "" : d.code;
-                        const depotKey = typeof d === "string" ? d : d.id;
-                        const isSelected = depotName === currentDepot;
-                        return (
-                          <DropdownMenuItem
-                            key={depotKey}
-                            onClick={() => {
-                              switchDepot(depotName);
-                              toast.success(
-                                `Operating depot set to ${depotName}`,
-                              );
-                            }}
-                            className="text-xs flex items-center justify-between cursor-pointer rounded-md"
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <span>{depotName}</span>
-                              {depotCode ? (
-                                <span className="text-[10px] text-muted-foreground font-mono">
-                                  ({depotCode})
-                                </span>
-                              ) : null}
-                            </div>
-                            {isSelected && (
-                              <Check className="size-3.5 text-primary ml-2 shrink-0" />
-                            )}
-                          </DropdownMenuItem>
-                        );
-                      },
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                        <Building2 className="size-3" />
+                        <span className="font-mono text-[10px] truncate max-w-[120px] sm:max-w-[180px]">
+                          {currentTenant.name.replace(" Corporation", "").replace(" Transit", "")}: {currentDepot}
+                        </span>
+                        <ChevronDown className="size-2.5 opacity-60" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="start"
+                      className="w-80 shadow-lg border-border rounded-lg"
+                    >
+                      <DropdownMenuLabel className="text-[11px] text-muted-foreground uppercase tracking-wider font-mono">
+                        Switch Transport Corporation
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {allTenants.map((t) => (
+                        <DropdownMenuItem
+                          key={t.id}
+                          onClick={() => {
+                            switchTenant(t.id);
+                            toast.success(
+                              `Switched to ${t.name} (${t.activeDepot})`,
+                            );
+                          }}
+                          className="flex items-center justify-between cursor-pointer py-2 rounded-md"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-xs text-foreground truncate">
+                              {t.name}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground font-mono">
+                              {t.region} · {t.fleetCount} Buses · {t.routesCount} Routes
+                            </p>
+                          </div>
+                          {t.id === currentTenant.id && (
+                            <Check className="size-4 text-primary ml-2 shrink-0" />
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-[11px] text-muted-foreground uppercase tracking-wider font-mono">
+                        Depot Selection ({currentTenant.name})
+                      </DropdownMenuLabel>
+                      {currentTenant.depots.map(
+                        (
+                          d: string | { id: string; name: string; code?: string },
+                        ) => {
+                          const depotName = typeof d === "string" ? d : d.name;
+                          const depotCode = typeof d === "string" ? "" : d.code;
+                          const depotKey = typeof d === "string" ? d : d.id;
+                          const isSelected = depotName === currentDepot;
+                          return (
+                            <DropdownMenuItem
+                              key={depotKey}
+                              onClick={() => {
+                                switchDepot(depotName);
+                                toast.success(
+                                  `Operating depot set to ${depotName}`,
+                                );
+                              }}
+                              className="text-xs flex items-center justify-between cursor-pointer rounded-md"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span>{depotName}</span>
+                                {depotCode ? (
+                                  <span className="text-[10px] text-muted-foreground font-mono">
+                                    ({depotCode})
+                                  </span>
+                                ) : null}
+                              </div>
+                              {isSelected && (
+                                <Check className="size-3.5 text-primary ml-2 shrink-0" />
+                              )}
+                            </DropdownMenuItem>
+                          );
+                        },
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                {subtitle ? (
+                  <p className="text-[10px] text-muted-foreground truncate hidden xl:block">
+                    {subtitle}
+                  </p>
+                ) : null}
               </div>
-              {subtitle ? (
-                <p className="mt-0.5 text-xs text-muted-foreground truncate">
-                  {subtitle}
-                </p>
-              ) : null}
             </div>
 
-
-            {/* Persistent Global Search */}
-            <div className="hidden sm:flex items-center flex-1 max-w-sm ml-2">
+            {/* Persistent Global Search Bar with Options and Settings */}
+            <div className="hidden lg:flex items-center flex-1 max-w-md mx-3">
               <GlobalSearchBar />
             </div>
 
             {/* Header Right Actions */}
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2 ml-auto">
               {actions ? (
-                <div className="flex items-center gap-2">{actions}</div>
+                <div className="flex items-center gap-1.5">{actions}</div>
               ) : null}
 
               {/* Operations Guide Sheet Trigger */}

@@ -543,6 +543,19 @@ export const bulkAssignConductors = async (params?: any) => {
   return await _bulkAssignConductors(toServerFnArgs(params));
 };
 
+const _bulkAssignFleetAndCrew = createServerFn({ method: "POST" })
+  .validator((params?: { serviceDate?: string; depot?: string }) => params)
+  .handler(async ({ data }) => {
+    const { bulkAssignFleetAndCrewImpl } = await import(
+      "../server/scheduling-ops"
+    );
+    return await bulkAssignFleetAndCrewImpl(data);
+  });
+
+export const bulkAssignFleetAndCrew = async (params?: any) => {
+  return await _bulkAssignFleetAndCrew(toServerFnArgs(params));
+};
+
 const _retryIssueAnalysis = createServerFn({ method: "POST" })
   .validator((params: { issueId: string }) => params)
   .handler(async ({ data }) => {

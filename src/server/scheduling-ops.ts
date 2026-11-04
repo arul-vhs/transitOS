@@ -2105,14 +2105,91 @@ export async function getLiveTrackingAssignmentsImpl(filters?: {
     tripConflictsMap.set(tId, list);
   };
 
-  const assignments: LiveTrackingAssignment[] = tripRows.map((t) => {
+  // Smart allocation trackers for fleet and crew
+  const availableBusesList = Array.from(busMap.values()).filter(
+    (b) => b.status !== "out-of-service",
+  );
+  const availableDriversList = Array.from(crewMap.values()).filter(
+    (c) => c.role === "driver" && c.status !== "leave" && c.status !== "medical-leave",
+  );
+  const availableConductorsList = Array.from(crewMap.values()).filter(
+    (c) => c.role === "conductor" && c.status !== "leave",
+  );
+
+  const busBusyTimes = new Map<string, Array<{ start: number; end: number }>>();
+  const driverBusyTimes = new Map<string, Array<{ start: number; end: number }>>();
+  const conductorBusyTimes = new Map<string, Array<{ start: number; end: number }>>();
+
+  // First pass: register already assigned schedules
+  tripRows.forEach((t) => {
     const duty = dutyTripsMap.get(t.id);
-    const bus = duty?.bus || (duty?.busId ? busMap.get(duty.busId) : null);
-    const driver =
+    if (duty?.busId) {
+      const list = busBusyTimes.get(duty.busId) || [];
+      list.push({ start: t.startTime, end: t.endTime + 10 });
+      busBusyTimes.set(duty.busId, list);
+    }
+    if (duty?.driverId) {
+      const list = driverBusyTimes.get(duty.driverId) || [];
+      list.push({ start: t.startTime, end: t.endTime + 15 });
+      driverBusyTimes.set(duty.driverId, list);
+    }
+    if (duty?.conductorId) {
+      const list = conductorBusyTimes.get(duty.conductorId) || [];
+      list.push({ start: t.startTime, end: t.endTime + 10 });
+      conductorBusyTimes.set(duty.conductorId, list);
+    }
+  });
+
+  const assignments: LiveTrackingAssignment[] = tripRows.map((t) => {
+    let duty = dutyTripsMap.get(t.id);
+    let bus = duty?.bus || (duty?.busId ? busMap.get(duty.busId) : null);
+    let driver =
       duty?.driver || (duty?.driverId ? crewMap.get(duty.driverId) : null);
-    const conductor =
+    let conductor =
       duty?.conductor ||
       (duty?.conductorId ? crewMap.get(duty.conductorId) : null);
+
+    // Auto-resolve missing bus if available
+    if (!bus && availableBusesList.length > 0) {
+      const candidate = availableBusesList.find((b) => {
+        const intervals = busBusyTimes.get(b.id) || [];
+        return !intervals.some((inv) => t.startTime < inv.end && t.endTime > inv.start);
+      });
+      if (candidate) {
+        bus = candidate;
+        const intervals = busBusyTimes.get(candidate.id) || [];
+        intervals.push({ start: t.startTime, end: t.endTime + 10 });
+        busBusyTimes.set(candidate.id, intervals);
+      }
+    }
+
+    // Auto-resolve missing driver if available
+    if (!driver && availableDriversList.length > 0) {
+      const candidate = availableDriversList.find((d) => {
+        const intervals = driverBusyTimes.get(d.id) || [];
+        return !intervals.some((inv) => t.startTime < inv.end && t.endTime > inv.start);
+      });
+      if (candidate) {
+        driver = candidate;
+        const intervals = driverBusyTimes.get(candidate.id) || [];
+        intervals.push({ start: t.startTime, end: t.endTime + 15 });
+        driverBusyTimes.set(candidate.id, intervals);
+      }
+    }
+
+    // Auto-resolve missing conductor if available
+    if (!conductor && availableConductorsList.length > 0) {
+      const candidate = availableConductorsList.find((c) => {
+        const intervals = conductorBusyTimes.get(c.id) || [];
+        return !intervals.some((inv) => t.startTime < inv.end && t.endTime > inv.start);
+      });
+      if (candidate) {
+        conductor = candidate;
+        const intervals = conductorBusyTimes.get(candidate.id) || [];
+        intervals.push({ start: t.startTime, end: t.endTime + 10 });
+        conductorBusyTimes.set(candidate.id, intervals);
+      }
+    }
 
     return {
       id: t.id,
@@ -2134,19 +2211,19 @@ export async function getLiveTrackingAssignmentsImpl(filters?: {
       busRegNumber:
         bus?.registrationNumber || duty?.busRegNumber || "Unassigned",
       busType: bus?.busType || "Standard Leyland BS-VI",
-      busStatus: bus?.status || (duty?.busId ? "assigned" : "unassigned"),
+      busStatus: bus?.status || (bus?.id ? "assigned" : "unassigned"),
       busDepot: bus?.depot || "Depot",
       driverId: driver?.id || duty?.driverId || null,
       driverName: driver?.name || duty?.driverName || "Unassigned",
       driverStatus:
-        driver?.status || (duty?.driverId ? "assigned" : "unassigned"),
+        driver?.status || (driver?.id ? "assigned" : "unassigned"),
       conductorId: conductor?.id || duty?.conductorId || null,
       conductorName: conductor?.name || duty?.conductorName || "Unassigned",
       conductorStatus:
-        conductor?.status || (duty?.conductorId ? "assigned" : "unassigned"),
-      conductorAssigned: Boolean(conductor?.id || duty?.conductorId),
-      driverAssigned: Boolean(driver?.id || duty?.driverId),
-      busAssigned: Boolean(bus?.id || duty?.busId),
+        conductor?.status || (conductor?.id ? "assigned" : "unassigned"),
+      conductorAssigned: Boolean(conductor?.id),
+      driverAssigned: Boolean(driver?.id),
+      busAssigned: Boolean(bus?.id),
       status: "scheduled",
       conflicts: [],
     };
@@ -4074,6 +4151,177 @@ export async function bulkAssignConductorsImpl(params?: {
     assignedCount,
     unassignedRemaining,
     details,
+  };
+}
+
+export async function bulkAssignFleetAndCrewImpl(params?: {
+  serviceDate?: string;
+  depot?: string;
+}): Promise<{
+  success: boolean;
+  assignedBuses: number;
+  assignedDrivers: number;
+  assignedConductors: number;
+  message: string;
+}> {
+  const currentUser = await requireAuth();
+  await requirePermission(currentUser.role, "schedule.modify");
+
+  const targetDate = params?.serviceDate || "25 Aug 2026";
+
+  let eligibleBuses: any[] = [];
+  let eligibleDrivers: any[] = [];
+  let eligibleConductors: any[] = [];
+  let tenantDutiesList: any[] = [];
+
+  try {
+    const allBuses = await db
+      .select()
+      .from(buses)
+      .where(eq(buses.tenantId, currentUser.tenantId));
+    eligibleBuses = allBuses.filter((b) => b.status !== "out-of-service");
+
+    const allCrew = await db
+      .select()
+      .from(crew)
+      .where(eq(crew.tenantId, currentUser.tenantId));
+    eligibleDrivers = allCrew.filter(
+      (c) => c.role === "driver" && c.status !== "leave" && c.status !== "medical-leave",
+    );
+    eligibleConductors = allCrew.filter(
+      (c) => c.role === "conductor" && c.status !== "leave",
+    );
+
+    tenantDutiesList = await db
+      .select()
+      .from(duties)
+      .where(
+        and(
+          eq(duties.tenantId, currentUser.tenantId),
+          eq(duties.serviceDate, targetDate),
+        ),
+      )
+      .orderBy(duties.startTime);
+  } catch {
+    eligibleBuses = FALLBACK_BUSES.filter(
+      (b) => b.tenantId === currentUser.tenantId && b.status !== "out-of-service",
+    );
+    eligibleDrivers = FALLBACK_CREW.filter(
+      (c) => c.tenantId === currentUser.tenantId && c.role === "driver",
+    );
+    eligibleConductors = FALLBACK_CREW.filter(
+      (c) => c.tenantId === currentUser.tenantId && c.role === "conductor",
+    );
+    tenantDutiesList = FALLBACK_DUTIES.filter(
+      (d) => d.tenantId === currentUser.tenantId,
+    );
+  }
+
+  const busSched = new Map<string, Array<{ start: number; end: number }>>();
+  const driverSched = new Map<string, Array<{ start: number; end: number }>>();
+  const conductorSched = new Map<string, Array<{ start: number; end: number }>>();
+
+  let busesAssignedCount = 0;
+  let driversAssignedCount = 0;
+  let conductorsAssignedCount = 0;
+
+  for (const d of tenantDutiesList) {
+    let busId = d.busId;
+    let driverId = d.driverId;
+    let conductorId = d.conductorId;
+
+    // Bus
+    if (!busId && eligibleBuses.length > 0) {
+      const chosenBus = eligibleBuses.find((b) => {
+        const intervals = busSched.get(b.id) || [];
+        return !intervals.some((inv) => d.startTime < inv.end && d.endTime > inv.start);
+      });
+      if (chosenBus) {
+        busId = chosenBus.id;
+        busesAssignedCount++;
+        const intervals = busSched.get(chosenBus.id) || [];
+        intervals.push({ start: d.startTime, end: d.endTime + 10 });
+        busSched.set(chosenBus.id, intervals);
+      }
+    } else if (busId) {
+      const intervals = busSched.get(busId) || [];
+      intervals.push({ start: d.startTime, end: d.endTime + 10 });
+      busSched.set(busId, intervals);
+    }
+
+    // Driver
+    if (!driverId && eligibleDrivers.length > 0) {
+      const chosenDriver = eligibleDrivers.find((dr) => {
+        const intervals = driverSched.get(dr.id) || [];
+        return !intervals.some((inv) => d.startTime < inv.end && d.endTime > inv.start);
+      });
+      if (chosenDriver) {
+        driverId = chosenDriver.id;
+        driversAssignedCount++;
+        const intervals = driverSched.get(chosenDriver.id) || [];
+        intervals.push({ start: d.startTime, end: d.endTime + 15 });
+        driverSched.set(chosenDriver.id, intervals);
+      }
+    } else if (driverId) {
+      const intervals = driverSched.get(driverId) || [];
+      intervals.push({ start: d.startTime, end: d.endTime + 15 });
+      driverSched.set(driverId, intervals);
+    }
+
+    // Conductor
+    if (!conductorId && eligibleConductors.length > 0) {
+      const chosenConductor = eligibleConductors.find((cd) => {
+        const intervals = conductorSched.get(cd.id) || [];
+        return !intervals.some((inv) => d.startTime < inv.end && d.endTime > inv.start);
+      });
+      if (chosenConductor) {
+        conductorId = chosenConductor.id;
+        conductorsAssignedCount++;
+        const intervals = conductorSched.get(chosenConductor.id) || [];
+        intervals.push({ start: d.startTime, end: d.endTime + 10 });
+        conductorSched.set(chosenConductor.id, intervals);
+      }
+    } else if (conductorId) {
+      const intervals = conductorSched.get(conductorId) || [];
+      intervals.push({ start: d.startTime, end: d.endTime + 10 });
+      conductorSched.set(conductorId, intervals);
+    }
+
+    try {
+      await db
+        .update(duties)
+        .set({
+          busId,
+          driverId,
+          conductorId,
+          status: "assigned",
+        })
+        .where(eq(duties.id, d.id));
+    } catch {
+      // In-memory update
+      d.busId = busId;
+      d.driverId = driverId;
+      d.conductorId = conductorId;
+      d.status = "assigned";
+    }
+  }
+
+  try {
+    await db.insert(auditLogs).values({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.id,
+      email: currentUser.email,
+      action: "BULK_FLEET_CREW_ASSIGNMENT",
+      details: `Auto-assigned fleet and crew on ${targetDate}: ${busesAssignedCount} buses, ${driversAssignedCount} drivers, ${conductorsAssignedCount} conductors.`,
+    });
+  } catch {}
+
+  return {
+    success: true,
+    assignedBuses: busesAssignedCount,
+    assignedDrivers: driversAssignedCount,
+    assignedConductors: conductorsAssignedCount,
+    message: `Assigned ${busesAssignedCount} buses, ${driversAssignedCount} drivers, and ${conductorsAssignedCount} conductors successfully.`,
   };
 }
 

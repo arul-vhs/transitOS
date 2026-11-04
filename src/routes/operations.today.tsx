@@ -80,6 +80,7 @@ import {
   recommendConductorForTrip,
   assignConductorToTrip,
   bulkAssignConductors,
+  bulkAssignFleetAndCrew,
   retryIssueAnalysis,
   markIssueManuallyResolved,
   ProblemCategory,
@@ -171,6 +172,7 @@ function OperationsTodayPage() {
 
   const [serviceDate, setServiceDate] = useState("25 Aug 2026");
   const [assignmentStatusFilter, setAssignmentStatusFilter] = useState<string>("all");
+  const [assignmentDepotFilter, setAssignmentDepotFilter] = useState<string>("all");
   const [mapRouteFilter, setMapRouteFilter] = useState<string>("all");
   const [mapDepotFilter, setMapDepotFilter] = useState<string>("all");
   const [mapStatusFilter, setMapStatusFilter] = useState<string>("all");
@@ -473,6 +475,25 @@ function OperationsTodayPage() {
     },
     onError: (err: any) => {
       toast.error(err.message || "Bulk conductor assignment failed.");
+    },
+  });
+
+  // Bulk Fleet & Crew Full Auto-Assignment Mutation
+  const bulkFleetCrewMutation = useMutation({
+    mutationFn: async () => {
+      return await bulkAssignFleetAndCrew({
+        serviceDate,
+        depot: mapDepotFilter !== "all" ? mapDepotFilter : undefined,
+      });
+    },
+    onSuccess: (res) => {
+      toast.success(res.message || "Full fleet & crew auto-assignment complete.");
+      queryClient.invalidateQueries({ queryKey: ["live-tracking-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["operational-issues"] });
+      queryClient.invalidateQueries({ queryKey: ["live-bus-tracking"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Fleet and crew auto-assignment failed.");
     },
   });
 
@@ -839,14 +860,41 @@ function OperationsTodayPage() {
   // Filter Assignments
   const filteredAssignments = useMemo(() => {
     return assignments.filter((item) => {
+      // Depot Filter
+      if (
+        assignmentDepotFilter !== "all" &&
+        item.busDepot.toLowerCase() !== assignmentDepotFilter.toLowerCase()
+      ) {
+        return false;
+      }
+
+      // Status Filter
       if (assignmentStatusFilter === "all") return true;
-      if (assignmentStatusFilter === "active") return item.status === "active";
-      if (assignmentStatusFilter === "conflicted") return item.status === "conflicted";
-      if (assignmentStatusFilter === "unassigned") return item.status === "unassigned";
-      if (assignmentStatusFilter === "missing_conductor") return !item.conductorId;
+      if (assignmentStatusFilter === "staffed") {
+        return (
+          Boolean(item.busId) &&
+          Boolean(item.driverId) &&
+          Boolean(item.conductorId) &&
+          (!item.conflicts || item.conflicts.length === 0)
+        );
+      }
+      if (assignmentStatusFilter === "conflicted") {
+        return item.status === "conflicted" || (item.conflicts && item.conflicts.length > 0);
+      }
+      if (assignmentStatusFilter === "missing_conductor") {
+        return !item.conductorId || item.conductorName === "Unassigned";
+      }
+      if (assignmentStatusFilter === "unassigned_bus_driver") {
+        return (
+          !item.busId ||
+          !item.driverId ||
+          item.busRegNumber === "Unassigned" ||
+          item.driverName === "Unassigned"
+        );
+      }
       return true;
     });
-  }, [assignments, assignmentStatusFilter]);
+  }, [assignments, assignmentStatusFilter, assignmentDepotFilter]);
 
   // Open Issue Review Drawer
   const handleOpenReview = (issue: OperationalIssue) => {
@@ -1464,18 +1512,48 @@ function OperationsTodayPage() {
         <section className="space-y-3 pt-2">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base font-bold text-foreground tracking-tight flex items-center gap-2">
                   <Users className="size-4 text-emerald-600" />
                   Current Vehicle & Crew Assignments
                 </h2>
-                {assignmentSummary.unassignedConductors > 0 && (
+                {assignmentSummary.unassignedConductors === 0 &&
+                assignmentSummary.unassignedDrivers === 0 &&
+                assignmentSummary.unassignedBuses === 0 ? (
                   <Badge
                     variant="outline"
-                    className="text-[11px] font-bold px-2 py-0 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded-md"
+                    className="text-[11px] font-bold px-2 py-0.5 border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-md flex items-center gap-1"
                   >
-                    {assignmentSummary.unassignedConductors} Missing Conductors
+                    <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400" />
+                    <span>All {assignments.length} Departures Fully Staffed</span>
                   </Badge>
+                ) : (
+                  <>
+                    {assignmentSummary.unassignedConductors > 0 && (
+                      <Badge
+                        variant="outline"
+                        className="text-[11px] font-bold px-2 py-0 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded-md"
+                      >
+                        {assignmentSummary.unassignedConductors} Missing Conductors
+                      </Badge>
+                    )}
+                    {assignmentSummary.unassignedDrivers > 0 && (
+                      <Badge
+                        variant="outline"
+                        className="text-[11px] font-bold px-2 py-0 border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-400 rounded-md"
+                      >
+                        {assignmentSummary.unassignedDrivers} Unassigned Drivers
+                      </Badge>
+                    )}
+                    {assignmentSummary.unassignedBuses > 0 && (
+                      <Badge
+                        variant="outline"
+                        className="text-[11px] font-bold px-2 py-0 border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-400 rounded-md"
+                      >
+                        {assignmentSummary.unassignedBuses} Unassigned Buses
+                      </Badge>
+                    )}
+                  </>
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -1483,18 +1561,30 @@ function OperationsTodayPage() {
               </p>
             </div>
 
-            {/* Table Header Action: Bulk Assign Conductors */}
-            <div className="flex items-center gap-2">
+            {/* Table Header Actions: Auto-Assign All & Bulk Conductors */}
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 size="sm"
-                onClick={() => bulkConductorMutation.mutate()}
-                disabled={bulkConductorMutation.isPending}
-                className="h-8 text-xs px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md shadow-xs flex items-center gap-1.5"
+                onClick={() => bulkFleetCrewMutation.mutate()}
+                disabled={bulkFleetCrewMutation.isPending}
+                className="h-8 text-xs px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
                 <CheckCheck className="size-3.5" />
+                {bulkFleetCrewMutation.isPending
+                  ? "Assigning Fleet & Crew..."
+                  : "Auto-Assign All Fleet & Crew"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => bulkConductorMutation.mutate()}
+                disabled={bulkConductorMutation.isPending}
+                className="h-8 text-xs px-2.5 border-border hover:bg-muted font-medium text-foreground rounded-md flex items-center gap-1.5 cursor-pointer"
+              >
+                <Users className="size-3.5 text-blue-600" />
                 {bulkConductorMutation.isPending
-                  ? "Assigning Conductors..."
-                  : "Bulk Assign Available Conductors"}
+                  ? "Assigning..."
+                  : "Assign Conductors"}
               </Button>
             </div>
           </div>
@@ -1515,7 +1605,8 @@ function OperationsTodayPage() {
                 item.tripCode.toLowerCase().includes(q) ||
                 (item.dutyCode || "").toLowerCase().includes(q) ||
                 item.origin.toLowerCase().includes(q) ||
-                item.destination.toLowerCase().includes(q)
+                item.destination.toLowerCase().includes(q) ||
+                item.busDepot.toLowerCase().includes(q)
               );
             }}
             filters={[
@@ -1525,12 +1616,25 @@ function OperationsTodayPage() {
                 value: assignmentStatusFilter,
                 options: [
                   { label: "All Assignments", value: "all" },
-                  { label: "Active & Staffed", value: "active" },
+                  { label: "Fully Staffed (100%)", value: "staffed" },
                   { label: "Missing Conductor", value: "missing_conductor" },
+                  { label: "Unassigned Bus / Driver", value: "unassigned_bus_driver" },
                   { label: "Conflicted", value: "conflicted" },
-                  { label: "Unassigned", value: "unassigned" },
                 ],
                 onChange: (v) => setAssignmentStatusFilter(v),
+              },
+              {
+                key: "depot",
+                label: "Filter Depot",
+                value: assignmentDepotFilter,
+                options: [
+                  { label: "All Depots", value: "all" },
+                  { label: "Meyyanur Depot", value: "Meyyanur Depot" },
+                  { label: "Johnsonpet Depot", value: "Johnsonpet Depot" },
+                  { label: "Hasthampatti Depot", value: "Hasthampatti Depot" },
+                  { label: "Steel Plant Depot", value: "Steel Plant Depot" },
+                ],
+                onChange: (v) => setAssignmentDepotFilter(v),
               },
             ]}
           />
