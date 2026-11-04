@@ -22,6 +22,9 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { TransitTable, ColumnDef } from "@/components/ui/transit-table";
+import { useActiveTenant } from "@/lib/tenant-context";
+import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -128,6 +131,7 @@ function RoutesPage() {
   const context = RootRoute.useRouteContext();
   const user = context?.user;
   const canManage = hasPermission(user?.role || "", "routes.manage");
+  const { currentTenant } = useActiveTenant();
 
   // Tab state: "routes" | "stops"
   const [viewTab, setViewTab] = useState<"routes" | "stops">("routes");
@@ -499,6 +503,175 @@ function RoutesPage() {
     (r) => (r.peakFrequency || 30) <= 15,
   ).length;
 
+
+  const routeColumns: ColumnDef<RouteItem>[] = [
+    {
+      header: "Route No",
+      accessorKey: "code",
+      cell: (route) => (
+        <span
+          className="inline-flex items-center justify-center px-2 py-0.5 rounded font-mono text-xs font-bold text-white shadow-2xs"
+          style={{ backgroundColor: route.color || "#2563EB" }}
+        >
+          {route.code}
+        </span>
+      ),
+    },
+    {
+      header: "Corridor Terminals",
+      accessorKey: "name",
+      cell: (route) => (
+        <div className="text-xs">
+          <p className="font-semibold text-foreground">{route.name}</p>
+          <p className="text-[11px] text-muted-foreground">
+            {route.origin || "Origin"} ⇄ {route.destination || "Destination"}
+          </p>
+        </div>
+      ),
+    },
+    {
+      header: "Distance / Runtime",
+      accessorKey: "lengthKm",
+      cell: (route) => (
+        <div className="text-xs">
+          <span className="font-bold text-foreground">{route.lengthKm} km</span>
+          <span className="text-muted-foreground mx-1">·</span>
+          <span className="text-muted-foreground">{route.durationMin} mins</span>
+        </div>
+      ),
+    },
+    {
+      header: "Stops",
+      cell: (route) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleOpenStops(route.id);
+          }}
+          className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium cursor-pointer"
+        >
+          <MapPin className="size-3" />
+          <span>{route.stopsCount || 6} stops</span>
+        </button>
+      ),
+    },
+    {
+      header: "Peak Frequency",
+      accessorKey: "peakFrequency",
+      cell: (route) => (
+        <span className="text-xs font-mono text-muted-foreground">
+          Every {route.peakFrequency || 15}m
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      accessorKey: "status",
+      cell: (route) => (
+        <Badge
+          variant="outline"
+          className="text-[10px] border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 rounded"
+        >
+          {route.status}
+        </Badge>
+      ),
+    },
+    {
+      header: "Actions",
+      className: "text-right",
+      cell: (route) => (
+        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-xs rounded-md border-border hover:bg-muted font-medium"
+          >
+            <Link to="/operations/trips">
+              <CalendarClock className="size-3 mr-1 text-primary" />
+              Schedule
+            </Link>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleOpenStops(route.id)}
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md"
+            title="View Intermediate Stops"
+          >
+            <Eye className="size-3 mr-1" />
+            Stops
+          </Button>
+          {canManage && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleOpenEdit(route)}
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md"
+            >
+              <Edit2 className="size-3 mr-1" />
+              Edit
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  const stopDirectoryColumns: ColumnDef<any>[] = [
+    {
+      header: "#",
+      cell: (_, idx?: number) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {(idx ?? 0) + 1}
+        </span>
+      ),
+    },
+    {
+      header: "Stop Station Name",
+      accessorKey: "name",
+      cell: (stop) => (
+        <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+          <MapPin className="size-3.5 text-primary shrink-0" />
+          <span>{stop.name}</span>
+        </div>
+      ),
+    },
+    {
+      header: "Coordinates",
+      cell: (stop) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {stop.lat}, {stop.lng}
+        </span>
+      ),
+    },
+    {
+      header: "Corridors Serving Stop",
+      cell: (stop) => (
+        <div className="flex flex-wrap gap-1.5">
+          {Array.from(stop.routes || []).map((rCode: any) => (
+            <Badge
+              key={String(rCode)}
+              variant="outline"
+              className="text-[10px] font-mono border-primary/25 bg-primary/5 text-primary rounded"
+            >
+              {String(rCode)}
+            </Badge>
+          ))}
+        </div>
+      ),
+    },
+    {
+      header: "Serving Lines",
+      className: "text-right",
+      cell: (stop) => (
+        <span className="font-mono text-xs font-semibold text-foreground">
+          {stop.count} lines
+        </span>
+      ),
+    },
+  ];
+
   return (
     <AppShell
       title="Routes & Network Corridors"
@@ -542,7 +715,7 @@ function RoutesPage() {
                 Route Network (Step 2 of 6)
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Manage Salem corridors and bus stop sequences. All routes and stops are preserved to create and extend new network services.
+                Manage network corridors, termini, and bus stop sequences. All routes and stops are preserved to create and extend new services.
               </p>
             </div>
           </div>
@@ -695,113 +868,91 @@ function RoutesPage() {
           </div>
         </div>
 
-        {/* 3A. View 1: Corridor Routes Table */}
+        {/* 3A. View 1: Corridor Routes Table with Pagination & Slide-Over */}
         {viewTab === "routes" && (
-          <div className="rounded-lg border border-border/80 bg-card overflow-hidden shadow-xs">
-            <Table>
-              <TableHeader className="bg-muted/40">
-                <TableRow>
-                  <TableHead className="w-[120px] text-xs font-bold text-foreground">Route No</TableHead>
-                  <TableHead className="text-xs font-bold text-foreground">Corridor Terminals</TableHead>
-                  <TableHead className="w-[150px] text-xs font-bold text-foreground">Distance / Runtime</TableHead>
-                  <TableHead className="w-[120px] text-xs font-bold text-foreground">Stops</TableHead>
-                  <TableHead className="w-[140px] text-xs font-bold text-foreground">Peak Frequency</TableHead>
-                  <TableHead className="w-[100px] text-xs font-bold text-foreground">Status</TableHead>
-                  <TableHead className="w-[200px] text-right text-xs font-bold text-foreground">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {routesLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-10 text-xs text-muted-foreground">
-                      Loading route network...
-                    </TableCell>
-                  </TableRow>
-                ) : routesList.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-10 text-xs text-muted-foreground">
-                      No routes found matching filter.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  routesList.map((route) => (
-                    <TableRow key={route.id}>
-                      <TableCell className="font-mono text-xs font-bold text-foreground">
-                        {route.code}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        <p className="font-semibold text-foreground">{route.name}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {route.origin || "Origin"} ⇄ {route.destination || "Destination"}
-                        </p>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        <span className="font-bold text-foreground">{route.lengthKm} km</span>
-                        <span className="text-muted-foreground mx-1">·</span>
-                        <span className="text-muted-foreground">{route.durationMin} mins</span>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        <button
-                          onClick={() => handleOpenStops(route.id)}
-                          className="inline-flex items-center gap-1 text-primary hover:underline font-medium cursor-pointer"
-                        >
-                          <MapPin className="size-3" />
-                          <span>{route.stopsCount || 6} stops</span>
-                        </button>
-                      </TableCell>
-                      <TableCell className="text-xs font-mono text-muted-foreground">
-                        Every {route.peakFrequency || 15}m
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 rounded"
-                        >
-                          {route.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            asChild
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 text-xs rounded-md border-border hover:bg-muted font-medium"
-                          >
-                            <Link to="/operations/trips">
-                              <CalendarClock className="size-3 mr-1 text-primary" />
-                              Schedule
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleOpenStops(route.id)}
-                            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md"
-                            title="View Intermediate Stops"
-                          >
-                            <Eye className="size-3 mr-1" />
-                            Stops
-                          </Button>
-                          {canManage && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenEdit(route)}
-                              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md"
-                            >
-                              <Edit2 className="size-3 mr-1" />
-                              Edit
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <TransitTable
+            data={filteredRoutes}
+            columns={routeColumns}
+            isLoading={routesLoading}
+            searchPlaceholder="Search route code or terminal..."
+            exportCsvName="transit-corridors"
+            defaultPageSize={10}
+            pageSizeOptions={[10, 25, 50, 100]}
+            filters={[
+              {
+                key: "status",
+                label: "Status",
+                value: statusFilter,
+                onChange: setStatusFilter,
+                options: [
+                  { label: "All Corridors", value: "all" },
+                  { label: "Active", value: "active" },
+                  { label: "Draft", value: "draft" },
+                ],
+              },
+            ]}
+            rowDetailTitle={(route) => `Corridor: ${route.code} (${route.name})`}
+            rowDetailSubtitle={(route) => `${route.lengthKm} km · ${route.durationMin} mins · Every ${route.peakFrequency || 15}m`}
+            renderRowDetail={(route, onClose) => (
+              <div className="space-y-4 text-xs">
+                <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="px-2.5 py-0.5 rounded font-bold text-xs text-white"
+                      style={{ backgroundColor: route.color || "#2563EB" }}
+                    >
+                      {route.code}
+                    </span>
+                    <Badge variant="outline" className="text-[10px] rounded uppercase">
+                      {route.status}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/60">
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-mono">Origin Terminus:</span>
+                      <p className="font-semibold text-foreground">{route.origin}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-mono">Destination Terminus:</span>
+                      <p className="font-semibold text-foreground">{route.destination}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-mono">Corridor Distance:</span>
+                      <p className="font-mono text-foreground">{route.lengthKm} km</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-muted-foreground font-mono">Peak Headway:</span>
+                      <p className="font-mono text-foreground">{route.peakFrequency || 15} mins</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <Button
+                    asChild
+                    size="sm"
+                    className="flex-1 h-8 text-xs gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+                  >
+                    <Link to="/network/map">
+                      <MapIcon className="size-3.5" />
+                      <span>Inspect GIS Map</span>
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-8 text-xs gap-1.5 border-border rounded-md"
+                  >
+                    <Link to="/simulation">
+                      <Play className="size-3.5 fill-current" />
+                      <span>Simulate Line</span>
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            )}
+          />
         )}
 
         {/* 3B. View 2: Network Stops Directory Table */}

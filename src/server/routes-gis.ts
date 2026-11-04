@@ -131,9 +131,12 @@ export async function getRoutesImpl(filters?: {
       }),
     );
 
-    return routesWithStopsCount;
+    if (routesWithStopsCount.length > 0) {
+      return routesWithStopsCount;
+    }
+    throw new Error("No database routes for tenant, using fallback dataset");
   } catch (err) {
-    let result = [...FALLBACK_ROUTES];
+    let result = FALLBACK_ROUTES.filter((r) => r.tenantId === currentUser.tenantId);
     if (filters?.status && filters.status !== "all") {
       result = result.filter((r) => r.status === filters.status);
     }
@@ -179,11 +182,11 @@ export async function getRouteImpl(id: string) {
     }
   } catch (err) {}
 
-  const fallback = FALLBACK_ROUTES.find((r) => r.id === id);
+  const fallback = FALLBACK_ROUTES.find((r) => r.id === id && r.tenantId === currentUser.tenantId);
   if (!fallback) {
     throw new Error("Route not found");
   }
-  const fallbackStops = FALLBACK_STOPS.filter((s) => s.routeId === id);
+  const fallbackStops = FALLBACK_STOPS.filter((s) => s.routeId === id && s.tenantId === currentUser.tenantId);
   return {
     ...fallback,
     stops: fallbackStops,
@@ -419,13 +422,15 @@ export async function getAllStopsImpl() {
   await requirePermission(currentUser.role, "routes.view");
 
   try {
-    return await db
+    const dbStops = await db
       .select()
       .from(stops)
       .where(eq(stops.tenantId, currentUser.tenantId))
       .orderBy(asc(stops.sequence));
+    if (dbStops.length > 0) return dbStops;
+    throw new Error("No database stops for tenant, using fallback dataset");
   } catch (err) {
-    return FALLBACK_STOPS.map((s) => ({
+    return FALLBACK_STOPS.filter((s) => s.tenantId === currentUser.tenantId).map((s) => ({
       id: s.id,
       tenantId: s.tenantId,
       routeId: s.routeId,

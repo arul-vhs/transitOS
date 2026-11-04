@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { users, tenants, auditLogs } from "./db/schema";
+import { ROLE_PERMISSIONS, hasPermission } from "../lib/auth-shared";
 
 const SECRET =
   process.env.SESSION_SECRET ||
@@ -22,9 +23,9 @@ export interface SessionPayload {
   name: string;
 }
 
-import { ROLE_PERMISSIONS, hasPermission } from "../lib/auth-shared";
-
-export const REAL_TENANT_ID = "6fcb73df-750e-4fe5-b0cb-456b119dcd64";
+export const CHENNAI_MTC_TENANT_ID = "69000000-0000-4000-8000-000000000069";
+export const SALEM_TENANT_ID = "6fcb73df-750e-4fe5-b0cb-456b119dcd64";
+export const REAL_TENANT_ID = CHENNAI_MTC_TENANT_ID;
 
 export const OLD_USER_ID_MAP: Record<string, string> = {
   "usr-demo-admin": "59c3c165-8fcd-4490-b126-c286ffa64700",
@@ -46,7 +47,7 @@ export function getSessionFromRequest(): SessionPayload | null {
         session.tenantId === "ten-salem-transport" ||
         session.tenantId.length < 30
       ) {
-        session.tenantId = REAL_TENANT_ID;
+        session.tenantId = CHENNAI_MTC_TENANT_ID;
       }
       if (session.userId && OLD_USER_ID_MAP[session.userId]) {
         session.userId = OLD_USER_ID_MAP[session.userId];
@@ -58,7 +59,7 @@ export function getSessionFromRequest(): SessionPayload | null {
   }
 }
 
-const DEMO_ACCOUNTS: Record<
+export const DEMO_ACCOUNTS: Record<
   string,
   {
     id: string;
@@ -71,12 +72,52 @@ const DEMO_ACCOUNTS: Record<
     depotName: string;
   }
 > = {
+  "admin@mtcchennai.demo": {
+    id: "69c3c165-8fcd-4490-b126-c286ffa64700",
+    email: "admin@mtcchennai.demo",
+    name: "System Admin (MTC)",
+    role: "ORGANIZATION_ADMIN",
+    tenantId: CHENNAI_MTC_TENANT_ID,
+    tenantName: "Chennai Metropolitan Transport Corporation",
+    tenantSlug: "chennai-mtc",
+    depotName: "Central / Broadway Depot",
+  },
+  "scheduler@mtcchennai.demo": {
+    id: "69693473-27dd-4c95-b892-9afd2d41db1b",
+    email: "scheduler@mtcchennai.demo",
+    name: "Chief Scheduler (MTC)",
+    role: "SCHEDULER",
+    tenantId: CHENNAI_MTC_TENANT_ID,
+    tenantName: "Chennai Metropolitan Transport Corporation",
+    tenantSlug: "chennai-mtc",
+    depotName: "Central / Broadway Depot",
+  },
+  "planner@mtcchennai.demo": {
+    id: "69ceced7c-eb42-4cd3-9e25-ab8515ed03a1",
+    email: "planner@mtcchennai.demo",
+    name: "Route Planner (MTC)",
+    role: "ROUTE_PLANNER",
+    tenantId: CHENNAI_MTC_TENANT_ID,
+    tenantName: "Chennai Metropolitan Transport Corporation",
+    tenantSlug: "chennai-mtc",
+    depotName: "Central / Broadway Depot",
+  },
+  "depot@mtcchennai.demo": {
+    id: "69271598-b1a5-4978-8cc8-75d10a2490c5",
+    email: "depot@mtcchennai.demo",
+    name: "Depot Manager (MTC)",
+    role: "DEPOT_MANAGER",
+    tenantId: CHENNAI_MTC_TENANT_ID,
+    tenantName: "Chennai Metropolitan Transport Corporation",
+    tenantSlug: "chennai-mtc",
+    depotName: "Central / Broadway Depot",
+  },
   "admin@salemtransport.demo": {
     id: "59c3c165-8fcd-4490-b126-c286ffa64700",
     email: "admin@salemtransport.demo",
     name: "System Admin",
     role: "ORGANIZATION_ADMIN",
-    tenantId: REAL_TENANT_ID,
+    tenantId: SALEM_TENANT_ID,
     tenantName: "Salem Transport Corporation",
     tenantSlug: "salem-transport",
     depotName: "Meyyanur Depot",
@@ -86,7 +127,7 @@ const DEMO_ACCOUNTS: Record<
     email: "scheduler@salemtransport.demo",
     name: "Chief Scheduler",
     role: "SCHEDULER",
-    tenantId: REAL_TENANT_ID,
+    tenantId: SALEM_TENANT_ID,
     tenantName: "Salem Transport Corporation",
     tenantSlug: "salem-transport",
     depotName: "Meyyanur Depot",
@@ -96,7 +137,7 @@ const DEMO_ACCOUNTS: Record<
     email: "planner@salemtransport.demo",
     name: "Roster Planner",
     role: "ROUTE_PLANNER",
-    tenantId: REAL_TENANT_ID,
+    tenantId: SALEM_TENANT_ID,
     tenantName: "Salem Transport Corporation",
     tenantSlug: "salem-transport",
     depotName: "Meyyanur Depot",
@@ -106,7 +147,7 @@ const DEMO_ACCOUNTS: Record<
     email: "depot@salemtransport.demo",
     name: "Depot Manager",
     role: "DEPOT_MANAGER",
-    tenantId: REAL_TENANT_ID,
+    tenantId: SALEM_TENANT_ID,
     tenantName: "Salem Transport Corporation",
     tenantSlug: "salem-transport",
     depotName: "Meyyanur Depot",
@@ -116,7 +157,7 @@ const DEMO_ACCOUNTS: Record<
     email: "management@salemtransport.demo",
     name: "Management Executive",
     role: "MANAGEMENT",
-    tenantId: REAL_TENANT_ID,
+    tenantId: SALEM_TENANT_ID,
     tenantName: "Salem Transport Corporation",
     tenantSlug: "salem-transport",
     depotName: "Meyyanur Depot",
@@ -126,7 +167,7 @@ const DEMO_ACCOUNTS: Record<
     email: "platform@salemtransport.demo",
     name: "Platform Admin",
     role: "PLATFORM_ADMIN",
-    tenantId: REAL_TENANT_ID,
+    tenantId: SALEM_TENANT_ID,
     tenantName: "Salem Transport Corporation",
     tenantSlug: "salem-transport",
     depotName: "Meyyanur Depot",
@@ -146,8 +187,9 @@ export async function getCurrentUser() {
     !session.tenantId ||
     session.tenantId === "ten-salem-transport" ||
     session.tenantId.length < 30
-      ? REAL_TENANT_ID
+      ? CHENNAI_MTC_TENANT_ID
       : session.tenantId;
+
   const cleanUserId = OLD_USER_ID_MAP[session.userId] || session.userId;
 
   try {
@@ -173,7 +215,10 @@ export async function getCurrentUser() {
         tenantId: user.tenantId,
         tenantName: user.tenant.name,
         tenantSlug: user.tenant.slug,
-        depotName: "Meyyanur Depot",
+        depotName:
+          user.tenantId === CHENNAI_MTC_TENANT_ID
+            ? "Central / Broadway Depot"
+            : "Meyyanur Depot",
       };
     }
   } catch (err) {
@@ -183,20 +228,26 @@ export async function getCurrentUser() {
   // Resilient fallback using session payload and demo directory
   const demo = Object.values(DEMO_ACCOUNTS).find(
     (u) =>
-      u.id === cleanUserId ||
-      u.email.toLowerCase() === session.email?.toLowerCase(),
+      (u.id === cleanUserId ||
+        u.email.toLowerCase() === session.email?.toLowerCase()) &&
+      u.tenantId === cleanTenantId,
   );
   if (demo) return demo;
 
+  const isMTC = cleanTenantId === CHENNAI_MTC_TENANT_ID;
   return {
     id: cleanUserId,
-    email: session.email,
-    name: session.name,
-    role: session.role,
+    email:
+      session.email ||
+      (isMTC ? "admin@mtcchennai.demo" : "admin@salemtransport.demo"),
+    name: session.name || (isMTC ? "System Admin (MTC)" : "System Admin"),
+    role: session.role || "ORGANIZATION_ADMIN",
     tenantId: cleanTenantId,
-    tenantName: "Salem Transport Corporation",
-    tenantSlug: "salem-transport",
-    depotName: "Meyyanur Depot",
+    tenantName: isMTC
+      ? "Chennai Metropolitan Transport Corporation"
+      : "Salem Transport Corporation",
+    tenantSlug: isMTC ? "chennai-mtc" : "salem-transport",
+    depotName: isMTC ? "Central / Broadway Depot" : "Meyyanur Depot",
   };
 }
 
@@ -365,6 +416,43 @@ export async function logoutFnImpl() {
   });
 
   return { success: true };
+}
+
+export async function switchTenantFnImpl(targetTenantId: string) {
+  if (!targetTenantId) throw new Error("Tenant ID is required.");
+
+  const session = getSessionFromRequest();
+  let updatedSession: SessionPayload;
+  const isMTC = targetTenantId === CHENNAI_MTC_TENANT_ID;
+
+  if (session) {
+    updatedSession = {
+      ...session,
+      tenantId: targetTenantId,
+    };
+  } else {
+    updatedSession = {
+      userId: isMTC
+        ? "69c3c165-8fcd-4490-b126-c286ffa64700"
+        : "59c3c165-8fcd-4490-b126-c286ffa64700",
+      tenantId: targetTenantId,
+      role: "ORGANIZATION_ADMIN",
+      email: isMTC ? "admin@mtcchennai.demo" : "admin@salemtransport.demo",
+      name: isMTC ? "System Admin (MTC)" : "System Admin",
+    };
+  }
+
+  const token = jwt.sign(updatedSession, SECRET, { expiresIn: "24h" });
+  const isProd = process.env.NODE_ENV === "production";
+  setCookie(COOKIE_NAME, token, {
+    httpOnly: true,
+    path: "/",
+    sameSite: "lax",
+    maxAge: 86400,
+    secure: isProd,
+  });
+
+  return { success: true, tenantId: targetTenantId };
 }
 
 export async function getCurrentUserFnImpl() {

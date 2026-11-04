@@ -28,6 +28,7 @@ import { Route as CrewConductorsRouteImport } from './routes/crew.conductors'
 import { Route as CrewDriversRouteImport } from './routes/crew.drivers'
 import { Route as FleetBusesRouteImport } from './routes/fleet.buses'
 import { Route as FleetMaintenanceRouteImport } from './routes/fleet.maintenance'
+import { Route as NetworkMapRouteImport } from './routes/network.map'
 import { Route as NetworkPlannerRouteImport } from './routes/network.planner'
 import { Route as NetworkRoutesRouteImport } from './routes/network.routes'
 import { Route as OperationsAllocationRouteImport } from './routes/operations.allocation'
@@ -132,6 +133,11 @@ const FleetMaintenanceRoute = FleetMaintenanceRouteImport.update({
   path: '/fleet/maintenance',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NetworkMapRoute = NetworkMapRouteImport.update({
+  id: '/network/map',
+  path: '/network/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NetworkPlannerRoute = NetworkPlannerRouteImport.update({
   id: '/network/planner',
   path: '/network/planner',
@@ -192,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/crew/drivers': typeof CrewDriversRoute
   '/fleet/buses': typeof FleetBusesRoute
   '/fleet/maintenance': typeof FleetMaintenanceRoute
+  '/network/map': typeof NetworkMapRoute
   '/network/planner': typeof NetworkPlannerRoute
   '/network/routes': typeof NetworkRoutesRoute
   '/operations/allocation': typeof OperationsAllocationRoute
@@ -220,6 +227,7 @@ export interface FileRoutesByTo {
   '/crew/drivers': typeof CrewDriversRoute
   '/fleet/buses': typeof FleetBusesRoute
   '/fleet/maintenance': typeof FleetMaintenanceRoute
+  '/network/map': typeof NetworkMapRoute
   '/network/planner': typeof NetworkPlannerRoute
   '/network/routes': typeof NetworkRoutesRoute
   '/operations/allocation': typeof OperationsAllocationRoute
@@ -250,6 +258,7 @@ export interface FileRoutesById {
   '/crew/drivers': typeof CrewDriversRoute
   '/fleet/buses': typeof FleetBusesRoute
   '/fleet/maintenance': typeof FleetMaintenanceRoute
+  '/network/map': typeof NetworkMapRoute
   '/network/planner': typeof NetworkPlannerRoute
   '/network/routes': typeof NetworkRoutesRoute
   '/operations/allocation': typeof OperationsAllocationRoute
@@ -281,6 +290,7 @@ export interface FileRouteTypes {
     | '/crew/drivers'
     | '/fleet/buses'
     | '/fleet/maintenance'
+    | '/network/map'
     | '/network/planner'
     | '/network/routes'
     | '/operations/allocation'
@@ -309,6 +319,7 @@ export interface FileRouteTypes {
     | '/crew/drivers'
     | '/fleet/buses'
     | '/fleet/maintenance'
+    | '/network/map'
     | '/network/planner'
     | '/network/routes'
     | '/operations/allocation'
@@ -338,6 +349,7 @@ export interface FileRouteTypes {
     | '/crew/drivers'
     | '/fleet/buses'
     | '/fleet/maintenance'
+    | '/network/map'
     | '/network/planner'
     | '/network/routes'
     | '/operations/allocation'
@@ -363,6 +375,7 @@ export interface RootRouteChildren {
   CrewDriversRoute: typeof CrewDriversRoute
   FleetBusesRoute: typeof FleetBusesRoute
   FleetMaintenanceRoute: typeof FleetMaintenanceRoute
+  NetworkMapRoute: typeof NetworkMapRoute
   NetworkPlannerRoute: typeof NetworkPlannerRoute
   NetworkRoutesRoute: typeof NetworkRoutesRoute
   OperationsAllocationRoute: typeof OperationsAllocationRoute
@@ -508,6 +521,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FleetMaintenanceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/network/map': {
+      id: '/network/map'
+      path: '/network/map'
+      fullPath: '/network/map'
+      preLoaderRoute: typeof NetworkMapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/network/planner': {
       id: '/network/planner'
       path: '/network/planner'
@@ -603,6 +623,7 @@ const rootRouteChildren: RootRouteChildren = {
   CrewDriversRoute: CrewDriversRoute,
   FleetBusesRoute: FleetBusesRoute,
   FleetMaintenanceRoute: FleetMaintenanceRoute,
+  NetworkMapRoute: NetworkMapRoute,
   NetworkPlannerRoute: NetworkPlannerRoute,
   NetworkRoutesRoute: NetworkRoutesRoute,
   OperationsAllocationRoute: OperationsAllocationRoute,

@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Check,
   Radio,
+  Play,
   Sun,
   Moon,
   Laptop,
@@ -61,13 +62,15 @@ const NAV: NavGroup[] = [
     title: "Operational Lifecycle",
     items: [
       { label: "Dashboard", to: "/", icon: Gauge },
-      { label: "Routes & Corridors", to: "/network/routes", icon: Map },
+      { label: "Transit Network Map", to: "/network/map", icon: Map },
+      { label: "Routes & Corridors", to: "/network/routes", icon: RouteIcon },
       { label: "Route Planner", to: "/network/planner", icon: Compass },
       { label: "Bus Fleet", to: "/fleet/buses", icon: Bus },
       { label: "Staff & Crew", to: "/crew/drivers", icon: Users },
       { label: "Schedules & Timetable", to: "/operations/trips", icon: CalendarClock },
       { label: "Smart Fleet Allocation", to: "/operations/allocation", icon: Workflow },
-      { label: "Live Road Dispatch", to: "/operations/today", icon: RouteIcon },
+      { label: "Simulation Deck", to: "/simulation", icon: Play },
+      { label: "Live Road Dispatch", to: "/operations/today", icon: Radio },
     ],
   },
   {
@@ -85,6 +88,8 @@ function isNavVisible(role: string, to: string): boolean {
 
   switch (to) {
     case "/":
+    case "/network/map":
+    case "/simulation":
     case "/operations/today":
     case "/operations/trips":
     case "/analytics":

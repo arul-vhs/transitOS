@@ -15,6 +15,9 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { TransitTable, ColumnDef } from "@/components/ui/transit-table";
+import { useActiveTenant } from "@/lib/tenant-context";
+import { Play, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -235,6 +238,111 @@ function BusesPage() {
     (b) => b.status === "maintenance" || b.status === "breakdown",
   ).length;
 
+
+  const columns: ColumnDef<BusItem>[] = [
+    {
+      header: "Registration Number",
+      accessorKey: "registrationNumber",
+      cell: (bus) => (
+        <span className="font-mono text-xs font-bold text-foreground">
+          {bus.registrationNumber}
+        </span>
+      ),
+    },
+    {
+      header: "Fleet Unit",
+      accessorKey: "fleetNumber",
+      cell: (bus) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {bus.fleetNumber || bus.registrationNumber}
+        </span>
+      ),
+    },
+    {
+      header: "Operating Depot",
+      accessorKey: "depot",
+      cell: (bus) => (
+        <span className="text-xs font-medium text-foreground">
+          {bus.depot}
+        </span>
+      ),
+    },
+    {
+      header: "Vehicle Model / Type",
+      accessorKey: "busType",
+      cell: (bus) => (
+        <span className="text-xs text-muted-foreground">
+          {bus.busType || "Standard Leyland BS-VI"}
+        </span>
+      ),
+    },
+    {
+      header: "Capacity",
+      accessorKey: "capacity",
+      cell: (bus) => (
+        <span className="text-xs text-muted-foreground font-mono">
+          {bus.capacity || 48} seats
+        </span>
+      ),
+    },
+    {
+      header: "Operational Status",
+      accessorKey: "status",
+      cell: (bus) => (
+        canManage ? (
+          <div onClick={(e) => e.stopPropagation()}>
+            <Select
+              value={bus.status}
+              onValueChange={(val) => statusMutation.mutate({ id: bus.id, status: val })}
+            >
+              <SelectTrigger className={`h-7 w-[125px] text-[11px] rounded font-medium ${getStatusBadgeClass(bus.status)}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="assigned">Assigned</SelectItem>
+                <SelectItem value="in-service">In Service</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+                <SelectItem value="breakdown">Breakdown</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <Badge variant="outline" className={`text-[10px] rounded ${getStatusBadgeClass(bus.status)}`}>
+            {bus.status}
+          </Badge>
+        )
+      ),
+    },
+    {
+      header: "Actions",
+      className: "text-right",
+      cell: (bus) => (
+        canManage ? (
+          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleOpenEdit(bus)}
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md"
+            >
+              <Edit2 className="size-3.5 mr-1" />
+              Edit
+            </Button>
+          </div>
+        ) : null
+      ),
+    },
+  ];
+
+  const depotOptions = [
+    { label: "All Depots", value: "all" },
+    ...currentTenant.depots.map((d) => ({
+      label: d.name,
+      value: d.name,
+    })),
+  ];
+
   return (
     <AppShell
       title="Bus Fleet Management"
@@ -264,7 +372,7 @@ function BusesPage() {
                 Bus Fleet (Step 3 of 6)
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Verify available buses across Meyyanur, Johnsonpet, Hasthampatti, and Steel Plant depots.
+                Verify available buses across active operating depots for the scheduled service date.
               </p>
             </div>
           </div>
@@ -292,7 +400,7 @@ function BusesPage() {
             <p className="text-3xl font-extrabold tracking-tight mt-1 text-foreground">
               {totalBuses}
             </p>
-            <p className="text-[11px] text-muted-foreground">Salem Division</p>
+            <p className="text-[11px] text-muted-foreground truncate">{currentTenant.name}</p>
           </div>
 
           <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col justify-between shadow-xs">

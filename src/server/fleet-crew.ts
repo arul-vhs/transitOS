@@ -38,13 +38,15 @@ export async function getBusesImpl(filters?: {
       );
     }
 
-    return await db
+    const dbBuses = await db
       .select()
       .from(buses)
       .where(and(...conditions))
       .orderBy(buses.fleetNumber);
+    if (dbBuses.length > 0) return dbBuses;
+    throw new Error("No database buses for tenant, using fallback dataset");
   } catch (err) {
-    let result = [...FALLBACK_BUSES];
+    let result = FALLBACK_BUSES.filter((b) => b.tenantId === currentUser.tenantId);
     if (filters?.status && filters.status !== "all") {
       result = result.filter((b) => b.status === filters.status);
     }
@@ -300,13 +302,15 @@ async function getCrewByRole(
       );
     }
 
-    return await db
+    const dbCrew = await db
       .select()
       .from(crew)
       .where(and(...conditions))
       .orderBy(crew.employeeId);
+    if (dbCrew.length > 0) return dbCrew;
+    throw new Error("No database crew for tenant, using fallback dataset");
   } catch (err) {
-    let result = FALLBACK_CREW.filter((c) => c.role === role);
+    let result = FALLBACK_CREW.filter((c) => c.role === role && c.tenantId === currentUser.tenantId);
     if (filters?.status && filters.status !== "all") {
       result = result.filter((c) => c.status === filters.status);
     }

@@ -58,7 +58,7 @@ export async function getTripsImpl(filters?: {
       conditions.push(eq(trips.direction, filters.direction));
     }
 
-    return await db
+    const dbTrips = await db
       .select({
         id: trips.id,
         tripCode: trips.tripCode,
@@ -79,8 +79,10 @@ export async function getTripsImpl(filters?: {
       .innerJoin(routes, eq(trips.routeId, routes.id))
       .where(and(...conditions))
       .orderBy(trips.startTime);
+    if (dbTrips.length > 0) return dbTrips;
+    throw new Error("No database trips for tenant, using fallback dataset");
   } catch (err) {
-    let result = FALLBACK_TRIPS.map((t) => ({
+    let result = FALLBACK_TRIPS.filter((t) => t.tenantId === currentUser.tenantId).map((t) => ({
       id: t.id,
       tripCode: t.tripNumber,
       direction: t.direction,
@@ -354,6 +356,9 @@ export async function getDutiesImpl(filters?: {
       .from(duties)
       .where(and(...conditions))
       .orderBy(duties.dutyCode);
+    if (rawDuties.length === 0) {
+      throw new Error("No database duties for tenant, using fallback dataset");
+    }
 
     // Load associated trips & crew segments for each duty
     return await Promise.all(
@@ -435,7 +440,7 @@ export async function getDutiesImpl(filters?: {
       }),
     );
   } catch (err) {
-    let result = FALLBACK_DUTIES.map((d) => ({
+    let result = FALLBACK_DUTIES.filter((d) => d.tenantId === currentUser.tenantId).map((d) => ({
       id: d.id,
       tenantId: d.tenantId,
       dutyCode: d.dutyNumber,

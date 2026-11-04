@@ -35,3 +35,16 @@ const _getCurrentUserFn = createServerFn({ method: "GET" }).handler(
 export const getCurrentUserFn = async () => {
   return await _getCurrentUserFn();
 };
+
+const _switchTenantFn = createServerFn({ method: "POST" })
+  .validator((payload: { tenantId: string }) => payload)
+  .handler(async ({ data }) => {
+    const { switchTenantFnImpl } = await import("../server/auth");
+    return await switchTenantFnImpl(data.tenantId);
+  });
+
+export const switchTenantFn = async (
+  payload: { tenantId: string } | { data: { tenantId: string } },
+) => {
+  return await _switchTenantFn(toServerFnArgs(payload)!);
+};

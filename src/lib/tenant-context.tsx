@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { switchTenantFn } from "@/lib/auth";
 
 export interface DepotDetail {
   id: string;
@@ -22,9 +23,82 @@ export interface TenantInfo {
   status: "active" | "standby";
 }
 
+export const CHENNAI_MTC_TENANT_ID = "69000000-0000-4000-8000-000000000069";
+export const SALEM_TENANT_ID = "6fcb73df-750e-4fe5-b0cb-456b119dcd64";
+
 export const INITIAL_TENANTS: TenantInfo[] = [
   {
-    id: "6fcb73df-750e-4fe5-b0cb-456b119dcd64",
+    id: CHENNAI_MTC_TENANT_ID,
+    name: "Chennai Metropolitan Transport Corporation",
+    slug: "chennai-mtc",
+    code: "TN-MTC-CHN",
+    region: "Chennai Metropolitan Area, Tamil Nadu",
+    depots: [
+      {
+        id: "depot-chn-01",
+        name: "Central / Broadway Depot",
+        code: "CHN-BDW-01",
+        capacity: 85,
+        activeBuses: 78,
+      },
+      {
+        id: "depot-chn-02",
+        name: "Adyar Depot",
+        code: "CHN-ADY-02",
+        capacity: 70,
+        activeBuses: 64,
+      },
+      {
+        id: "depot-chn-03",
+        name: "Annanagar West Depot",
+        code: "CHN-ANW-03",
+        capacity: 75,
+        activeBuses: 68,
+      },
+      {
+        id: "depot-chn-04",
+        name: "Alandur Depot",
+        code: "CHN-ALN-04",
+        capacity: 60,
+        activeBuses: 55,
+      },
+      {
+        id: "depot-chn-05",
+        name: "Madhavaram Depot",
+        code: "CHN-MDV-05",
+        capacity: 65,
+        activeBuses: 58,
+      },
+      {
+        id: "depot-chn-06",
+        name: "Vadapalani Depot",
+        code: "CHN-VDP-06",
+        capacity: 80,
+        activeBuses: 74,
+      },
+      {
+        id: "depot-chn-07",
+        name: "Tambaram Depot",
+        code: "CHN-TBM-07",
+        capacity: 90,
+        activeBuses: 82,
+      },
+      {
+        id: "depot-chn-08",
+        name: "CMBT Koyambedu Depot",
+        code: "CHN-CMB-08",
+        capacity: 100,
+        activeBuses: 92,
+      },
+    ],
+    activeDepot: "Central / Broadway Depot",
+    fleetCount: 50,
+    fleetSize: 50,
+    routesCount: 12,
+    status: "active",
+  },
+  {
+    id: SALEM_TENANT_ID,
     name: "Salem Transport Corporation",
     slug: "salem-transport",
     code: "TN-STC-SLM",
@@ -79,81 +153,11 @@ export const INITIAL_TENANTS: TenantInfo[] = [
         capacity: 40,
         activeBuses: 35,
       },
-      {
-        id: "depot-cbe-03",
-        name: "Singanallur Depot",
-        code: "CBE-SNG-03",
-        capacity: 35,
-        activeBuses: 30,
-      },
     ],
     activeDepot: "Gandhipuram Depot",
     fleetCount: 55,
     fleetSize: 55,
     routesCount: 12,
-    status: "active",
-  },
-  {
-    id: "mdu-750e-4fe5-b0cb-456b119dcd66",
-    name: "Madurai Metro Bus",
-    slug: "madurai-metro",
-    code: "TN-MMB-MDU",
-    region: "Madurai, Tamil Nadu",
-    depots: [
-      {
-        id: "depot-mdu-01",
-        name: "Mattuthavani Central Depot",
-        code: "MDU-MAT-01",
-        capacity: 50,
-        activeBuses: 44,
-      },
-      {
-        id: "depot-mdu-02",
-        name: "Periyar Depot",
-        code: "MDU-PER-02",
-        capacity: 42,
-        activeBuses: 36,
-      },
-      {
-        id: "depot-mdu-03",
-        name: "Arappalayam Depot",
-        code: "MDU-ARP-03",
-        capacity: 38,
-        activeBuses: 32,
-      },
-    ],
-    activeDepot: "Mattuthavani Central Depot",
-    fleetCount: 50,
-    fleetSize: 50,
-    routesCount: 10,
-    status: "active",
-  },
-  {
-    id: "try-750e-4fe5-b0cb-456b119dcd67",
-    name: "Tiruchirappalli Regional Transit",
-    slug: "trichy-transit",
-    code: "TN-TRT-TPJ",
-    region: "Tiruchirappalli, Tamil Nadu",
-    depots: [
-      {
-        id: "depot-try-01",
-        name: "Central Bus Stand Depot",
-        code: "TPJ-CBS-01",
-        capacity: 40,
-        activeBuses: 34,
-      },
-      {
-        id: "depot-try-02",
-        name: "Chathiram Depot",
-        code: "TPJ-CHT-02",
-        capacity: 32,
-        activeBuses: 28,
-      },
-    ],
-    activeDepot: "Central Bus Stand Depot",
-    fleetCount: 40,
-    fleetSize: 40,
-    routesCount: 7,
     status: "active",
   },
 ];
@@ -227,7 +231,7 @@ export function useActiveTenant() {
     };
   }, []);
 
-  const switchTenant = (tenantId: string) => {
+  const switchTenant = async (tenantId: string) => {
     const target = tenantsList.find((t) => t.id === tenantId);
     if (!target) return;
 
@@ -237,6 +241,16 @@ export function useActiveTenant() {
       localStorage.setItem(TENANT_STORAGE_KEY, target.id);
       localStorage.setItem(DEPOT_STORAGE_KEY, target.activeDepot);
       window.dispatchEvent(new Event("transitos_tenant_change"));
+    }
+
+    try {
+      await switchTenantFn({ tenantId: target.id });
+      // Invalidate window to ensure all server loaders refresh immediately
+      if (typeof window !== "undefined") {
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error("Failed to switch tenant on server", err);
     }
   };
 
@@ -310,14 +324,12 @@ export function useActiveTenant() {
   };
 
   return {
-    // Standard names
     allTenants: tenantsList,
     tenants: tenantsList,
     currentTenant,
     activeTenant: currentTenant,
     currentDepot: currentDepotDetail.name,
     activeDepot: currentDepotDetail,
-    // Operations
     switchTenant,
     setActiveTenantId: switchTenant,
     switchDepot,

@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { TransitTable, ColumnDef } from "@/components/ui/transit-table";
+import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -594,6 +596,157 @@ function TripsPage() {
       setGenSubmitting(false);
     }
   };
+
+
+  const columns: ColumnDef<TripItem>[] = [
+    {
+      header: "Trip Code",
+      accessorKey: "tripCode",
+      cell: (trip) => (
+        <span className="font-mono text-xs font-bold text-foreground">
+          {trip.tripCode}
+        </span>
+      ),
+    },
+    {
+      header: "Route Corridor",
+      accessorKey: "routeName",
+      cell: (trip) => (
+        <div className="text-xs">
+          <p className="font-semibold text-foreground truncate max-w-[200px]">
+            {trip.routeName || trip.routeCode || "Route Corridor"}
+          </p>
+          <p className="text-[11px] text-muted-foreground truncate">
+            {trip.origin} → {trip.destination}
+          </p>
+        </div>
+      ),
+    },
+    {
+      header: "Departure / Arrival",
+      accessorKey: "startTime",
+      cell: (trip) => (
+        <div className="text-xs">
+          <span className="font-bold text-foreground font-mono">
+            {formatMinutesToTimeString(trip.startTime)}
+          </span>
+          <span className="text-muted-foreground mx-1">-</span>
+          <span className="font-mono text-muted-foreground">
+            {formatMinutesToTimeString(trip.endTime)}
+          </span>
+          <span className="block text-[10px] text-muted-foreground">
+            {trip.durationMin} mins
+          </span>
+        </div>
+      ),
+    },
+    {
+      header: "Direction",
+      accessorKey: "direction",
+      cell: (trip) => (
+        <Badge
+          variant="outline"
+          className="text-[10px] font-mono border-border text-muted-foreground rounded"
+        >
+          {trip.direction}
+        </Badge>
+      ),
+    },
+    {
+      header: "Assigned Bus",
+      cell: (trip) => {
+        const assign = tripAssignmentMap.get(trip.id);
+        return assign && assign.busReg !== "Unassigned" ? (
+          <div className="flex items-center gap-1.5 text-xs">
+            <BusIcon className="size-3.5 text-primary shrink-0" />
+            <span className="font-medium text-foreground truncate">{assign.busReg}</span>
+          </div>
+        ) : (
+          <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">Unassigned</span>
+        );
+      },
+    },
+    {
+      header: "Assigned Driver",
+      cell: (trip) => {
+        const assign = tripAssignmentMap.get(trip.id);
+        return assign && assign.driverName !== "Unassigned" ? (
+          <div className="flex items-center gap-1.5 text-xs">
+            <Users className="size-3.5 text-primary shrink-0" />
+            <span className="font-medium text-foreground truncate">{assign.driverName}</span>
+          </div>
+        ) : (
+          <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">Unassigned</span>
+        );
+      },
+    },
+    {
+      header: "Status",
+      cell: (trip) => {
+        const assign = tripAssignmentMap.get(trip.id);
+        const isUnassigned = !assign || assign.busReg === "Unassigned" || assign.driverName === "Unassigned";
+        const conflictMsgs = schedulingConflicts.get(trip.id);
+        const hasConflict = !!conflictMsgs && conflictMsgs.length > 0;
+
+        if (hasConflict) {
+          return (
+            <Badge
+              variant="outline"
+              className="text-[10px] border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10 rounded"
+              title={conflictMsgs?.join("\n")}
+            >
+              Conflict
+            </Badge>
+          );
+        }
+        if (isUnassigned) {
+          return (
+            <Badge
+              variant="outline"
+              className="text-[10px] border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded"
+            >
+              Unassigned
+            </Badge>
+          );
+        }
+        return (
+          <Badge
+            variant="outline"
+            className="text-[10px] border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 rounded"
+          >
+            Scheduled
+          </Badge>
+        );
+      },
+    },
+    {
+      header: "Actions",
+      className: "text-right",
+      cell: (trip) => (
+        canModify ? (
+          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleOpenAssignModal(trip.id)}
+              className="h-7 px-2 text-xs text-primary hover:text-primary rounded-md font-medium"
+            >
+              <UserCheck className="size-3.5 mr-1" />
+              Assign
+            </Button>
+          </div>
+        ) : null
+      ),
+    },
+  ];
+
+  const routeOptions = [
+    { label: "All Corridors", value: "all" },
+    ...routesList.map((r) => ({
+      label: `${r.code}: ${r.name.split("⇄")[0]}`,
+      value: r.id,
+    })),
+  ];
 
   return (
     <AppShell

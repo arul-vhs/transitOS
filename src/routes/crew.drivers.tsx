@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { TransitTable, ColumnDef } from "@/components/ui/transit-table";
+import { useActiveTenant } from "@/lib/tenant-context";
+import { CalendarClock, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -233,6 +236,105 @@ function DriversPage() {
     (d) => d.status === "resting" || d.status === "leave",
   ).length;
 
+
+  const columns: ColumnDef<DriverItem>[] = [
+    {
+      header: "Employee ID",
+      accessorKey: "employeeId",
+      cell: (driver) => (
+        <span className="font-mono text-xs font-bold text-foreground">
+          {driver.employeeId || "EMP-DR"}
+        </span>
+      ),
+    },
+    {
+      header: "Driver Name",
+      accessorKey: "name",
+      cell: (driver) => (
+        <span className="text-xs font-semibold text-foreground">
+          {driver.name}
+        </span>
+      ),
+    },
+    {
+      header: "Reporting Depot",
+      accessorKey: "depot",
+      cell: (driver) => (
+        <span className="text-xs font-medium text-foreground">
+          {driver.depot}
+        </span>
+      ),
+    },
+    {
+      header: "License Badge",
+      accessorKey: "licenseCategory",
+      cell: (driver) => (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <ShieldCheck className="size-3.5 text-primary shrink-0" />
+          <span className="truncate max-w-[200px]">
+            {driver.licenseCategory || "Heavy Passenger Vehicle (HPV)"}
+          </span>
+        </div>
+      ),
+    },
+    {
+      header: "Availability Status",
+      accessorKey: "status",
+      cell: (driver) => (
+        canManage ? (
+          <div onClick={(e) => e.stopPropagation()}>
+            <Select
+              value={driver.status}
+              onValueChange={(val) => statusMutation.mutate({ id: driver.id, status: val })}
+            >
+              <SelectTrigger className={`h-7 w-[125px] text-[11px] rounded font-medium ${getStatusBadgeClass(driver.status)}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="assigned">Assigned</SelectItem>
+                <SelectItem value="resting">Resting</SelectItem>
+                <SelectItem value="leave">On Leave</SelectItem>
+                <SelectItem value="unavailable">Unavailable</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <Badge variant="outline" className={`text-[10px] rounded ${getStatusBadgeClass(driver.status)}`}>
+            {driver.status}
+          </Badge>
+        )
+      ),
+    },
+    {
+      header: "Actions",
+      className: "text-right",
+      cell: (driver) => (
+        canManage ? (
+          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleOpenEdit(driver)}
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md"
+            >
+              <Edit2 className="size-3.5 mr-1" />
+              Edit
+            </Button>
+          </div>
+        ) : null
+      ),
+    },
+  ];
+
+  const depotOptions = [
+    { label: "All Depots", value: "all" },
+    ...currentTenant.depots.map((d) => ({
+      label: d.name,
+      value: d.name,
+    })),
+  ];
+
   return (
     <AppShell
       title="Driver Roster & Staff"
@@ -302,7 +404,7 @@ function DriversPage() {
             <p className="text-3xl font-extrabold tracking-tight mt-1 text-foreground">
               {totalDrivers}
             </p>
-            <p className="text-[11px] text-muted-foreground">Salem Division</p>
+            <p className="text-[11px] text-muted-foreground truncate">{currentTenant.name}</p>
           </div>
 
           <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col justify-between shadow-xs">
@@ -345,138 +447,115 @@ function DriversPage() {
           </div>
         </div>
 
-        {/* 2. Filter Bar */}
-        <div className="rounded-lg border border-border/80 bg-card p-4 flex flex-wrap gap-3 items-center justify-between shadow-xs">
-          <div className="flex flex-1 flex-wrap gap-2.5 items-center min-w-[280px]">
-            <div className="relative flex-1 max-w-xs min-w-[180px]">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Search driver name or employee ID..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 h-8 text-xs rounded-md"
-              />
-            </div>
+        {/* 2. Redesigned Driver Roster Table with Pagination and Slide-Over Detail */}
+        <TransitTable
+          data={driversList}
+          columns={columns}
+          isLoading={isLoading}
+          searchPlaceholder="Search driver name or employee ID..."
+          exportCsvName="driver-roster"
+          defaultPageSize={10}
+          pageSizeOptions={[10, 25, 50, 100]}
+          filters={[
+            {
+              key: "status",
+              label: "Status",
+              value: statusFilter,
+              onChange: setStatusFilter,
+              options: [
+                { label: "All Statuses", value: "all" },
+                { label: "Available", value: "available" },
+                { label: "Assigned", value: "assigned" },
+                { label: "Resting", value: "resting" },
+                { label: "On Leave", value: "leave" },
+              ],
+            },
+            {
+              key: "depot",
+              label: "Depot",
+              value: depotFilter,
+              onChange: setDepotFilter,
+              options: depotOptions,
+            },
+          ]}
+          rowDetailTitle={(driver) => `Driver: ${driver.name}`}
+          rowDetailSubtitle={(driver) => `ID: ${driver.employeeId || "N/A"} · ${driver.depot}`}
+          renderRowDetail={(driver, onClose) => (
+            <div className="space-y-4 text-xs">
+              <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm text-foreground">{driver.name}</span>
+                  <Badge variant="outline" className={`text-[10px] rounded ${getStatusBadgeClass(driver.status)}`}>
+                    {driver.status.toUpperCase()}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/60">
+                  <div>
+                    <span className="text-[10px] text-muted-foreground font-mono">Employee ID:</span>
+                    <p className="font-mono font-medium text-foreground">{driver.employeeId || "N/A"}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground font-mono">Home Depot:</span>
+                    <p className="font-medium text-foreground">{driver.depot}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-[10px] text-muted-foreground font-mono">License Qualification:</span>
+                    <p className="text-foreground">{driver.licenseCategory || "Heavy Passenger Vehicle (HPV) / PSV Badge"}</p>
+                  </div>
+                </div>
+              </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px] h-8 text-xs rounded-md">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="available">Available</SelectItem>
-                <SelectItem value="assigned">Assigned</SelectItem>
-                <SelectItem value="resting">Resting</SelectItem>
-                <SelectItem value="leave">On Leave</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={depotFilter} onValueChange={setDepotFilter}>
-              <SelectTrigger className="w-[170px] h-8 text-xs rounded-md">
-                <SelectValue placeholder="Depot" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Depots</SelectItem>
-                <SelectItem value="Meyyanur Depot">Meyyanur Depot</SelectItem>
-                <SelectItem value="Johnsonpet Depot">Johnsonpet Depot</SelectItem>
-                <SelectItem value="Hasthampatti Depot">Hasthampatti Depot</SelectItem>
-                <SelectItem value="Steel Plant Depot">Steel Plant Depot</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <span className="text-xs text-muted-foreground">
-            Total: <span className="font-bold text-foreground">{driversList.length}</span> drivers
-          </span>
-        </div>
-
-        {/* 3. Driver Directory Table */}
-        <div className="rounded-lg border border-border/80 bg-card overflow-hidden shadow-xs">
-          <Table>
-            <TableHeader className="bg-muted/40">
-              <TableRow>
-                <TableHead className="text-xs font-bold text-foreground">Employee ID</TableHead>
-                <TableHead className="text-xs font-bold text-foreground">Driver Name</TableHead>
-                <TableHead className="text-xs font-bold text-foreground">Reporting Depot</TableHead>
-                <TableHead className="text-xs font-bold text-foreground">License Badge</TableHead>
-                <TableHead className="text-xs font-bold text-foreground">Availability Status</TableHead>
-                {canManage && <TableHead className="text-right text-xs font-bold text-foreground">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-xs text-muted-foreground">
-                    Loading driver roster...
-                  </TableCell>
-                </TableRow>
-              ) : driversList.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-xs text-muted-foreground">
-                    No drivers matching filter criteria.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                driversList.map((driver) => (
-                  <TableRow key={driver.id}>
-                    <TableCell className="font-mono text-xs font-bold text-foreground">
-                      {driver.employeeId || "TNSTC-DR"}
-                    </TableCell>
-                    <TableCell className="text-xs font-semibold text-foreground">
-                      {driver.name}
-                    </TableCell>
-                    <TableCell className="text-xs font-medium text-foreground">
-                      {driver.depot}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1.5">
-                        <ShieldCheck className="size-3.5 text-primary shrink-0" />
-                        <span className="truncate max-w-[200px]">
-                          {driver.licenseCategory || "Heavy Passenger Vehicle (HPV)"}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {canManage ? (
-                        <Select
-                          value={driver.status}
-                          onValueChange={(val) => statusMutation.mutate({ id: driver.id, status: val })}
-                        >
-                          <SelectTrigger className={`h-7 w-[125px] text-[11px] rounded font-medium ${getStatusBadgeClass(driver.status)}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="available">Available</SelectItem>
-                            <SelectItem value="assigned">Assigned</SelectItem>
-                            <SelectItem value="resting">Resting</SelectItem>
-                            <SelectItem value="leave">On Leave</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Badge variant="outline" className={`text-[10px] rounded ${getStatusBadgeClass(driver.status)}`}>
-                          {driver.status}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    {canManage && (
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenEdit(driver)}
-                          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground rounded-md"
-                        >
-                          <Edit2 className="size-3.5 mr-1" />
-                          Edit
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))
+              {/* Status Update Control */}
+              {canManage && (
+                <div className="space-y-1.5 p-3 rounded-lg border border-border bg-card">
+                  <span className="font-semibold text-foreground">Change Duty Status</span>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Select
+                      value={driver.status}
+                      onValueChange={(val) => {
+                        statusMutation.mutate({ id: driver.id, status: val });
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs rounded-md">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="available">Available</SelectItem>
+                        <SelectItem value="assigned">Assigned</SelectItem>
+                        <SelectItem value="resting">Resting</SelectItem>
+                        <SelectItem value="leave">On Leave</SelectItem>
+                        <SelectItem value="unavailable">Unavailable</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      onClick={() => handleOpenEdit(driver)}
+                      className="h-8 text-xs rounded-md border-border"
+                      variant="outline"
+                    >
+                      <Edit2 className="size-3.5 mr-1" />
+                      Edit Details
+                    </Button>
+                  </div>
+                </div>
               )}
-            </TableBody>
-          </Table>
-        </div>
+
+              {/* Quick Actions */}
+              <div className="flex items-center gap-2 pt-2">
+                <Button
+                  asChild
+                  size="sm"
+                  className="flex-1 h-8 text-xs gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+                >
+                  <Link to="/operations/trips">
+                    <CalendarClock className="size-3.5 mr-1" />
+                    <span>View Scheduled Shifts</span>
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          )}
+        />
 
         {/* 4. Modal: Add / Edit Driver */}
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
