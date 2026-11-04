@@ -66,6 +66,7 @@ import { hasPermission } from "@/lib/auth-shared";
 import { useActiveTenant } from "@/lib/tenant-context";
 import { useTheme } from "@/components/theme-provider";
 import { RouteBadge, formatRouteNumber, formatRouteName } from "@/lib/route-utils";
+import { getDrivers, getBuses } from "@/lib/fleet-crew";
 import {
   getLiveBusTracking,
   ingestVehicleTelemetry,
@@ -198,6 +199,10 @@ function OperationsTodayPage() {
   const [selectedIssue, setSelectedIssue] = useState<OperationalIssue | null>(null);
   const [selectedSolutionId, setSelectedSolutionId] = useState<string>("");
   const [dispatchNotes, setDispatchNotes] = useState<string>("");
+  const [resolutionActionType, setResolutionActionType] = useState<"driver" | "bus" | "recommendation">("driver");
+  const [selectedDriverId, setSelectedDriverId] = useState<string>("");
+  const [selectedBusId, setSelectedBusId] = useState<string>("");
+  const [showOnlyMovingBuses, setShowOnlyMovingBuses] = useState(false);
 
   // Conductor Recommendation Drawer State
   const [conductorDrawerOpen, setConductorDrawerOpen] = useState(false);
@@ -268,18 +273,49 @@ function OperationsTodayPage() {
     untrackedBuses: 0,
   };
 
-  // Filter tracked buses for search query
+  // Filter tracked buses for search query and moving status
   const filteredTrackedBuses = useMemo(() => {
-    if (!mapSearchQuery.trim()) return trackedBuses;
+    let result = trackedBuses;
+    if (showOnlyMovingBuses) {
+      result = result.filter(
+        (b) =>
+          b.hasActiveSos ||
+          (b.speedKmH ?? 0) > 0 ||
+          b.delayStatus === "ON_TIME" ||
+          b.delayStatus === "DELAYED",
+      );
+    }
+    if (!mapSearchQuery.trim()) return result;
     const q = mapSearchQuery.toLowerCase();
-    return trackedBuses.filter(
+    return result.filter(
       (b) =>
         b.busRegNumber.toLowerCase().includes(q) ||
         (b.routeCode && b.routeCode.toLowerCase().includes(q)) ||
         (b.driverName && b.driverName.toLowerCase().includes(q)) ||
         (b.nextStopName && b.nextStopName.toLowerCase().includes(q)),
     );
-  }, [trackedBuses, mapSearchQuery]);
+  }, [trackedBuses, mapSearchQuery, showOnlyMovingBuses]);
+
+  // Fetch available drivers & buses for supervisor reassignment
+  const { data: driversList = [] } = useQuery({
+    queryKey: ["drivers-list", currentTenant.id],
+    queryFn: () => getDrivers(),
+  });
+
+  const { data: busesList = [] } = useQuery({
+    queryKey: ["buses-list", currentTenant.id],
+    queryFn: () => getBuses(),
+  });
+
+  // Critical Crew SOS Issues
+  const activeCrewSosIssues = useMemo(() => {
+    return (issuesData?.issues || []).filter(
+      (iss) =>
+        (iss.category === "CREW_SOS" || iss.urgency === "CRITICAL") &&
+        iss.lifecycleStatus !== "RESOLVED" &&
+        iss.lifecycleStatus !== "AUTOMATICALLY_RESOLVED",
+    );
+  }, [issuesData?.issues]);
 
   // Fetch Live Tracking Assignments Table Data
   const {
@@ -393,9 +429,16 @@ function OperationsTodayPage() {
     },
   });
 
-  // Approve Recommendation Mutation
+  // Approve Recommendation & Dispatch Mutation
   const approveMutation = useMutation({
-    mutationFn: async (vars: { issueId: string; solutionId?: string; dispatchNotes?: string }) => {
+    mutationFn: async (vars: {
+      issueId: string;
+      solutionId?: string;
+      dispatchNotes?: string;
+      overrideDriverId?: string;
+      overrideBusId?: string;
+      overrideConductorId?: string;
+    }) => {
       return await approveIssueRecommendation(vars);
     },
     onSuccess: (res) => {
@@ -663,23 +706,30 @@ function OperationsTodayPage() {
       // Only plot buses with actual coordinates
       if (b.latitude === null || b.longitude === null) return;
 
-      const isOnTime = b.delayStatus === "ON_TIME";
-      const isDelayed = b.delayStatus === "DELAYED";
-      const isStationary = b.delayStatus === "STATIONARY";
+      const isSos = Boolean(b.hasActiveSos);
+      const isOnTime = !isSos && b.delayStatus === "ON_TIME";
+      const isDelayed = !isSos && b.delayStatus === "DELAYED";
+      const isStationary = !isSos && b.delayStatus === "STATIONARY";
 
-      const bgClass = isOnTime
-        ? "bg-emerald-600 text-white border-emerald-400"
-        : isDelayed
-          ? "bg-amber-600 text-white border-amber-400"
-          : isStationary
-            ? "bg-blue-600 text-white border-blue-400"
-            : "bg-slate-600 text-white border-slate-400";
+      const bgClass = isSos
+        ? "bg-rose-600 text-white border-rose-300 ring-2 ring-rose-500 animate-pulse font-bold"
+        : isOnTime
+          ? "bg-emerald-600 text-white border-emerald-400"
+          : isDelayed
+            ? "bg-amber-600 text-white border-amber-400"
+            : isStationary
+              ? "bg-blue-600 text-white border-blue-400"
+              : "bg-slate-600 text-white border-slate-400";
 
-      const pingColor = isOnTime
-        ? "bg-emerald-400"
-        : isDelayed
-          ? "bg-amber-400"
-          : "bg-blue-400";
+      const pingColor = isSos
+        ? "bg-rose-400"
+        : isOnTime
+          ? "bg-emerald-400"
+          : isDelayed
+            ? "bg-amber-400"
+            : "bg-blue-400";
+
+      const labelText = isSos ? "SOS" : (b.routeCode || "BUS");
 
       const html = `
         <div class="relative group cursor-pointer transition-transform hover:scale-110">
@@ -692,7 +742,7 @@ function OperationsTodayPage() {
               : ""
           }
           <div class="px-2 py-1 rounded-md text-[10px] font-bold font-mono shadow-md border flex items-center gap-1.5 ${bgClass}">
-            <span>${b.routeCode || "BUS"}</span>
+            <span>${labelText}</span>
             <span class="opacity-80">·</span>
             <span class="text-[9px] font-sans font-medium">${b.busRegNumber.slice(-4)}</span>
           </div>
@@ -716,12 +766,14 @@ function OperationsTodayPage() {
 
       marker.bindTooltip(
         `<div class="p-1 space-y-0.5 font-sans">
+          ${isSos ? '<div class="text-[10px] font-bold font-mono bg-rose-600 text-white px-1.5 py-0.5 rounded-sm uppercase inline-block mb-0.5">CRITICAL CREW SOS ACTIVE</div>' : ""}
           <div class="font-bold text-xs flex items-center gap-1.5">
             <span>${b.busRegNumber}</span>
             <span class="text-[10px] px-1 py-0 rounded bg-muted font-mono font-normal">Route ${b.routeCode}</span>
           </div>
           <div class="text-[11px] text-muted-foreground">${b.routeName || b.origin + " to " + b.destination}</div>
           <div class="text-[10px] font-mono text-emerald-600 font-semibold">${b.speedKmH} km/h · ${b.lastUpdatedAgo || "Just now"}</div>
+          <div class="text-[10px] text-muted-foreground">Pilot: ${b.driverName || "Driver Assigned"}</div>
         </div>`,
         { direction: "top", offset: [0, -10] },
       );
@@ -900,6 +952,38 @@ function OperationsTodayPage() {
   const handleOpenReview = (issue: OperationalIssue) => {
     setSelectedIssue(issue);
     setSelectedSolutionId(issue.bestSolution?.id || "");
+
+    if (
+      issue.category === "CREW_SOS" ||
+      issue.category === "DRIVER_UNAVAILABLE" ||
+      issue.category === "MISSING_DRIVER"
+    ) {
+      setResolutionActionType("driver");
+    } else if (
+      issue.category === "BUS_BREAKDOWN" ||
+      issue.category === "UNASSIGNED_BUS"
+    ) {
+      setResolutionActionType("bus");
+    } else {
+      setResolutionActionType("driver");
+    }
+
+    // Pre-select replacement driver if suggested or first available
+    const recDriverId = issue.bestSolution?.replacementDriverId;
+    if (recDriverId) {
+      setSelectedDriverId(recDriverId);
+    } else if (driversList.length > 0) {
+      setSelectedDriverId(driversList[0].id);
+    }
+
+    // Pre-select replacement bus if suggested or first available
+    const recBusId = issue.bestSolution?.replacementBusId;
+    if (recBusId) {
+      setSelectedBusId(recBusId);
+    } else if (busesList.length > 0) {
+      setSelectedBusId(busesList[0].id);
+    }
+
     setReviewSheetOpen(true);
   };
 
@@ -1209,7 +1293,47 @@ function OperationsTodayPage() {
         </div>
       }
     >
-      <div className="space-y-8">
+      <div className="space-y-6">
+        {/* ======================================================== */}
+        {/* EMERGENCY CREW SOS ALERT BANNER */}
+        {/* ======================================================== */}
+        {activeCrewSosIssues.length > 0 && (
+          <div className="p-4 rounded-lg border-2 border-rose-500 bg-rose-500/10 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-start gap-3">
+              <div className="flex size-9 items-center justify-center rounded-md bg-rose-600 text-white shrink-0 mt-0.5 animate-pulse">
+                <AlertOctagon className="size-5" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-sm text-rose-950 dark:text-rose-100 uppercase tracking-wide">
+                    Critical Crew SOS Distress Alert ({activeCrewSosIssues.length} Active)
+                  </span>
+                  <Badge variant="outline" className="border-rose-500 text-rose-600 dark:text-rose-400 bg-rose-500/20 text-[10px] font-mono uppercase font-bold rounded-md">
+                    Emergency Priority
+                  </Badge>
+                </div>
+                <p className="text-xs text-rose-800 dark:text-rose-300">
+                  {activeCrewSosIssues[0]?.description || "Emergency distress signal transmitted by driver on transit corridor."}
+                  {" · "}
+                  <span className="font-semibold text-rose-900 dark:text-rose-100">
+                    Route {activeCrewSosIssues[0]?.routeCode} ({activeCrewSosIssues[0]?.routeName}) · Trip {activeCrewSosIssues[0]?.tripCode}
+                  </span>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                size="sm"
+                onClick={() => handleOpenReview(activeCrewSosIssues[0]!)}
+                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-md shadow-xs cursor-pointer flex items-center gap-1.5 h-8.5 px-3"
+              >
+                <AlertOctagon className="size-3.5" />
+                <span>Respond & Reassign Driver / Fleet</span>
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* ======================================================== */}
         {/* SECTION A: LIVE BUS MAP */}
         {/* ======================================================== */}
@@ -1252,6 +1376,16 @@ function OperationsTodayPage() {
                 >
                   <Activity className="size-3 mr-1" />
                   {isSimulatingMovements ? "Simulation: Moving" : "Simulation: Paused"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={showOnlyMovingBuses ? "default" : "outline"}
+                  onClick={() => setShowOnlyMovingBuses((prev) => !prev)}
+                  className="h-7 text-xs px-2.5 rounded-md font-medium"
+                  title="Toggle In-Service Moving Buses vs All Tracked Fleet"
+                >
+                  <Navigation className="size-3 mr-1" />
+                  {showOnlyMovingBuses ? "Moving Only" : "All Vehicles"}
                 </Button>
                 <Button
                   size="sm"
@@ -1779,13 +1913,17 @@ function OperationsTodayPage() {
                           variant="outline"
                           className={cn(
                             "text-[9px] font-bold uppercase rounded-md px-1.5 py-0.5",
-                            issue.category === "BUS_BREAKDOWN" ||
-                              issue.category === "SCHEDULING_OVERLAP"
-                              ? "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10"
-                              : "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10",
+                            issue.category === "CREW_SOS"
+                              ? "border-rose-600 text-rose-700 dark:text-rose-300 bg-rose-500/20 font-bold"
+                              : issue.category === "BUS_BREAKDOWN" ||
+                                  issue.category === "SCHEDULING_OVERLAP"
+                                ? "border-rose-500/40 text-rose-700 dark:text-rose-400 bg-rose-500/10"
+                                : "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10",
                           )}
                         >
-                          {issue.category.replace(/_/g, " ")}
+                          {issue.category === "CREW_SOS"
+                            ? "EMERGENCY CREW SOS"
+                            : issue.category.replace(/_/g, " ")}
                         </Badge>
                         <Badge
                           variant="outline"
@@ -2020,54 +2158,190 @@ function OperationsTodayPage() {
                 </div>
               </div>
 
-              {/* Solution Options Selector */}
+              {/* Solution Strategy & Options Selector */}
               {selectedIssue.lifecycleStatus !== "RESOLVED" &&
                 selectedIssue.lifecycleStatus !== "AUTOMATICALLY_RESOLVED" && (
-                  <div className="space-y-3 pt-3 border-t border-border/60">
-                    <h3 className="font-bold text-sm text-foreground">
-                      Ranked Solution Options
-                    </h3>
-                    <div className="space-y-2">
-                      {[selectedIssue.bestSolution, ...selectedIssue.alternativeSolutions]
-                        .filter(Boolean)
-                        .map((sol) => (
-                          <div
-                            key={sol!.id}
-                            onClick={() => setSelectedSolutionId(sol!.id)}
-                            className={cn(
-                              "p-3 rounded-lg border text-xs cursor-pointer transition-all space-y-1",
-                              selectedSolutionId === sol!.id
-                                ? "border-blue-600 bg-blue-500/10 dark:bg-blue-950/20 shadow-xs"
-                                : "border-border/80 bg-card hover:bg-muted/40",
-                            )}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-foreground flex items-center gap-1.5">
-                                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-muted">
-                                  Rank {sol!.rank}
-                                </span>
-                                {sol!.title}
-                              </span>
-                              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                                {sol!.suitabilityScore}/100 Match
-                              </span>
-                            </div>
-                            <p className="text-muted-foreground">{sol!.reason}</p>
-                            <div className="text-[10px] text-muted-foreground/80 flex items-center gap-3">
-                              <span>Depot: {sol!.depot}</span>
-                              <span>Lead Time: {sol!.repositioningMinutes} min</span>
-                              <span>Cascading Risk: {sol!.cascadingConflictRisk}</span>
-                            </div>
-                          </div>
-                        ))}
+                  <div className="space-y-4 pt-3 border-t border-border/60">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-sm text-foreground">
+                        Supervisor Resolution Strategy
+                      </h3>
+                      <Badge variant="outline" className="text-[10px] font-mono border-blue-500/30 text-blue-600 bg-blue-500/10 rounded-md">
+                        {resolutionActionType === "driver" ? "Driver Reassignment" : resolutionActionType === "bus" ? "Bus Replacement" : "Ranked AI Solver"}
+                      </Badge>
                     </div>
 
-                    <div className="space-y-1.5 pt-2">
+                    {/* Mode Selector Tabs */}
+                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-muted/60 rounded-md border border-border/70 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setResolutionActionType("driver")}
+                        className={cn(
+                          "py-1.5 px-2 rounded-md font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center",
+                          resolutionActionType === "driver"
+                            ? "bg-card text-foreground shadow-xs border border-border/80"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <UserCheck className="size-3.5 text-blue-600" />
+                        <span>Change Driver</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setResolutionActionType("bus")}
+                        className={cn(
+                          "py-1.5 px-2 rounded-md font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center",
+                          resolutionActionType === "bus"
+                            ? "bg-card text-foreground shadow-xs border border-border/80"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <Bus className="size-3.5 text-emerald-600" />
+                        <span>Replace Bus</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setResolutionActionType("recommendation")}
+                        className={cn(
+                          "py-1.5 px-2 rounded-md font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center",
+                          resolutionActionType === "recommendation"
+                            ? "bg-card text-foreground shadow-xs border border-border/80"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <ShieldCheck className="size-3.5 text-amber-600" />
+                        <span>AI Proposals</span>
+                      </button>
+                    </div>
+
+                    {/* MODE 1: CHANGE / REASSIGN DRIVER */}
+                    {resolutionActionType === "driver" && (
+                      <div className="space-y-3 p-3.5 rounded-lg border border-blue-500/30 bg-blue-500/5">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                            <UserCheck className="size-3.5 text-blue-600" />
+                            Select Certified Relief Driver to Assign
+                          </label>
+                          <p className="text-[11px] text-muted-foreground">
+                            Assign an available pilot from depot reserve roster to take over active duty.
+                          </p>
+                        </div>
+
+                        <Select
+                          value={selectedDriverId}
+                          onValueChange={setSelectedDriverId}
+                        >
+                          <SelectTrigger className="h-9 text-xs rounded-md bg-card">
+                            <SelectValue placeholder="Select relief driver..." />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-56">
+                            {driversList.map((d: any) => (
+                              <SelectItem key={d.id} value={d.id} className="text-xs">
+                                {d.name} ({d.employeeId}) · {d.depot}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <div className="p-2.5 rounded-md border border-border/70 bg-card text-[11px] space-y-1 text-muted-foreground font-mono">
+                          <div className="flex justify-between">
+                            <span>Compliance Status:</span>
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400">MV Act & Continuous Rest Verified</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Reporting Buffer:</span>
+                            <span className="font-bold text-foreground">6 - 8 Minutes Turnout</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* MODE 2: REPLACE BUS */}
+                    {resolutionActionType === "bus" && (
+                      <div className="space-y-3 p-3.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                            <Bus className="size-3.5 text-emerald-600" />
+                            Select Standby Reserve Vehicle to Deploy
+                          </label>
+                          <p className="text-[11px] text-muted-foreground">
+                            Dispatch a standby replacement fleet unit from depot reserve to resume service.
+                          </p>
+                        </div>
+
+                        <Select
+                          value={selectedBusId}
+                          onValueChange={setSelectedBusId}
+                        >
+                          <SelectTrigger className="h-9 text-xs rounded-md bg-card">
+                            <SelectValue placeholder="Select standby bus..." />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-56">
+                            {busesList.map((b: any) => (
+                              <SelectItem key={b.id} value={b.id} className="text-xs">
+                                {b.registrationNumber} ({b.fleetNumber || b.busType}) · {b.depot}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <div className="p-2.5 rounded-md border border-border/70 bg-card text-[11px] space-y-1 text-muted-foreground font-mono">
+                          <div className="flex justify-between">
+                            <span>Depot Inspection:</span>
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400">BS-VI Fitness Active</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Deadhead Turnaround:</span>
+                            <span className="font-bold text-foreground">12 - 14 Minutes Buffer</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* MODE 3: RANKED PROPOSALS */}
+                    {resolutionActionType === "recommendation" && (
+                      <div className="space-y-2">
+                        {[selectedIssue.bestSolution, ...selectedIssue.alternativeSolutions]
+                          .filter(Boolean)
+                          .map((sol) => (
+                            <div
+                              key={sol!.id}
+                              onClick={() => setSelectedSolutionId(sol!.id)}
+                              className={cn(
+                                "p-3 rounded-lg border text-xs cursor-pointer transition-all space-y-1",
+                                selectedSolutionId === sol!.id
+                                  ? "border-blue-600 bg-blue-500/10 dark:bg-blue-950/20 shadow-xs"
+                                  : "border-border/80 bg-card hover:bg-muted/40",
+                              )}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-foreground flex items-center gap-1.5">
+                                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-muted">
+                                    Rank {sol!.rank}
+                                  </span>
+                                  {sol!.title}
+                                </span>
+                                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                  {sol!.suitabilityScore}/100 Match
+                                </span>
+                              </div>
+                              <p className="text-muted-foreground">{sol!.reason}</p>
+                              <div className="text-[10px] text-muted-foreground/80 flex items-center gap-3">
+                                <span>Depot: {sol!.depot}</span>
+                                <span>Lead Time: {sol!.repositioningMinutes} min</span>
+                                <span>Risk: {sol!.cascadingConflictRisk}</span>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+
+                    <div className="space-y-1.5 pt-1">
                       <label className="text-xs font-medium text-foreground">
                         Supervisor Dispatch Notes (Optional)
                       </label>
                       <Textarea
-                        placeholder="e.g. Cleared by Adyar depot master. Fleet repositioned."
+                        placeholder="e.g. Cleared with depot control master. Assigned relief pilot to trip."
                         value={dispatchNotes}
                         onChange={(e) => setDispatchNotes(e.target.value)}
                         className="text-xs rounded-md"
@@ -2124,13 +2398,27 @@ function OperationsTodayPage() {
                           approveMutation.mutate({
                             issueId: selectedIssue.id,
                             solutionId: selectedSolutionId,
+                            overrideDriverId:
+                              resolutionActionType === "driver"
+                                ? selectedDriverId
+                                : undefined,
+                            overrideBusId:
+                              resolutionActionType === "bus"
+                                ? selectedBusId
+                                : undefined,
                             dispatchNotes,
                           })
                         }
                         disabled={approveMutation.isPending}
-                        className="rounded-md text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                        className="rounded-md text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer flex items-center gap-1.5"
                       >
-                        {approveMutation.isPending ? "Executing..." : "Approve & Dispatch"}
+                        {approveMutation.isPending
+                          ? "Executing..."
+                          : resolutionActionType === "driver"
+                            ? "Approve & Reassign Driver"
+                            : resolutionActionType === "bus"
+                              ? "Approve & Deploy Standby Bus"
+                              : "Approve & Dispatch"}
                       </Button>
                     </>
                   )}

@@ -77,6 +77,7 @@ export interface LiveTrackedBus {
     | "UNTRACKED";
   statusReason: string;
   affectedTripIds: string[];
+  hasActiveSos?: boolean;
 }
 
 // In-memory tenant store for latest vehicle telemetry: key = `${tenantId}:${busRegNumber}`
@@ -364,7 +365,139 @@ export async function getLiveBusTrackingImpl(filters?: {
       registerRouteGeom(r.id, r.code, r.name, r.color, r.pathCoordinates, r.stops);
     });
   } else {
-    // Salem or other divisions
+    // Salem primary corridors with distinct enterprise color palette and GIS polylines
+    const SALEM_DEFAULT_CORRIDORS: Array<{
+      id: string;
+      code: string;
+      name: string;
+      color: string;
+      path: [number, number][];
+    }> = [
+      {
+        id: "route-salem-1",
+        code: "Route 1",
+        name: "Town Bus Stand ⇄ Salem Junction",
+        color: "#2563EB", // Cobalt
+        path: [
+          [78.1591, 11.6528],
+          [78.155, 11.658],
+          [78.1565, 11.6668],
+          [78.1437, 11.6705],
+          [78.117, 11.6718],
+          [78.1132, 11.6714],
+        ],
+      },
+      {
+        id: "route-salem-13",
+        code: "Route 13",
+        name: "Town Bus Stand ⇄ Yercaud Foothills",
+        color: "#059669", // Emerald
+        path: [
+          [78.1591, 11.6528],
+          [78.155, 11.658],
+          [78.156, 11.6625],
+          [78.1573, 11.6795],
+          [78.1635, 11.6965],
+          [78.179, 11.6989],
+          [78.1885, 11.7125],
+        ],
+      },
+      {
+        id: "route-salem-4",
+        code: "Route 4",
+        name: "Town Bus Stand ⇄ Kondalampatti",
+        color: "#0284C7", // Sky
+        path: [
+          [78.1591, 11.6528],
+          [78.143, 11.652],
+          [78.1508, 11.6432],
+          [78.148, 11.636],
+          [78.138, 11.6315],
+          [78.1248, 11.6305],
+        ],
+      },
+      {
+        id: "route-salem-33",
+        code: "Route 33",
+        name: "MGR Central Bus Stand ⇄ Steel Plant",
+        color: "#D97706", // Amber
+        path: [
+          [78.1424, 11.6673],
+          [78.138, 11.6685],
+          [78.1437, 11.6705],
+          [78.1132, 11.6714],
+          [78.115, 11.685],
+          [78.102, 11.678],
+          [78.094, 11.671],
+        ],
+      },
+      {
+        id: "route-salem-8",
+        code: "Route 8",
+        name: "MGR Central Bus Stand ⇄ Ammapet Colony",
+        color: "#0D9488", // Teal
+        path: [
+          [78.1424, 11.6673],
+          [78.1437, 11.6705],
+          [78.1565, 11.6668],
+          [78.1591, 11.6528],
+          [78.171, 11.654],
+          [78.1877, 11.6548],
+          [78.195, 11.657],
+        ],
+      },
+      {
+        id: "route-salem-74",
+        code: "Route 74",
+        name: "Town Bus Stand ⇄ Omalur Bus Stand",
+        color: "#475569", // Slate
+        path: [
+          [78.1591, 11.6528],
+          [78.1565, 11.6668],
+          [78.1424, 11.6673],
+          [78.115, 11.685],
+          [78.078, 11.718],
+          [78.058, 11.732],
+          [78.0476, 11.7436],
+        ],
+      },
+      {
+        id: "route-salem-55",
+        code: "Route 55",
+        name: "MGR Central Bus Stand ⇄ Seelanaickenpatti",
+        color: "#0891B2", // Cyan
+        path: [
+          [78.1424, 11.6673],
+          [78.138, 11.6685],
+          [78.1565, 11.6668],
+          [78.1508, 11.6432],
+          [78.146, 11.638],
+          [78.145, 11.6228],
+        ],
+      },
+      {
+        id: "route-salem-2a",
+        code: "Route 2A",
+        name: "Salem Junction ⇄ Ayothiapattinam",
+        color: "#1E3A8A", // Deep Navy
+        path: [
+          [78.1132, 11.6714],
+          [78.117, 11.6718],
+          [78.1437, 11.6705],
+          [78.1565, 11.6668],
+          [78.1591, 11.6528],
+          [78.1877, 11.6548],
+          [78.212, 11.662],
+          [78.252, 11.6745],
+        ],
+      },
+    ];
+
+    SALEM_DEFAULT_CORRIDORS.forEach((sc) => {
+      registerRouteGeom(sc.id, sc.code, sc.name, sc.color, sc.path);
+    });
+
+    // Also register any custom DB fallback routes
     FALLBACK_ROUTES.filter((r) => r.tenantId === currentUser.tenantId).forEach((r) => {
       const coords =
         (r.geometryGeojson as any)?.coordinates ||
@@ -373,18 +506,6 @@ export async function getLiveBusTrackingImpl(filters?: {
         registerRouteGeom(r.id, r.code, r.name, r.color || "#059669", coords);
       }
     });
-
-    // Also check generic Salem fallback routes if still empty
-    if (routeGeomMap.size === 0 && isSalemTenant) {
-      FALLBACK_ROUTES.forEach((r) => {
-        const coords =
-          (r.geometryGeojson as any)?.coordinates ||
-          (r.polyline as any)?.coordinates;
-        if (coords && Array.isArray(coords) && coords.length > 1) {
-          registerRouteGeom(r.id, r.code, r.name, r.color || "#059669", coords);
-        }
-      });
-    }
   }
 
   // Collect distinct corridors available for this tenant
@@ -419,11 +540,44 @@ export async function getLiveBusTrackingImpl(filters?: {
     return undefined;
   };
 
-  for (let aIdx = 0; aIdx < assignments.length; aIdx++) {
-    const a = assignments[aIdx]!;
+  // Group scheduled assignments by physical vehicle (busRegNumber)
+  // Each physical vehicle must only have ONE live tracking marker on the map!
+  const busGroupMap = new Map<string, typeof assignments>();
+  for (const a of assignments) {
     if (!a.busRegNumber || a.busRegNumber === "Unassigned") continue;
+    const reg = a.busRegNumber.trim().toUpperCase();
+    if (!busGroupMap.has(reg)) {
+      busGroupMap.set(reg, []);
+    }
+    busGroupMap.get(reg)!.push(a);
+  }
 
-    const key = `${currentUser.tenantId}:${a.busRegNumber.toUpperCase()}`;
+  const busEntries = Array.from(busGroupMap.entries());
+
+  for (let bIdx = 0; bIdx < busEntries.length; bIdx++) {
+    const [busReg, busTrips] = busEntries[bIdx]!;
+
+    // Find the currently active or nearest trip for this vehicle
+    let a = busTrips.find(
+      (t) =>
+        currentMinutes >= (t.startTime ?? 0) &&
+        currentMinutes <= (t.endTime ?? 1440),
+    );
+
+    if (!a) {
+      const upcoming = busTrips
+        .filter((t) => (t.startTime ?? 0) > currentMinutes)
+        .sort((x, y) => (x.startTime ?? 0) - (y.startTime ?? 0));
+      if (upcoming.length > 0) {
+        a = upcoming[0];
+      } else {
+        a = busTrips[busTrips.length - 1]!;
+      }
+    }
+
+    if (!a) continue;
+
+    const key = `${currentUser.tenantId}:${busReg}`;
     const telemetry = LIVE_TELEMETRY.get(key);
 
     const routeCode = formatRouteNumber(a.routeCode);
@@ -432,7 +586,7 @@ export async function getLiveBusTrackingImpl(filters?: {
 
     // If no geometry matched, distribute across available tenant corridors so buses don't bunch on one route
     if (!geom && availableCorridors.length > 0) {
-      geom = availableCorridors[aIdx % availableCorridors.length];
+      geom = availableCorridors[bIdx % availableCorridors.length];
     }
 
     let isLive = false;
@@ -573,7 +727,7 @@ export async function getLiveBusTrackingImpl(filters?: {
             };
 
       const nowMs = Date.now();
-      const seed = a.busRegNumber.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+      const seed = busReg.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) + bIdx * 17;
       const speedFactor = 0.000035;
       const rawProgress = ((nowMs * speedFactor) + ((seed % 100) / 100)) % 1.0;
       const isReturn = a.direction === "RETURN" || a.direction === "DOWN";
@@ -586,8 +740,14 @@ export async function getLiveBusTrackingImpl(filters?: {
       const p1 = (activeGeom.path[segmentIndex] || [80.24, 13.045]) as [number, number];
       const p2 = (activeGeom.path[segmentIndex + 1] || p1) as [number, number];
 
-      const currentLng = p1[0] + (p2[0] - p1[0]) * fraction;
-      const currentLat = p1[1] + (p2[1] - p1[1]) * fraction;
+      let currentLng = p1[0] + (p2[0] - p1[0]) * fraction;
+      let currentLat = p1[1] + (p2[1] - p1[1]) * fraction;
+
+      // Terminal dispersion so multiple buses don't overlap into an identical stack
+      const jitterLat = ((bIdx % 5) - 2) * 0.0007;
+      const jitterLng = (Math.floor(bIdx / 5) - 1) * 0.0007;
+      currentLat += jitterLat;
+      currentLng += jitterLng;
 
       const dLng = isReturn ? p1[0] - p2[0] : p2[0] - p1[0];
       const dLat = isReturn ? p1[1] - p2[1] : p2[1] - p1[1];
@@ -631,12 +791,12 @@ export async function getLiveBusTrackingImpl(filters?: {
         }
       }
 
-      if (seed % 6 === 0) {
-        delayMinutes = 4 + (seed % 5);
+      if (seed % 7 === 0) {
+        delayMinutes = 4 + (seed % 4);
         delayStatus = "DELAYED";
         speedKmH = Math.max(14, Math.round(18 + Math.sin(seed + nowMs / 8000) * 6));
         statusReason = `Peak corridor congestion near ${nextStopName || "junction"} (+${delayMinutes} min delay).`;
-      } else if (seed % 13 === 0) {
+      } else if (seed % 17 === 0) {
         delayMinutes = 1;
         delayStatus = "STATIONARY";
         speedKmH = 0;
@@ -649,19 +809,20 @@ export async function getLiveBusTrackingImpl(filters?: {
       }
     }
 
-    // Check if vehicle has an active operational disruption
-    const directDisruption = LIVE_DISRUPTIONS.get(`${currentUser.tenantId}:${a.busRegNumber.toUpperCase()}`);
+    // Check if vehicle has an active operational disruption or Crew SOS
+    const directDisruption = LIVE_DISRUPTIONS.get(`${currentUser.tenantId}:${busReg}`);
     const activeDisruption =
       directDisruption ||
       Array.from(LIVE_DISRUPTIONS.values()).find(
         (d) =>
           !d.resolved &&
           d.tenantId === currentUser.tenantId &&
-          ((d.resourceId && (d.resourceId === a.busId || d.resourceId === a.busRegNumber)) ||
-            (d.busRegNumber && d.busRegNumber.toUpperCase() === a.busRegNumber.toUpperCase()) ||
+          ((d.resourceId && (d.resourceId === a.busId || d.resourceId === busReg)) ||
+            (d.busRegNumber && d.busRegNumber.toUpperCase() === busReg) ||
             (d.tripId && d.tripId === a.tripId)),
       );
 
+    let hasActiveSos = false;
     if (activeDisruption && !activeDisruption.resolved) {
       isLive = true;
       gpsStatus = "LIVE";
@@ -669,6 +830,14 @@ export async function getLiveBusTrackingImpl(filters?: {
       delayStatus = activeDisruption.type.includes("BREAKDOWN") ? "STATIONARY" : "DELAYED";
       speedKmH = activeDisruption.type.includes("BREAKDOWN") ? 0 : 12;
       statusReason = `[DISRUPTION ALERT] ${activeDisruption.reason || activeDisruption.type.replace(/_/g, " ")}. Central Dispatch response active.`;
+
+      if (
+        activeDisruption.type === "SOS_CRITICAL" ||
+        activeDisruption.type === "CREW_SOS" ||
+        activeDisruption.severity === "critical"
+      ) {
+        hasActiveSos = true;
+      }
     }
 
     // Apply Filters
@@ -707,7 +876,7 @@ export async function getLiveBusTrackingImpl(filters?: {
 
     trackedBuses.push({
       busId: a.busId,
-      busRegNumber: a.busRegNumber,
+      busRegNumber: busReg,
       busType: a.busType,
       depot: a.busDepot,
       isLive,
@@ -735,6 +904,7 @@ export async function getLiveBusTrackingImpl(filters?: {
       delayStatus,
       statusReason,
       affectedTripIds: [a.tripId],
+      hasActiveSos,
     });
   }
 

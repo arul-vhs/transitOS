@@ -23,6 +23,7 @@ import {
   Flame,
   ArrowRight,
   RefreshCw,
+  AlertOctagon,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -31,6 +32,14 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -98,6 +107,7 @@ function CrewPortalPage() {
   const [problemLocation, setProblemLocation] = useState<string>("");
   const [problemDescription, setProblemDescription] = useState<string>("");
   const [reportedIssues, setReportedIssues] = useState<ReportedProblemItem[]>([]);
+  const [sosConfirmOpen, setSosConfirmOpen] = useState(false);
 
   // 1. Fetch Crew Members
   const { data: driversList = [], isLoading: driversLoading } = useQuery({
@@ -251,6 +261,7 @@ function CrewPortalPage() {
       queryClient.invalidateQueries({ queryKey: ["incidents-crew"] });
       queryClient.invalidateQueries({ queryKey: ["operational-issues"] });
       queryClient.invalidateQueries({ queryKey: ["live-bus-tracking"] });
+      queryClient.invalidateQueries({ queryKey: ["live-tracking-assignments"] });
       refetchServerIncidents();
     },
     onError: (err: any) => {
@@ -278,6 +289,15 @@ function CrewPortalPage() {
       subtitle="Driver and Conductor self-service: inspect assigned duty timetable, bus assignment, and transmit live disruption alerts to dispatch."
       actions={
         <div className="flex items-center gap-2">
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setSosConfirmOpen(true)}
+            className="h-8 text-xs font-bold rounded-md bg-rose-600 hover:bg-rose-700 text-white shadow-xs cursor-pointer flex items-center gap-1.5"
+          >
+            <AlertOctagon className="size-3.5" />
+            <span>Emergency SOS</span>
+          </Button>
           <Badge
             variant="outline"
             className="font-mono text-xs border-primary/30 text-primary bg-primary/5 px-2.5 py-1 rounded-md"
@@ -867,6 +887,64 @@ function CrewPortalPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* EMERGENCY SOS CONFIRMATION DIALOG */}
+      <Dialog open={sosConfirmOpen} onOpenChange={setSosConfirmOpen}>
+        <DialogContent className="sm:max-w-md p-6 space-y-4 rounded-lg">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-rose-600 dark:text-rose-400 flex items-center gap-2">
+              <AlertOctagon className="size-5" />
+              Transmit Emergency SOS to Central Dispatch
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Immediately alerts Central Operations and Live Fleet Tracking. Central Dispatch will review telemetry and dispatch relief driver or replacement vehicle.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-md border border-rose-500/30 bg-rose-500/10 p-3 space-y-2 text-xs font-mono">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Reporting Pilot:</span>
+              <span className="font-bold text-foreground">{activeCrewMember?.name} ({activeCrewMember?.employeeId})</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Assigned Vehicle:</span>
+              <span className="font-bold text-foreground">{assignedBus?.registrationNumber || "Active Bus"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Active Duty / Route:</span>
+              <span className="font-bold text-foreground">{assignedDuty?.dutyCode || "D-01"} · {dutyTripsList[0]?.routeCode || "Corridor Trip"}</span>
+            </div>
+          </div>
+
+          <DialogFooter className="pt-2 flex-row gap-2 justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSosConfirmOpen(false)}
+              className="rounded-md text-xs font-medium"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                reportIncidentMutation.mutate({
+                  category: "SOS_CRITICAL",
+                  severity: "critical",
+                  location: problemLocation || dutyTripsList[0]?.origin || "Transit Corridor",
+                  description: `CRITICAL CREW SOS: Emergency in-cab distress alert signaled by ${activeCrewMember?.name || "Driver"} (${activeCrewMember?.employeeId || "Staff"}). Immediate driver replacement or rescue fleet deployment required.`,
+                });
+                setSosConfirmOpen(false);
+              }}
+              disabled={reportIncidentMutation.isPending}
+              className="rounded-md text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs cursor-pointer flex items-center gap-1.5"
+            >
+              <AlertOctagon className="size-3.5" />
+              {reportIncidentMutation.isPending ? "Transmitting..." : "Confirm & Send SOS Signal"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
