@@ -72,7 +72,7 @@ import {
   generateOptimizedSchedule,
   publishSchedule,
 } from "@/lib/optimization-fns";
-import { formatMinutesToTime } from "@/lib/utils";
+import { cn, formatMinutesToTime } from "@/lib/utils";
 import {
   getTodayIndianDate,
   formatToIndianDate,
@@ -183,6 +183,7 @@ function TripsPage() {
   const { currentTenant } = useActiveTenant();
 
   // Filters State
+  const [viewMode, setViewMode] = useState<"matrix" | "list">("matrix");
   const [serviceDate, setServiceDate] = useState(DEFAULT_DATE);
   const [routeFilter, setRouteFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -271,9 +272,9 @@ function TripsPage() {
 
   const calculatedDuration = selectedRoute?.durationMin || 30;
   const calculatedEndTimeMinutes = useMemo(() => {
-    const startMin = parseTimeToMinutes(departureTime);
+    const startMin = parse12HourToMinutes(departureTime12);
     return startMin + calculatedDuration;
-  }, [departureTime, calculatedDuration]);
+  }, [departureTime12, calculatedDuration]);
 
   // Trip to Assignment mapping (Trip ID -> Bus, Driver, Conductor, Duty)
   const tripAssignmentMap = useMemo(() => {
@@ -281,9 +282,9 @@ function TripsPage() {
       string,
       {
         dutyId: string;
-        busId?: string | null;
-        driverId?: string | null;
-        conductorId?: string | null;
+        busId?: string | null | undefined;
+        driverId?: string | null | undefined;
+        conductorId?: string | null | undefined;
         busReg: string;
         driverName: string;
         conductorName: string;
@@ -299,9 +300,9 @@ function TripsPage() {
 
         map.set(t.id, {
           dutyId: duty.id,
-          busId: duty.busId,
-          driverId: duty.driverId,
-          conductorId: duty.conductorId,
+          busId: duty.busId ?? null,
+          driverId: duty.driverId ?? null,
+          conductorId: duty.conductorId ?? null,
           busReg: bus ? `${bus.registrationNumber} (${bus.fleetNumber || "Bus"})` : "Unassigned",
           driverName: driver ? driver.name : "Unassigned",
           conductorName: conductor ? conductor.name : "Unassigned",
@@ -319,11 +320,13 @@ function TripsPage() {
 
     for (let i = 0; i < tripsList.length; i++) {
       const tripA = tripsList[i];
+      if (!tripA) continue;
       const assignA = tripAssignmentMap.get(tripA.id);
       if (!assignA) continue;
 
       for (let j = i + 1; j < tripsList.length; j++) {
         const tripB = tripsList[j];
+        if (!tripB) continue;
         const assignB = tripAssignmentMap.get(tripB.id);
         if (!assignB) continue;
 
@@ -393,6 +396,13 @@ function TripsPage() {
       return true;
     });
   }, [tripsList, searchQuery, tripAssignmentMap]);
+
+  const corridorsForMatrix = useMemo(() => {
+    if (routeFilter !== "all") {
+      return routesList.filter((r) => r.id === routeFilter);
+    }
+    return routesList;
+  }, [routesList, routeFilter]);
 
   // Cancel trip mutation
   const cancelMutation = useMutation({
@@ -961,13 +971,164 @@ function TripsPage() {
             </Select>
           </div>
 
-          <div className="text-xs text-muted-foreground">
-            Showing <span className="font-bold text-foreground">{filteredTrips.length}</span> trips
+          <div className="flex items-center gap-3">
+            <div className="flex items-center bg-muted/60 border border-border p-0.5 rounded-md">
+              <Button
+                variant={viewMode === "matrix" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("matrix")}
+                className="h-7 text-xs px-2.5 rounded-md font-medium"
+              >
+                <CalendarClock className="size-3.5 mr-1.5" />
+                Timetable Grid
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="h-7 text-xs px-2.5 rounded-md font-medium"
+              >
+                <Filter className="size-3.5 mr-1.5" />
+                Trips List
+              </Button>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Showing <span className="font-bold text-foreground">{filteredTrips.length}</span> trips
+            </div>
           </div>
         </div>
 
-        {/* 3. Timetable Table */}
-        <div className="rounded-lg border border-border/80 bg-card overflow-hidden shadow-xs">
+        {viewMode === "matrix" ? (
+          <div className="rounded-lg border border-border/80 bg-card overflow-hidden shadow-xs">
+            <div className="p-4 border-b border-border/60 bg-muted/20 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <CalendarClock className="size-4 text-blue-600" />
+                  Corridor Timetable Schedule Matrix
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Hourly scheduled departures across corridors. Click any trip tile to assign bus and crew.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-xs bg-emerald-500"></span>
+                  <span className="text-muted-foreground">Fully Assigned</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-xs bg-amber-500"></span>
+                  <span className="text-muted-foreground">Needs Bus/Crew</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-xs bg-rose-500"></span>
+                  <span className="text-muted-foreground">Conflict Detected</span>
+                </span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <div className="min-w-[1100px] divide-y divide-border/60">
+                <div className="grid grid-cols-[220px_repeat(16,1fr)] bg-muted/40 text-[11px] font-bold text-foreground border-b border-border/80">
+                  <div className="p-3 sticky left-0 bg-muted/90 z-10 border-r border-border/60">Route Corridor</div>
+                  {[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21].map((hour) => (
+                    <div key={hour} className="p-2 text-center border-r border-border/40 font-mono">
+                      {String(hour).padStart(2, "0")}:00
+                    </div>
+                  ))}
+                </div>
+
+                {corridorsForMatrix.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-muted-foreground">No corridors found.</div>
+                ) : (
+                  corridorsForMatrix.map((corridor) => {
+                    const corridorTrips = filteredTrips.filter(
+                      (t) => t.routeId === corridor.id || t.routeCode === corridor.code,
+                    );
+                    return (
+                      <div
+                        key={corridor.id}
+                        className="grid grid-cols-[220px_repeat(16,1fr)] hover:bg-muted/10 transition-colors"
+                      >
+                        <div className="p-3 sticky left-0 bg-card z-10 border-r border-border/60 flex flex-col justify-center">
+                          <div className="flex items-center gap-1.5">
+                            <RouteBadge route={corridor.code} size="sm" />
+                            <span className="text-xs font-bold text-foreground truncate max-w-[140px]">
+                              {corridor.name.split("⇄")[0]}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]">
+                            {corridor.origin} → {corridor.destination}
+                          </span>
+                          <span className="text-[10px] font-mono text-muted-foreground/80 mt-0.5">
+                            {corridorTrips.length} daily departures
+                          </span>
+                        </div>
+
+                        {[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21].map((hour) => {
+                          const hourTrips = corridorTrips.filter(
+                            (t) => Math.floor(t.startTime / 60) === hour,
+                          );
+                          return (
+                            <div
+                              key={hour}
+                              className="p-1 border-r border-border/40 min-h-[68px] flex flex-col gap-1 justify-center"
+                            >
+                              {hourTrips.length === 0 ? (
+                                <span className="text-center text-muted-foreground/30 text-[10px] font-mono select-none">
+                                  -
+                                </span>
+                              ) : (
+                                hourTrips.map((trip) => {
+                                  const assign = tripAssignmentMap.get(trip.id);
+                                  const isUnassigned =
+                                    !assign ||
+                                    assign.busReg === "Unassigned" ||
+                                    assign.driverName === "Unassigned";
+                                  const conflictMsgs = schedulingConflicts.get(trip.id);
+                                  const hasConflict = !!conflictMsgs && conflictMsgs.length > 0;
+
+                                  return (
+                                    <div
+                                      key={trip.id}
+                                      onClick={() => handleOpenQuickAssign(trip)}
+                                      className={cn(
+                                        "p-1 rounded-md text-[10px] font-mono border transition-all cursor-pointer shadow-2xs hover:shadow-xs",
+                                        hasConflict
+                                          ? "bg-rose-500/10 border-rose-500/40 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20"
+                                          : isUnassigned
+                                            ? "bg-amber-500/10 border-amber-500/40 text-amber-800 dark:text-amber-300 hover:bg-amber-500/20"
+                                            : "bg-emerald-500/10 border-emerald-500/40 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-500/20",
+                                      )}
+                                      title={`Trip ${trip.tripCode}: ${formatMinutesToTimeString(trip.startTime)} - ${formatMinutesToTimeString(trip.endTime)}\nBus: ${assign?.busReg || "Unassigned"}\nDriver: ${assign?.driverName || "Unassigned"}${hasConflict ? "\n" + conflictMsgs?.join("\n") : ""}`}
+                                    >
+                                      <div className="flex items-center justify-between font-bold">
+                                        <span>{formatMinutesToTimeString(trip.startTime)}</span>
+                                        <span className="text-[9px] opacity-75">
+                                          {trip.direction === "RETURN" ? "RET" : "OUT"}
+                                        </span>
+                                      </div>
+                                      <div className="text-[9px] truncate opacity-90 mt-0.5">
+                                        {assign && assign.busReg !== "Unassigned"
+                                          ? assign.busReg.split(" ")[0]
+                                          : "Unassigned"}
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* 3. Timetable Table List */
+          <div className="rounded-lg border border-border/80 bg-card overflow-hidden shadow-xs">
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow>
@@ -1143,6 +1304,7 @@ function TripsPage() {
             </TableBody>
           </Table>
         </div>
+        )}
 
         {/* 4. MODAL: 7-STEP GUIDED OPERATIONAL SCHEDULER */}
         <Dialog open={isWizardOpen} onOpenChange={setIsWizardOpen}>
@@ -1219,7 +1381,7 @@ function TripsPage() {
                   {selectedRoute && (
                     <div className="rounded-md border border-border/80 bg-muted/20 p-3 text-xs space-y-1.5">
                       <div className="flex items-center gap-2">
-                        <RouteBadge code={selectedRoute.code} />
+                        <RouteBadge route={selectedRoute.code} />
                         <span className="font-semibold text-foreground">{selectedRoute.name}</span>
                       </div>
                       <p className="text-muted-foreground text-[11px]">

@@ -174,6 +174,7 @@ function OperationsTodayPage() {
   const [mapDepotFilter, setMapDepotFilter] = useState<string>("all");
   const [mapStatusFilter, setMapStatusFilter] = useState<string>("all");
   const [mapSearchQuery, setMapSearchQuery] = useState<string>("");
+  const [isSimulatingMovements, setIsSimulatingMovements] = useState(true);
 
   const [issuesTab, setIssuesTab] = useState<
     "needs_review" | "manual" | "resolved" | "all"
@@ -242,7 +243,7 @@ function OperationsTodayPage() {
         routeCode: mapRouteFilter !== "all" ? mapRouteFilter : undefined,
         statusFilter: mapStatusFilter !== "all" ? mapStatusFilter : undefined,
       }),
-    refetchInterval: 10000, // Auto-sync live tracking every 10s
+    refetchInterval: isSimulatingMovements ? 3000 : false, // Smooth live movement tick every 3s
   });
 
   const trackedBuses: LiveTrackedBus[] = useMemo(
@@ -426,7 +427,7 @@ function OperationsTodayPage() {
 
   // Conductor Direct Assignment Mutation
   const assignConductorMutation = useMutation({
-    mutationFn: async (vars: { tripId: string; dutyId?: string; conductorId: string }) => {
+    mutationFn: async (vars: { tripId: string; dutyId?: string | undefined; conductorId: string }) => {
       return await assignConductorToTrip({
         ...vars,
         serviceDate,
@@ -663,8 +664,8 @@ function OperationsTodayPage() {
           ${
             b.isLive
               ? `<span class="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full ${pingColor} opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 ${pingColor}"></span>
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-sm ${pingColor} opacity-75"></span>
+                  <span class="relative inline-flex rounded-sm h-2.5 w-2.5 ${pingColor}"></span>
                 </span>`
               : ""
           }
@@ -1181,17 +1182,48 @@ function OperationsTodayPage() {
                   variant="outline"
                   className="text-[11px] font-bold px-2 py-0 border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-md flex items-center gap-1"
                 >
-                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="size-1.5 rounded-sm bg-emerald-500 animate-pulse"></span>
                   {trackingSummary.liveTracked} Live Tracking
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Real-time AVL positioning, corridor delay detection, and timetable adherence. Untracked vehicles are strictly labelled.
+                Real-time AVL positioning, live corridor movement simulation, and timetable adherence.
               </p>
             </div>
 
-            {/* Live Tracking KPI Summary Strip */}
+            {/* Live Movement Simulation & KPI Strip */}
             <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1 bg-muted/60 border border-border p-1 rounded-md">
+                <Button
+                  size="sm"
+                  variant={isSimulatingMovements ? "default" : "outline"}
+                  onClick={() => {
+                    setIsSimulatingMovements((prev) => !prev);
+                    toast.info(
+                      !isSimulatingMovements
+                        ? "Resumed live movement simulation (auto-tick every 3s)."
+                        : "Paused live movement simulation."
+                    );
+                  }}
+                  className="h-7 text-xs px-2.5 rounded-md font-medium"
+                >
+                  <Activity className="size-3 mr-1" />
+                  {isSimulatingMovements ? "Simulation: Moving" : "Simulation: Paused"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    refetchTracking();
+                    toast.success("Simulated next live telemetry tick for all corridor buses.");
+                  }}
+                  className="h-7 text-xs px-2 rounded-md"
+                  title="Simulate Next Live Moment"
+                >
+                  <RefreshCw className={cn("size-3", refetchingTracking && "animate-spin")} />
+                  <span className="sr-only">Step Moment</span>
+                </Button>
+              </div>
               <div className="px-2.5 py-1 rounded-md border border-border bg-card text-xs flex items-center gap-2">
                 <span className="text-muted-foreground">Monitored:</span>
                 <span className="font-mono font-bold text-foreground">

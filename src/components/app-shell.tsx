@@ -69,7 +69,7 @@ const NAV: NavGroup[] = [
       { label: "Bus Fleet", to: "/fleet/buses", icon: Bus },
       { label: "Bus Crew", to: "/crew/drivers", icon: Users },
       { label: "Schedules & Timetable", to: "/operations/trips", icon: CalendarClock },
-      { label: "Smart Fleet Allocation", to: "/operations/allocation", icon: Workflow },
+      { label: "Passenger Demand & Allocation", to: "/operations/allocation", icon: Workflow },
       { label: "Simulation Deck", to: "/simulation", icon: Play },
       { label: "Live Tracking", to: "/operations/today", icon: Radio },
     ],

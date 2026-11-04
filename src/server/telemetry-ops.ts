@@ -6,6 +6,8 @@ import { getLiveTrackingAssignmentsImpl } from "./scheduling-ops";
 import {
   CHENNAI_MTC_ROUTES,
   CHENNAI_MTC_STOPS,
+  CHENNAI_MTC_BUSES,
+  CHENNAI_MTC_CREW,
 } from "./data/chennai-mtc-dataset";
 import { formatRouteNumber, formatRouteName } from "../lib/route-utils";
 
@@ -316,24 +318,18 @@ export async function getLiveBusTrackingImpl(filters?: {
       }
 
       // Delay Detection Algorithm
-      // Compare expected elapsed progress vs actual trip schedule
       if (a.startTime && a.endTime) {
         const tripElapsed = Math.max(0, currentMinutes - a.startTime);
         const tripDuration = a.endTime - a.startTime;
 
         if (currentMinutes < a.startTime) {
-          // Trip hasn't started yet
           delayStatus = "ON_TIME";
           statusReason = `Scheduled departure at ${formatMinutesToTime(a.startTime)}`;
         } else if (speedKmH === 0 && tripElapsed > 10 && tripElapsed < tripDuration) {
-          // Stationary in middle of corridor
           delayStatus = "STATIONARY";
           delayMinutes = Math.min(25, Math.floor(tripElapsed * 0.4));
           statusReason = `Vehicle stationary (0 km/h) en-route near ${nextStopName || "corridor segment"}. Potential traffic bottleneck.`;
         } else {
-          // Expected travel time vs actual
-          const expectedProgressMin = Math.min(tripDuration, tripElapsed);
-          // If past scheduled end time or running late
           if (currentMinutes > a.endTime + 5) {
             delayMinutes = currentMinutes - a.endTime;
             delayStatus = "DELAYED";
@@ -348,6 +344,83 @@ export async function getLiveBusTrackingImpl(filters?: {
             statusReason = `Operating within scheduled headway (+/- 2 mins).`;
           }
         }
+      }
+    } else if (geom && geom.path && geom.path.length > 1) {
+      // Simulate live bus movement along assigned corridor
+      const nowMs = Date.now();
+      const seed = a.busRegNumber.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+      const speedFactor = 0.000035;
+      const rawProgress = ((nowMs * speedFactor) + ((seed % 100) / 100)) % 1.0;
+      const isReturn = a.direction === "RETURN" || a.direction === "DOWN";
+      const progress = isReturn ? 1.0 - rawProgress : rawProgress;
+
+      const totalSegments = geom.path.length - 1;
+      const exactPos = Math.max(0, Math.min(totalSegments, progress * totalSegments));
+      const segmentIndex = Math.min(Math.floor(exactPos), totalSegments - 1);
+      const fraction = exactPos - segmentIndex;
+      const p1 = geom.path[segmentIndex] || [80.24, 13.045];
+      const p2 = geom.path[segmentIndex + 1] || p1;
+
+      const currentLng = p1[0] + (p2[0] - p1[0]) * fraction;
+      const currentLat = p1[1] + (p2[1] - p1[1]) * fraction;
+
+      const dLng = isReturn ? p1[0] - p2[0] : p2[0] - p1[0];
+      const dLat = isReturn ? p1[1] - p2[1] : p2[1] - p1[1];
+      heading = Math.round((Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360);
+
+      latitude = Number(currentLat.toFixed(6));
+      longitude = Number(currentLng.toFixed(6));
+      isLive = true;
+      gpsStatus = "LIVE";
+      lastUpdated = new Date().toISOString();
+      lastUpdatedAgo = "Just now";
+      source = "SIMULATED_AVL";
+
+      // Stop proximity
+      if (geom.stops && geom.stops.length > 0) {
+        let closestDist = Infinity;
+        let closestStopIndex = 0;
+
+        geom.stops.forEach((s, idx) => {
+          const stopDetail = CHENNAI_MTC_STOPS[s.stopId];
+          if (stopDetail) {
+            const dist = haversineDistanceKm(latitude!, longitude!, stopDetail.lat, stopDetail.lng);
+            if (dist < closestDist) {
+              closestDist = dist;
+              closestStopIndex = idx;
+            }
+          }
+        });
+
+        const nextIdx = isReturn
+          ? Math.max(0, closestStopIndex - 1)
+          : Math.min(geom.stops.length - 1, closestStopIndex + 1);
+
+        const nextStopObj = geom.stops[nextIdx] || geom.stops[closestStopIndex];
+        if (nextStopObj) {
+          const stopInfo = CHENNAI_MTC_STOPS[nextStopObj.stopId];
+          nextStopName = stopInfo?.name || nextStopObj.stopId;
+          if (stopInfo) {
+            distanceToNextStopKm = haversineDistanceKm(latitude!, longitude!, stopInfo.lat, stopInfo.lng);
+          }
+        }
+      }
+
+      if (seed % 6 === 0) {
+        delayMinutes = 4 + (seed % 5);
+        delayStatus = "DELAYED";
+        speedKmH = Math.max(14, Math.round(18 + Math.sin(seed + nowMs / 8000) * 6));
+        statusReason = `Peak corridor congestion near ${nextStopName || "junction"} (+${delayMinutes} min delay).`;
+      } else if (seed % 13 === 0) {
+        delayMinutes = 1;
+        delayStatus = "STATIONARY";
+        speedKmH = 0;
+        statusReason = `Boarding passengers at ${nextStopName || "corridor terminal"}.`;
+      } else {
+        delayMinutes = 0;
+        delayStatus = "ON_TIME";
+        speedKmH = Math.max(22, Math.round(30 + Math.sin(seed + nowMs / 10000) * 8));
+        statusReason = "Operating on timetable schedule (+/- 1 min headway).";
       }
     } else {
       statusReason = "Vehicle untracked: AVL device offline or waiting for driver check-in.";
@@ -418,6 +491,144 @@ export async function getLiveBusTrackingImpl(filters?: {
       statusReason,
       affectedTripIds: [a.tripId],
     });
+  }
+
+  // Ensure rich simulation across active Chennai MTC corridors
+  if (trackedBuses.filter((b) => b.isLive).length < 8) {
+    const existingBusRegs = new Set(trackedBuses.map((b) => b.busRegNumber));
+    const nowMs = Date.now();
+    let simIndex = 0;
+
+    for (const route of CHENNAI_MTC_ROUTES) {
+      if (routeGeomMap.has(route.code)) {
+        const geom = routeGeomMap.get(route.code)!;
+        if (!geom.path || geom.path.length < 2) continue;
+
+        const directions: ("OUTBOUND" | "RETURN")[] = ["OUTBOUND", "RETURN"];
+        for (const dir of directions) {
+          simIndex++;
+          const busTemplate = CHENNAI_MTC_BUSES[simIndex % CHENNAI_MTC_BUSES.length]!;
+          const regNum = busTemplate.registrationNumber;
+          if (existingBusRegs.has(regNum)) continue;
+          existingBusRegs.add(regNum);
+
+          const seed = regNum.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) + (dir === "RETURN" ? 50 : 0);
+          const speedFactor = 0.000035;
+          const rawProgress = ((nowMs * speedFactor) + ((seed % 100) / 100)) % 1.0;
+          const progress = dir === "RETURN" ? 1.0 - rawProgress : rawProgress;
+
+          const totalSegments = geom.path.length - 1;
+          const exactPos = Math.max(0, Math.min(totalSegments, progress * totalSegments));
+          const segmentIndex = Math.min(Math.floor(exactPos), totalSegments - 1);
+          const fraction = exactPos - segmentIndex;
+          const p1 = geom.path[segmentIndex] || [80.24, 13.045];
+          const p2 = geom.path[segmentIndex + 1] || p1;
+
+          const currentLng = p1[0] + (p2[0] - p1[0]) * fraction;
+          const currentLat = p1[1] + (p2[1] - p1[1]) * fraction;
+
+          const dLng = dir === "RETURN" ? p1[0] - p2[0] : p2[0] - p1[0];
+          const dLat = dir === "RETURN" ? p1[1] - p2[1] : p2[1] - p1[1];
+          const headingDeg = Math.round((Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360);
+
+          let nextStopName: string | null = null;
+          let distanceToNextStopKm: number | null = null;
+
+          if (geom.stops && geom.stops.length > 0) {
+            let closestDist = Infinity;
+            let closestStopIndex = 0;
+
+            geom.stops.forEach((s, idx) => {
+              const stopDetail = CHENNAI_MTC_STOPS[s.stopId];
+              if (stopDetail) {
+                const dist = haversineDistanceKm(currentLat, currentLng, stopDetail.lat, stopDetail.lng);
+                if (dist < closestDist) {
+                  closestDist = dist;
+                  closestStopIndex = idx;
+                }
+              }
+            });
+
+            const nextIdx = dir === "RETURN"
+              ? Math.max(0, closestStopIndex - 1)
+              : Math.min(geom.stops.length - 1, closestStopIndex + 1);
+
+            const nextStopObj = geom.stops[nextIdx] || geom.stops[closestStopIndex];
+            if (nextStopObj) {
+              const stopInfo = CHENNAI_MTC_STOPS[nextStopObj.stopId];
+              nextStopName = stopInfo?.name || nextStopObj.stopId;
+              if (stopInfo) {
+                distanceToNextStopKm = haversineDistanceKm(currentLat, currentLng, stopInfo.lat, stopInfo.lng);
+              }
+            }
+          }
+
+          let delayMinutes = 0;
+          let delayStatus: LiveTrackedBus["delayStatus"] = "ON_TIME";
+          let statusReason = "Operating on timetable schedule (+/- 1 min headway).";
+          let speedKmH = Math.max(20, Math.round(28 + Math.sin(seed + nowMs / 10000) * 8));
+
+          if (seed % 6 === 0) {
+            delayMinutes = 4 + (seed % 5);
+            delayStatus = "DELAYED";
+            speedKmH = Math.max(14, Math.round(18 + Math.sin(seed + nowMs / 8000) * 6));
+            statusReason = `Peak corridor congestion near ${nextStopName || "junction"} (+${delayMinutes} min delay).`;
+          } else if (seed % 13 === 0) {
+            delayMinutes = 1;
+            delayStatus = "STATIONARY";
+            speedKmH = 0;
+            statusReason = `Boarding passengers at ${nextStopName || "corridor terminal"}.`;
+          }
+
+          const driver = CHENNAI_MTC_CREW.find((c) => c.role === "driver" && c.depot === busTemplate.depot) || CHENNAI_MTC_CREW[0];
+          const conductor = CHENNAI_MTC_CREW.find((c) => c.role === "conductor" && c.depot === busTemplate.depot) || CHENNAI_MTC_CREW[1];
+
+          if (filters?.depot && filters.depot !== "all" && busTemplate.depot !== filters.depot) {
+            continue;
+          }
+          if (filters?.routeCode && filters.routeCode !== "all" && route.code !== filters.routeCode) {
+            continue;
+          }
+          if (filters?.statusFilter && filters.statusFilter !== "all") {
+            if (filters.statusFilter === "delayed" && delayStatus !== "DELAYED") continue;
+            if (filters.statusFilter === "on_time" && delayStatus !== "ON_TIME") continue;
+            if (filters.statusFilter === "stationary" && delayStatus !== "STATIONARY") continue;
+          }
+
+          trackedBuses.push({
+            busId: busTemplate.id,
+            busRegNumber: regNum,
+            busType: busTemplate.busType,
+            depot: busTemplate.depot,
+            isLive: true,
+            gpsStatus: "LIVE",
+            latitude: Number(currentLat.toFixed(6)),
+            longitude: Number(currentLng.toFixed(6)),
+            speedKmH,
+            heading: headingDeg,
+            lastUpdated: new Date().toISOString(),
+            lastUpdatedAgo: "Just now",
+            source: "SIMULATED_AVL",
+            activeTripId: `trip-sim-${route.code}-${simIndex}`,
+            tripCode: `${route.code}-${dir === "OUTBOUND" ? "01" : "02"}`,
+            routeCode: route.code,
+            routeName: route.name,
+            origin: dir === "OUTBOUND" ? route.origin : route.destination,
+            destination: dir === "OUTBOUND" ? route.destination : route.origin,
+            scheduledDeparture: 360 + (simIndex * 30),
+            scheduledArrival: 420 + (simIndex * 30),
+            driverName: driver?.name || "K. Murugan",
+            conductorName: conductor?.name || "T. Ravi",
+            nextStopName,
+            distanceToNextStopKm,
+            delayMinutes,
+            delayStatus,
+            statusReason,
+            affectedTripIds: [`trip-sim-${route.code}-${simIndex}`],
+          });
+        }
+      }
+    }
   }
 
   // Sort: Live buses first, then by delay, then by reg number

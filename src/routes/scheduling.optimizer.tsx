@@ -161,15 +161,15 @@ function OptimizerPage() {
 
   // Calculate baseline metrics
   const baselineUnassigned = currentTrips.filter(
-    (t) =>
-      !currentDuties.some((d) => d.trips?.some((dt: any) => dt.id === t.id)),
+    (t: any) =>
+      !currentDuties.some((d: any) => d.trips?.some((dt: any) => dt.id === t.id)),
   ).length;
   const baselineBuses = new Set(
-    currentDuties.map((d) => d.busId).filter(Boolean),
+    currentDuties.map((d: any) => d.busId).filter(Boolean),
   ).size;
   const baselineDuties = currentDuties.length;
   let baselineHandovers = 0;
-  currentDuties.forEach((d) => {
+  currentDuties.forEach((d: any) => {
     if (d.dutyType === "UNLINKED" && d.crewSegments) {
       baselineHandovers += Math.max(0, d.crewSegments.length - 1);
     }
@@ -565,7 +565,7 @@ function OptimizerPage() {
                   <span className="text-2xl font-bold font-mono text-foreground">
                     {
                       busesList.filter(
-                        (b) =>
+                        (b: any) =>
                           b.status === "available" || b.status === "assigned",
                       ).length
                     }
@@ -576,7 +576,7 @@ function OptimizerPage() {
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl border border-border/70 bg-card/60 backdrop-blur-xs flex flex-col justify-between hover:border-primary/40 transition-colors">
+              <div className="p-3.5 rounded-lg border border-border/70 bg-card/60 backdrop-blur-xs flex flex-col justify-between hover:border-primary/40 transition-colors">
                 <div className="flex items-center justify-between text-muted-foreground">
                   <span className="text-[10px] font-bold uppercase tracking-wider">
                     Ready Drivers
@@ -585,7 +585,7 @@ function OptimizerPage() {
                 </div>
                 <div className="mt-2">
                   <span className="text-2xl font-bold font-mono text-foreground">
-                    {driversList.filter((d) => d.status === "available").length}
+                    {driversList.filter((d: any) => d.status === "available").length}
                   </span>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
                     HPV licensed crew
@@ -593,7 +593,7 @@ function OptimizerPage() {
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl border border-border/70 bg-card/60 backdrop-blur-xs flex flex-col justify-between hover:border-primary/40 transition-colors">
+              <div className="p-3.5 rounded-lg border border-border/70 bg-card/60 backdrop-blur-xs flex flex-col justify-between hover:border-primary/40 transition-colors">
                 <div className="flex items-center justify-between text-muted-foreground">
                   <span className="text-[10px] font-bold uppercase tracking-wider">
                     Ready Conductors
@@ -603,7 +603,7 @@ function OptimizerPage() {
                 <div className="mt-2">
                   <span className="text-2xl font-bold font-mono text-foreground">
                     {
-                      conductorsList.filter((c) => c.status === "available")
+                      conductorsList.filter((c: any) => c.status === "available")
                         .length
                     }
                   </span>

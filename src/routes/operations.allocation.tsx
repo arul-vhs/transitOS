@@ -87,7 +87,7 @@ export const Route = createFileRoute("/operations/allocation")({
   },
   head: () => ({
     meta: [
-      { title: "Dynamic Fleet Allocation: TransitOS" },
+      { title: "Passenger Demand & Fleet Allocation: TransitOS" },
       {
         name: "description",
         content:
@@ -122,32 +122,32 @@ const STRATEGY_OPTIONS: {
 
 const PRESET_SCENARIOS = [
   {
-    name: "Yercaud Tourist Return Surge",
-    routeId: "route-slm-13",
+    name: "OMR IT Tech Park Evening Departure Surge",
+    routeId: "route-mtc-570",
     surgePercent: 65,
     cause:
-      "Weekend holiday rush from Marina Beach and Anna Square toward CMBT and Tambaram.",
+      "Peak tech corridor outflow along Rajiv Gandhi Salai from Siruseri SIPCOT to Guindy and CMBT.",
   },
   {
-    name: "Chennai Central Express Train Arrival",
-    routeId: "route-slm-01",
+    name: "Chennai Central Railway Express Arrival",
+    routeId: "route-mtc-21g",
     surgePercent: 55,
     cause:
-      "Simultaneous arrival of Vande Bharat and Nilgiri Express at MGR Chennai Central Station.",
+      "Simultaneous arrival of Coromandel and Vande Bharat Express at MGR Chennai Central Station.",
   },
   {
-    name: "Steel Plant Evening Shift Release",
-    routeId: "route-slm-33",
+    name: "ECR Beach Leisure & Coastal Excursion Surge",
+    routeId: "route-mtc-102",
     surgePercent: 50,
     cause:
-      "Shift dismissal along OMR IT Corridor from Siruseri SIPCOT toward Guindy.",
+      "Weekend passenger flow returning from East Coast Road toward Central Broadway.",
   },
   {
-    name: "Omalur Industrial Hub Surge",
-    routeId: "route-slm-74",
+    name: "T. Nagar Festive Shopping Corridor Surge",
+    routeId: "route-mtc-5c",
     surgePercent: 45,
     cause:
-      "Suburban evening commute from Ambattur Industrial Estate to Central Broadway.",
+      "Heavy retail and pedestrian transfer between T. Nagar Bus Terminus and Broadway.",
   },
 ];
 
@@ -200,14 +200,14 @@ function DynamicFleetAllocationPage() {
     useState<AllocationStrategy>("BALANCED_SLA");
   const [activeScenarios, setActiveScenarios] = useState<SurgeScenarioInput[]>([
     {
-      routeId: "route-slm-13",
+      routeId: "route-mtc-570",
       surgePercent: 45,
-      cause: "Evening Yercaud excursion return commute",
+      cause: "OMR IT Corridor evening commuter peak",
     },
   ]);
 
   // Simulation custom input
-  const [customRouteId, setCustomRouteId] = useState<string>("route-slm-01");
+  const [customRouteId, setCustomRouteId] = useState<string>("route-mtc-570");
   const [customSurgePercent, setCustomSurgePercent] = useState<number>(35);
 
   // Dispatch confirmation dialog
@@ -330,7 +330,7 @@ function DynamicFleetAllocationPage() {
 
   return (
     <AppShell
-      title="Smart Fleet Allocation"
+      title="Passenger Demand & Smart Fleet Allocation"
       subtitle="Demand-responsive capacity rebalancing, real-time surge detection, and multi-depot reserve dispatch"
     >
       <div className="space-y-6 p-4 md:p-8 max-w-7xl mx-auto">
@@ -342,12 +342,12 @@ function DynamicFleetAllocationPage() {
                 <Workflow className="h-5 w-5" />
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                Corridor Rebalancing & Surge Controls
+                Passenger Demand & Corridor Rebalancing Controls
               </h1>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              Dynamic capacity rebalancing, real-time surge detection, and
-              multi-depot reserve dispatch for the Chennai MTC transit network.
+              Dynamic passenger demand sensing, corridor surge detection, and
+              multi-depot reserve fleet dispatch for Chennai MTC corridors.
             </p>
           </div>
 
@@ -633,7 +633,7 @@ function DynamicFleetAllocationPage() {
                   max={85}
                   step={5}
                   value={[customSurgePercent]}
-                  onValueChange={(vals) => setCustomSurgePercent(vals[0])}
+                  onValueChange={(vals) => setCustomSurgePercent(vals[0] ?? 35)}
                   className="w-full"
                 />
               </div>
@@ -688,8 +688,9 @@ function DynamicFleetAllocationPage() {
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip
                       content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
+                        if (active && payload && payload.length && payload[0]) {
                           const data = payload[0].payload;
+                          if (!data) return null;
                           return (
                             <div className="bg-popover border border-border p-2.5 rounded-md shadow-md text-xs space-y-1">
                               <p className="font-semibold text-foreground">

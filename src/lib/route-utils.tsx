@@ -143,20 +143,34 @@ export interface RouteBadgeProps {
   route: RouteIdentifiable | string | null | undefined;
   className?: string;
   showName?: boolean;
+  size?: "xs" | "sm" | "md" | "lg";
 }
 
 export function RouteBadge({
   route,
   className,
   showName = false,
+  size = "md",
 }: RouteBadgeProps) {
   const { number, name } = formatRouteDisplay(route);
+
+  const sizeClasses =
+    size === "xs"
+      ? "text-[9px] px-1 py-0"
+      : size === "sm"
+        ? "text-[10px] px-1.5 py-0"
+        : size === "lg"
+          ? "text-xs px-2 py-0.5"
+          : "text-[11px] px-1.5 py-0";
 
   return (
     <div className={cn("inline-flex items-center gap-1.5", className)}>
       <Badge
         variant="outline"
-        className="font-mono font-bold text-[11px] px-1.5 py-0 bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30 rounded-md tracking-wider uppercase shrink-0"
+        className={cn(
+          "font-mono font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30 rounded-md tracking-wider uppercase shrink-0",
+          sizeClasses
+        )}
       >
         {number}
       </Badge>
