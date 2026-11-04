@@ -44,6 +44,8 @@ build/
 .output/
 .nitro/
 .wrangler/
+digitalplat-vistapanel-package/
+digitalplat-htdocs.zip
 
 # Logs
 logs/
