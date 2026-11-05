@@ -58,7 +58,7 @@ export const Route = createFileRoute("/simulation")({
       {
         name: "description",
         content:
-          "Multi-corridor transit operations simulation, real-time fleet movement, telemetry tracking, and AI auto-recovery engine.",
+          "Multi-corridor transit operations simulation, real-time fleet movement, telemetry tracking, and automated recovery engine.",
       },
     ],
   }),
@@ -1099,7 +1099,7 @@ function SimulationPage() {
     );
     setSelectedBusId(target.id);
 
-    // Open AI Recovery Dialog
+    // Open Automated Recovery Dialog
     setRecoveryModal({
       isOpen: true,
       type: "breakdown",
@@ -1134,7 +1134,7 @@ function SimulationPage() {
       {
         id: String(Date.now()),
         time: formatMinutesToTime(Math.floor(currentMinutes)),
-        text: `[INCIDENT] Engine failure reported on ${target.fleetNumber} (${target.regNumber}) at ${target.nextStop}. AI Recovery Engine activated.`,
+        text: `[INCIDENT] Engine failure reported on ${target.fleetNumber} (${target.regNumber}) at ${target.nextStop}. Automated Recovery Engine activated.`,
         type: "alert",
       },
       ...prev,
@@ -1347,7 +1347,7 @@ function SimulationPage() {
   return (
     <AppShell
       title="Simulation Deck"
-      subtitle={`Interactive multi-corridor transit simulation, real-time fleet movement, and automated AI recovery (${isChennai ? "Chennai MTC" : "Salem Transport"}).`}
+      subtitle={`Interactive multi-corridor transit simulation, real-time fleet movement, and automated schedule recovery (${isChennai ? "Chennai MTC" : "Salem Transport"}).`}
       actions={
         <div className="flex items-center gap-2">
           <Badge
@@ -1974,7 +1974,7 @@ function SimulationPage() {
         </div>
       </div>
 
-      {/* AI RECOVERY OPTIMIZATION DIALOG */}
+      {/* AUTOMATED RECOVERY OPTIMIZATION DIALOG */}
       {recoveryModal && (
         <Dialog
           open={recoveryModal.isOpen}
@@ -1989,7 +1989,7 @@ function SimulationPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-sm font-bold">
                 <ShieldCheck className="size-4 text-emerald-600" />
-                <span>AI Automated Recovery Recommendation</span>
+                <span>Automated Recovery Recommendation</span>
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
                 TransitOS Rescheduling Engine evaluated candidate solutions with 0.40 reliability weight.

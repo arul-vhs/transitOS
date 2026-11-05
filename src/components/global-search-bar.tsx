@@ -210,7 +210,7 @@ export function GlobalSearchBar() {
         id: "set-sim-deck",
         category: "Settings",
         title: "Corridor Simulation Deck",
-        subtitle: "Multi-corridor live simulation, disruption injection & AI recovery",
+        subtitle: "Multi-corridor live simulation, disruption injection & automated recovery",
         badge: "Simulation",
         navigateTo: "/simulation",
       },

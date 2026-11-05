@@ -2197,7 +2197,7 @@ function OperationsTodayPage() {
                         Supervisor Resolution Strategy
                       </h3>
                       <Badge variant="outline" className="text-[10px] font-mono border-blue-500/30 text-blue-600 bg-blue-500/10 rounded-md">
-                        {resolutionActionType === "driver" ? "Driver Reassignment" : resolutionActionType === "bus" ? "Bus Replacement" : "Ranked AI Solver"}
+                        {resolutionActionType === "driver" ? "Driver Reassignment" : resolutionActionType === "bus" ? "Bus Replacement" : "Ranked Constraint Solver"}
                       </Badge>
                     </div>
 
@@ -2240,7 +2240,7 @@ function OperationsTodayPage() {
                         )}
                       >
                         <ShieldCheck className="size-3.5 text-amber-600" />
-                        <span>AI Proposals</span>
+                        <span>Automated Proposals</span>
                       </button>
                     </div>
 

@@ -1371,8 +1371,7 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                 Stress-test timetable robustness with 1x to 10x simulation speeds,
-                corridor search filters, simulated vehicle breakdowns, and live AI
-                recovery resilience scoring.
+                corridor search filters, simulated vehicle breakdowns, and automated recovery resilience scoring.
               </p>
               <div className="pt-2">
                 <Link
@@ -1704,7 +1703,7 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
                   </div>
                   <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                     <Check className="size-3.5 text-blue-600 shrink-0" />
-                    <span>Full Google OR-Tools AI Solver</span>
+                    <span>Full Google OR-Tools Constraint Solver</span>
                   </div>
                   <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                     <Check className="size-3.5 text-blue-600 shrink-0" />
