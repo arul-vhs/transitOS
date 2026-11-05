@@ -1,6 +1,5 @@
 import {
   createFileRoute,
-  redirect,
   useRouter,
   Link,
 } from "@tanstack/react-router";
@@ -36,22 +35,6 @@ import { Badge } from "@/components/ui/badge";
 import { getCurrentUserFn, onboardTenantAndSignupFn } from "@/lib/auth";
 
 export const Route = createFileRoute("/signup")({
-  beforeLoad: async () => {
-    try {
-      const user = await getCurrentUserFn();
-      if (user) {
-        throw redirect({ to: "/" });
-      }
-    } catch (err: any) {
-      if (
-        err?.message === "Redirect" ||
-        err?.status === 302 ||
-        err?.status === 307
-      ) {
-        throw err;
-      }
-    }
-  },
   head: () => ({
     meta: [
       { title: "Onboard Transport Corporation: TransitOS" },

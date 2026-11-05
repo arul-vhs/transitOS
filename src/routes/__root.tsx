@@ -96,7 +96,7 @@ export interface RouterContext {
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async ({ location }) => {
     // Skip protection checks for public pages
-    const publicPages = ["/login", "/landing", "/privacy", "/terms"];
+    const publicPages = ["/login", "/signup", "/landing", "/privacy", "/terms"];
     if (publicPages.includes(location.pathname)) {
       try {
         const user = await getCurrentUserFn();

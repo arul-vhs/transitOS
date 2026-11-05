@@ -484,163 +484,127 @@ export function GlobalSearchBar() {
 
   return (
     <div ref={containerRef} className="relative w-full">
-      <div className="flex items-center rounded-md border border-border/90 bg-muted/30 focus-within:bg-background focus-within:border-primary/60 transition-all shadow-2xs">
-        {/* Category Selector Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="flex items-center gap-1 border-r border-border/80 px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-l-md transition-colors shrink-0 cursor-pointer"
-              title="Search Scope Category"
-            >
-              <span>{selectedCategory === "All" ? "All" : selectedCategory}</span>
-              <ChevronDown className="size-3 opacity-60" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-44 text-xs rounded-lg shadow-lg border-border">
-            <DropdownMenuLabel className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
-              Search Scope
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {categoryOptions.map((opt) => (
-              <DropdownMenuItem
-                key={opt.value}
-                onClick={() => {
-                  setSelectedCategory(opt.value);
-                  inputRef.current?.focus();
-                  setIsOpen(true);
-                }}
-                className="flex items-center justify-between text-xs py-1.5 rounded-md cursor-pointer"
-              >
-                <span>{opt.label}</span>
-                {selectedCategory === opt.value && (
-                  <Check className="size-3.5 text-primary" />
-                )}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
+      <div className="relative flex items-center rounded-md border border-border/90 bg-muted/30 focus-within:bg-background focus-within:border-primary/60 transition-all shadow-2xs">
         {/* Search Input Box */}
-        <div className="relative flex-1 flex items-center">
-          <Search className="absolute left-2.5 size-3.5 text-muted-foreground pointer-events-none" />
-          <Input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onFocus={() => setIsOpen(true)}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setIsOpen(true);
-              setSelectedIndex(0);
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              selectedCategory === "Settings"
-                ? "Search settings, themes, rules..."
-                : `Search ${selectedCategory === "All" ? "routes, buses, crew, settings" : selectedCategory.toLowerCase()}...`
-            }
-            className="h-9.5 pl-8 pr-16 text-xs sm:text-sm bg-transparent border-0 focus-visible:ring-0 shadow-none rounded-none"
-          />
+        <Search className="absolute left-3 size-4 text-muted-foreground pointer-events-none" />
+        <Input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onFocus={() => setIsOpen(true)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIsOpen(true);
+            setSelectedIndex(0);
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder={
+            selectedCategory === "Settings"
+              ? "Search system settings, themes, optimizer rules..."
+              : selectedCategory === "All"
+                ? "Search routes, stops, bus fleet, crew, trips, or settings (Ctrl+K)..."
+                : `Search ${selectedCategory.toLowerCase()}...`
+          }
+          className="h-10 w-full pl-9.5 pr-20 text-sm bg-transparent border-0 focus-visible:ring-0 shadow-none rounded-md placeholder:text-muted-foreground/70"
+        />
 
-          {query ? (
+        {query ? (
+          <button
+            type="button"
+            onClick={() => {
+              setQuery("");
+              inputRef.current?.focus();
+            }}
+            className="absolute right-9 text-muted-foreground hover:text-foreground cursor-pointer p-0.5 rounded-sm hover:bg-muted"
+          >
+            <X className="size-3.5" />
+          </button>
+        ) : (
+          <kbd className="absolute right-9 hidden sm:inline-flex items-center gap-0.5 rounded border border-border/80 bg-background/80 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground pointer-events-none select-none shadow-2xs">
+            <span>Ctrl</span>K
+          </kbd>
+        )}
+
+        {/* Quick Search Settings Button */}
+        <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
+          <PopoverTrigger asChild>
             <button
               type="button"
-              onClick={() => {
-                setQuery("");
-                inputRef.current?.focus();
-              }}
-              className="absolute right-7 text-muted-foreground hover:text-foreground cursor-pointer"
+              className="absolute right-2 text-muted-foreground hover:text-foreground hover:bg-muted/80 p-1.5 rounded-md transition-colors cursor-pointer"
+              title="Search Options & Settings"
             >
-              <X className="size-3" />
+              <SlidersHorizontal className="size-3.5" />
             </button>
-          ) : (
-            <kbd className="absolute right-7 hidden sm:inline-flex items-center gap-0.5 rounded border border-border/80 bg-background px-1 font-mono text-[9px] text-muted-foreground pointer-events-none">
-              <span>Ctrl</span>K
-            </kbd>
-          )}
-
-          {/* Quick Search Settings Button */}
-          <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
-            <PopoverTrigger asChild>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64 p-3 rounded-lg border-border shadow-xl space-y-3">
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="font-bold text-xs text-foreground flex items-center gap-1.5">
+                <Settings className="size-3.5 text-primary" />
+                Search Options
+              </span>
+              <span className="text-[10px] font-mono text-muted-foreground">
+                Shortcut: Ctrl+K
+              </span>
+            </div>
+            <div className="space-y-1.5 text-xs">
+              <p className="text-[11px] text-muted-foreground">Default Filter Scope:</p>
+              <div className="grid grid-cols-2 gap-1">
+                {categoryOptions.slice(0, 6).map((c) => (
+                  <button
+                    key={c.value}
+                    onClick={() => {
+                      setSelectedCategory(c.value);
+                      setSettingsOpen(false);
+                      inputRef.current?.focus();
+                    }}
+                    className={cn(
+                      "text-left text-[11px] px-2 py-1 rounded border transition-colors",
+                      selectedCategory === c.value
+                        ? "bg-primary/10 border-primary/40 font-semibold text-primary"
+                        : "border-border hover:bg-muted text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="border-t border-border pt-2 space-y-1">
+              <p className="text-[10px] text-muted-foreground">Quick Shortcuts:</p>
               <button
-                type="button"
-                className="absolute right-1 text-muted-foreground hover:text-foreground hover:bg-muted p-1 rounded-md transition-colors cursor-pointer"
-                title="Search Options & Settings"
+                onClick={() => {
+                  setSettingsOpen(false);
+                  void router.navigate({ to: "/settings" });
+                }}
+                className="w-full text-left text-xs px-2 py-1.5 rounded-md hover:bg-muted text-foreground flex items-center justify-between"
               >
-                <SlidersHorizontal className="size-3.5" />
+                <span className="flex items-center gap-1.5">
+                  <Building2 className="size-3 text-muted-foreground" />
+                  System Settings Page
+                </span>
+                <ArrowRight className="size-3 text-muted-foreground" />
               </button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-64 p-3 rounded-lg border-border shadow-xl space-y-3">
-              <div className="flex items-center justify-between border-b border-border pb-2">
-                <span className="font-bold text-xs text-foreground flex items-center gap-1.5">
-                  <Settings className="size-3.5 text-primary" />
-                  Search Options
+              <button
+                onClick={() => {
+                  setSettingsOpen(false);
+                  void router.navigate({ to: "/simulation" });
+                }}
+                className="w-full text-left text-xs px-2 py-1.5 rounded-md hover:bg-muted text-foreground flex items-center justify-between"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="size-3 text-muted-foreground" />
+                  Simulation Deck
                 </span>
-                <span className="text-[10px] font-mono text-muted-foreground">
-                  Shortcut: Ctrl+K
-                </span>
-              </div>
-              <div className="space-y-1.5 text-xs">
-                <p className="text-[11px] text-muted-foreground">Default Filter Scope:</p>
-                <div className="grid grid-cols-2 gap-1">
-                  {categoryOptions.slice(0, 6).map((c) => (
-                    <button
-                      key={c.value}
-                      onClick={() => {
-                        setSelectedCategory(c.value);
-                        setSettingsOpen(false);
-                        inputRef.current?.focus();
-                      }}
-                      className={cn(
-                        "text-left text-[11px] px-2 py-1 rounded border transition-colors",
-                        selectedCategory === c.value
-                          ? "bg-primary/10 border-primary/40 font-semibold text-primary"
-                          : "border-border hover:bg-muted text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {c.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="border-t border-border pt-2 space-y-1">
-                <p className="text-[10px] text-muted-foreground">Quick Shortcuts:</p>
-                <button
-                  onClick={() => {
-                    setSettingsOpen(false);
-                    void router.navigate({ to: "/settings" });
-                  }}
-                  className="w-full text-left text-xs px-2 py-1.5 rounded-md hover:bg-muted text-foreground flex items-center justify-between"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <Building2 className="size-3 text-muted-foreground" />
-                    System Settings Page
-                  </span>
-                  <ArrowRight className="size-3 text-muted-foreground" />
-                </button>
-                <button
-                  onClick={() => {
-                    setSettingsOpen(false);
-                    void router.navigate({ to: "/simulation" });
-                  }}
-                  className="w-full text-left text-xs px-2 py-1.5 rounded-md hover:bg-muted text-foreground flex items-center justify-between"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <Sparkles className="size-3 text-muted-foreground" />
-                    Simulation Deck
-                  </span>
-                  <ArrowRight className="size-3 text-muted-foreground" />
-                </button>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
+                <ArrowRight className="size-3 text-muted-foreground" />
+              </button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Dropdown Results Overlay */}
       {isOpen && (query.trim() || selectedCategory === "Settings") && (
-        <div className="absolute top-11 left-0 right-0 z-50 rounded-lg border border-border bg-background shadow-xl overflow-hidden animate-in fade-in-50 duration-100">
+        <div className="absolute top-12 left-0 right-0 z-50 rounded-lg border border-border bg-background shadow-xl overflow-hidden animate-in fade-in-50 duration-100">
           {/* Quick Filter Pill Strip */}
           <div className="flex items-center gap-1 px-2.5 py-1.5 bg-muted/40 border-b border-border/70 overflow-x-auto text-[11px]">
             <span className="text-[10px] text-muted-foreground font-mono shrink-0 mr-1">

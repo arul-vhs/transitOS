@@ -346,22 +346,9 @@ export function AppShell({
               </Sheet>
 
               <div className="min-w-0 flex flex-col justify-center">
-                <div className="flex items-center gap-2">
-                  <h1 className="truncate text-sm sm:text-base font-bold tracking-tight text-foreground">
-                    {title}
-                  </h1>
-
-                  {/* Active Operating Corporation & Depot */}
-                  <div
-                    className="inline-flex items-center gap-1.5 rounded-md border border-primary/25 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary select-none shrink-0"
-                    title={`Operating Authority: ${currentTenant.name} (${currentDepot})`}
-                  >
-                    <Building2 className="size-3.5 text-primary shrink-0" />
-                    <span className="font-mono text-[11px] truncate max-w-[140px] sm:max-w-[210px]">
-                      {currentTenant.name.replace(" Corporation", "").replace(" Transit", "")}: {currentDepot}
-                    </span>
-                  </div>
-                </div>
+                <h1 className="truncate text-sm sm:text-base font-bold tracking-tight text-foreground">
+                  {title}
+                </h1>
                 {subtitle ? (
                   <p className="text-[10px] text-muted-foreground truncate hidden xl:block">
                     {subtitle}
@@ -371,7 +358,7 @@ export function AppShell({
             </div>
 
             {/* Persistent Global Search Bar with Options and Settings - Expanded Size */}
-            <div className="hidden md:flex items-center flex-1 max-w-2xl lg:max-w-3xl mx-3 sm:mx-5">
+            <div className="hidden md:flex items-center flex-1 max-w-3xl lg:max-w-4xl mx-4 sm:mx-6">
               <GlobalSearchBar />
             </div>
 
