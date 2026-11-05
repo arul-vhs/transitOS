@@ -1,5 +1,6 @@
 import { eq, and, or, like, asc, desc, not, ne, inArray, count } from "drizzle-orm";
-import { db } from "./db";
+import { db, cleanUuid } from "./db";
+import { isSalemTenantId } from "./allocation/demand-engine";
 import {
   routes,
   stops,
@@ -3014,18 +3015,37 @@ export function registerOperationalIssueFromIncident(incident: {
   const targetDate = incident.serviceDate || "25 Aug 2026";
   const issueId = `ISSUE-${incident.id.slice(0, 8).toUpperCase()}`;
 
-  const isSalem =
-    incident.tenantId === "c4ab681d-7b82-4674-bb8a-14ef96de6d23" ||
-    incident.tenantId === "6fcb73df-750e-4fe5-b0cb-456b119dcd64";
+  const isSalem = isSalemTenantId(incident.tenantId);
 
-  // Provide realistic reserve options from tenant fleet & crew rosters
-  const standbyDriverId = isSalem ? "crew-salem-d01" : "crew-chn-d01";
-  const standbyDriverName = isSalem ? "Murugesan K. (Depot Standby Pilot)" : "R. Balasubramanian (Standby Pilot)";
-  const standbyBusId = isSalem ? "bus-salem-07" : "bus-chn-03";
-  const standbyBusReg = isSalem ? "TN-30-AA-1420 (Depot Standby)" : "TN-01-N-9842 (Saidapet Standby)";
+  // Dynamically resolve actual standby drivers & buses from tenant roster
+  const fbDrivers = FALLBACK_CREW.filter(
+    (c) => (c.tenantId === incident.tenantId || (!c.tenantId && isSalem)) && c.role === "driver",
+  );
+  // Exclude the reporting/distressed driver (e.g. Murugesan K.) from the replacement recommendation
+  const distressedResourceId = incident.resourceId;
+  const distressedDesc = (incident.description || "").toLowerCase();
+  const availableDrivers = fbDrivers.filter(
+    (d) =>
+      d.id !== distressedResourceId &&
+      (!distressedDesc.includes("murugesan") || !d.name.toLowerCase().includes("murugesan")),
+  );
 
-  const altDriverId = isSalem ? "crew-salem-d02" : "crew-chn-d02";
-  const altDriverName = isSalem ? "Selvam R. (Relief Pilot)" : "M. Saravanan (Relief Pilot)";
+  const primaryDriver = availableDrivers[0] || fbDrivers[0];
+  const altDriver = availableDrivers[1] || availableDrivers[0];
+
+  const standbyDriverId = primaryDriver?.id || (isSalem ? "6b517472-9d90-4201-a7c9-feba9d8928fc" : "crew-mtc-2000");
+  const standbyDriverName = primaryDriver?.name || (isSalem ? "Selvam R." : "R. Senthil (Driver)");
+
+  const altDriverId = altDriver?.id || (isSalem ? "722ef441-f832-48e0-bfd1-7101e4e192d4" : "crew-mtc-2002");
+  const altDriverName = altDriver?.name || (isSalem ? "Palanisamy M." : "M. Palani (Driver)");
+
+  const fbBuses = FALLBACK_BUSES.filter(
+    (b) => b.tenantId === incident.tenantId || (!b.tenantId && isSalem),
+  );
+  const primaryBus = fbBuses[0];
+  const standbyBusId = primaryBus?.id || (isSalem ? "aa174cdf-b77b-4483-afb9-46d46659c632" : "bus-mtc-1001");
+  const standbyBusReg = primaryBus?.registrationNumber || (isSalem ? "TN-30-N-0412" : "TN-01-N-1001");
+  const depotName = primaryDriver?.depot || (isSalem ? "Meyyanur Depot" : "Central / Broadway Depot");
 
   const issue: OperationalIssue = {
     id: issueId,
@@ -3067,7 +3087,7 @@ export function registerOperationalIssueFromIncident(incident: {
       resourceType: "driver",
       replacementDriverId: standbyDriverId,
       replacementDriverName: standbyDriverName,
-      depot: isSalem ? "Meyyanur Depot" : "Central Depot",
+      depot: depotName,
       repositioningMinutes: 6,
       suitabilityScore: 96,
       reason: "Available certified relief driver on depot standby with full HPV license verification and 0 fatigue violations.",
@@ -3082,7 +3102,7 @@ export function registerOperationalIssueFromIncident(incident: {
         resourceType: "bus",
         replacementBusId: standbyBusId,
         replacementBusReg: standbyBusReg,
-        depot: isSalem ? "Meyyanur Depot" : "Depot Reserve",
+        depot: depotName,
         repositioningMinutes: 14,
         suitabilityScore: 91,
         reason: "Dispatches reserve vehicle from depot to cover all downline departures.",
@@ -3096,7 +3116,7 @@ export function registerOperationalIssueFromIncident(incident: {
         resourceType: "driver",
         replacementDriverId: altDriverId,
         replacementDriverName: altDriverName,
-        depot: isSalem ? "Meyyanur Depot" : "Central Depot",
+        depot: depotName,
         repositioningMinutes: 10,
         suitabilityScore: 84,
         reason: "Executes relief pilot handover at next major junction checkpoint.",
@@ -3778,27 +3798,42 @@ export async function approveIssueRecommendationImpl(params: {
     }
   }
 
-  // 4. Update DB incident if linked
+  // 4. Update DB incident if linked with valid UUID check
   const cleanId = issue.id.replace(/^ISSUE-/, "").replace(/^INC-/, "").toLowerCase();
+  const validTripId = cleanUuid(issue.tripId);
+  const validIncidentId = cleanUuid(cleanId);
   try {
-    await db
-      .update(incidents)
-      .set({
-        status: "RESOLVED",
-        resolvedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(incidents.tenantId, currentUser.tenantId),
-          or(
-            eq(incidents.id, cleanId),
-            like(incidents.id, `${cleanId}%`),
-            eq(incidents.tripId, issue.tripId),
-          ),
-        ),
-      );
-  } catch {}
+    if (validIncidentId) {
+      await db
+        .update(incidents)
+        .set({ status: "RESOLVED", resolvedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(incidents.tenantId, currentUser.tenantId), eq(incidents.id, validIncidentId)));
+    }
+    if (validTripId) {
+      await db
+        .update(incidents)
+        .set({ status: "RESOLVED", resolvedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(incidents.tenantId, currentUser.tenantId), eq(incidents.tripId, validTripId)));
+    }
+    // Prefix scan for partial IDs
+    if (!validIncidentId && cleanId.length >= 4) {
+      const tenantIncs = await db
+        .select({ id: incidents.id })
+        .from(incidents)
+        .where(eq(incidents.tenantId, currentUser.tenantId))
+        .limit(50);
+      for (const inc of tenantIncs) {
+        if (inc.id.toLowerCase().startsWith(cleanId)) {
+          await db
+            .update(incidents)
+            .set({ status: "RESOLVED", resolvedAt: new Date(), updatedAt: new Date() })
+            .where(eq(incidents.id, inc.id));
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn("[approveIssueRecommendationImpl Incident Update Notice]:", err?.message);
+  }
 
   // 5. Clear Live Disruption Telemetry
   try {
@@ -3828,6 +3863,20 @@ export async function approveIssueRecommendationImpl(params: {
     issue.diagnostic.recommendedSolution = `Supervisor Dispatch: ${actionSummary.trim()}`;
   }
 
+  // Update in OPERATIONAL_ISSUES across all matching keys so activeCrewSosIssues filter drops it immediately
+  for (const [k, v] of OPERATIONAL_ISSUES.entries()) {
+    if (
+      v.id === issue.id ||
+      k === issue.id ||
+      k === `INC-${cleanId}` ||
+      (issue.tripId && v.tripId === issue.tripId)
+    ) {
+      v.lifecycleStatus = "RESOLVED";
+      v.resolvedAt = issue.resolvedAt;
+      v.resolvedBy = issue.resolvedBy;
+      OPERATIONAL_ISSUES.set(k, v);
+    }
+  }
   OPERATIONAL_ISSUES.set(issue.id, issue);
   OPERATIONAL_ISSUES.set(`INC-${cleanId}`, issue);
 

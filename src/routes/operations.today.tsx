@@ -968,21 +968,51 @@ function OperationsTodayPage() {
       setResolutionActionType("driver");
     }
 
-    // Pre-select replacement driver if suggested or first available
+    // Pre-select replacement driver: match suggested ID, name, or pick next available relief driver
     const recDriverId = issue.bestSolution?.replacementDriverId;
-    if (recDriverId) {
-      setSelectedDriverId(recDriverId);
-    } else if (driversList.length > 0) {
-      setSelectedDriverId(driversList[0].id);
+    const recDriverName = (issue.bestSolution?.replacementDriverName || "").toLowerCase().replace(/\s*\(.*?\)/g, "").trim();
+    
+    let matchedDriverId = "";
+    if (recDriverId && driversList.some((d: any) => d.id === recDriverId)) {
+      matchedDriverId = recDriverId;
+    } else if (recDriverName) {
+      const match = driversList.find((d: any) =>
+        d.name?.toLowerCase().includes(recDriverName) ||
+        recDriverName.includes(d.name?.toLowerCase())
+      );
+      if (match) matchedDriverId = match.id;
+    }
+    
+    if (!matchedDriverId && driversList.length > 0) {
+      // Pick first driver who is NOT the distressed reporting driver
+      const distressedDesc = (issue.description || "").toLowerCase();
+      const nonDistressed = driversList.filter((d: any) =>
+        (!distressedDesc.includes(d.name?.toLowerCase() || "___")) &&
+        (!distressedDesc.includes(d.employeeId?.toLowerCase() || "___"))
+      );
+      matchedDriverId = nonDistressed[0]?.id || driversList[0]?.id || "";
+    }
+    setSelectedDriverId(matchedDriverId);
+
+    // Pre-select replacement bus: match suggested ID, registration, or pick first available standby bus
+    const recBusId = issue.bestSolution?.replacementBusId;
+    const recBusReg = (issue.bestSolution?.replacementBusReg || "").toLowerCase().replace(/\s*\(.*?\)/g, "").trim();
+
+    let matchedBusId = "";
+    if (recBusId && busesList.some((b: any) => b.id === recBusId)) {
+      matchedBusId = recBusId;
+    } else if (recBusReg) {
+      const match = busesList.find((b: any) =>
+        b.registrationNumber?.toLowerCase().includes(recBusReg) ||
+        recBusReg.includes(b.registrationNumber?.toLowerCase())
+      );
+      if (match) matchedBusId = match.id;
     }
 
-    // Pre-select replacement bus if suggested or first available
-    const recBusId = issue.bestSolution?.replacementBusId;
-    if (recBusId) {
-      setSelectedBusId(recBusId);
-    } else if (busesList.length > 0) {
-      setSelectedBusId(busesList[0].id);
+    if (!matchedBusId && busesList.length > 0) {
+      matchedBusId = busesList[0]?.id || "";
     }
+    setSelectedBusId(matchedBusId);
 
     setReviewSheetOpen(true);
   };
