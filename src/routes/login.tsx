@@ -227,10 +227,6 @@ function LoginPage() {
             </div>
           </div>
         </div>
-
-        <div className="text-center text-xs text-muted-foreground">
-          Demo Build · Local PostgreSQL Authentication
-        </div>
       </div>
     </div>
   );

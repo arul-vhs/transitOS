@@ -483,14 +483,14 @@ export function GlobalSearchBar() {
   ];
 
   return (
-    <div ref={containerRef} className="relative w-full max-w-md">
+    <div ref={containerRef} className="relative w-full">
       <div className="flex items-center rounded-md border border-border/90 bg-muted/30 focus-within:bg-background focus-within:border-primary/60 transition-all shadow-2xs">
         {/* Category Selector Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="flex items-center gap-1 border-r border-border/80 px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-l-md transition-colors shrink-0 cursor-pointer"
+              className="flex items-center gap-1 border-r border-border/80 px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-l-md transition-colors shrink-0 cursor-pointer"
               title="Search Scope Category"
             >
               <span>{selectedCategory === "All" ? "All" : selectedCategory}</span>
@@ -540,7 +540,7 @@ export function GlobalSearchBar() {
                 ? "Search settings, themes, rules..."
                 : `Search ${selectedCategory === "All" ? "routes, buses, crew, settings" : selectedCategory.toLowerCase()}...`
             }
-            className="h-8 pl-8 pr-16 text-xs bg-transparent border-0 focus-visible:ring-0 shadow-none rounded-none"
+            className="h-9.5 pl-8 pr-16 text-xs sm:text-sm bg-transparent border-0 focus-visible:ring-0 shadow-none rounded-none"
           />
 
           {query ? (
@@ -640,7 +640,7 @@ export function GlobalSearchBar() {
 
       {/* Dropdown Results Overlay */}
       {isOpen && (query.trim() || selectedCategory === "Settings") && (
-        <div className="absolute top-10 left-0 right-0 z-50 rounded-lg border border-border bg-background shadow-xl overflow-hidden animate-in fade-in-50 duration-100">
+        <div className="absolute top-11 left-0 right-0 z-50 rounded-lg border border-border bg-background shadow-xl overflow-hidden animate-in fade-in-50 duration-100">
           {/* Quick Filter Pill Strip */}
           <div className="flex items-center gap-1 px-2.5 py-1.5 bg-muted/40 border-b border-border/70 overflow-x-auto text-[11px]">
             <span className="text-[10px] text-muted-foreground font-mono shrink-0 mr-1">

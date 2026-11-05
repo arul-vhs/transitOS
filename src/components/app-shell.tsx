@@ -351,92 +351,16 @@ export function AppShell({
                     {title}
                   </h1>
 
-                  {/* Multi-Tenant Corporation & Depot Switcher */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        className="inline-flex items-center gap-1.5 rounded-md border border-primary/25 bg-primary/10 hover:bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary transition-colors cursor-pointer shrink-0"
-                        title="Switch Operating Corporation & Depot"
-                      >
-                        <Building2 className="size-3" />
-                        <span className="font-mono text-[10px] truncate max-w-[120px] sm:max-w-[180px]">
-                          {currentTenant.name.replace(" Corporation", "").replace(" Transit", "")}: {currentDepot}
-                        </span>
-                        <ChevronDown className="size-2.5 opacity-60" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="start"
-                      className="w-80 shadow-lg border-border rounded-lg"
-                    >
-                      <DropdownMenuLabel className="text-[11px] text-muted-foreground uppercase tracking-wider font-mono">
-                        Switch Transport Corporation
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {allTenants.map((t) => (
-                        <DropdownMenuItem
-                          key={t.id}
-                          onClick={() => {
-                            switchTenant(t.id);
-                            toast.success(
-                              `Switched to ${t.name} (${t.activeDepot})`,
-                            );
-                          }}
-                          className="flex items-center justify-between cursor-pointer py-2 rounded-md"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-xs text-foreground truncate">
-                              {t.name}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground font-mono">
-                              {t.region} · {t.fleetCount} Buses · {t.routesCount} Routes
-                            </p>
-                          </div>
-                          {t.id === currentTenant.id && (
-                            <Check className="size-4 text-primary ml-2 shrink-0" />
-                          )}
-                        </DropdownMenuItem>
-                      ))}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel className="text-[11px] text-muted-foreground uppercase tracking-wider font-mono">
-                        Depot Selection ({currentTenant.name})
-                      </DropdownMenuLabel>
-                      {currentTenant.depots.map(
-                        (
-                          d: string | { id: string; name: string; code?: string },
-                        ) => {
-                          const depotName = typeof d === "string" ? d : d.name;
-                          const depotCode = typeof d === "string" ? "" : d.code;
-                          const depotKey = typeof d === "string" ? d : d.id;
-                          const isSelected = depotName === currentDepot;
-                          return (
-                            <DropdownMenuItem
-                              key={depotKey}
-                              onClick={() => {
-                                switchDepot(depotName);
-                                toast.success(
-                                  `Operating depot set to ${depotName}`,
-                                );
-                              }}
-                              className="text-xs flex items-center justify-between cursor-pointer rounded-md"
-                            >
-                              <div className="flex items-center gap-1.5">
-                                <span>{depotName}</span>
-                                {depotCode ? (
-                                  <span className="text-[10px] text-muted-foreground font-mono">
-                                    ({depotCode})
-                                  </span>
-                                ) : null}
-                              </div>
-                              {isSelected && (
-                                <Check className="size-3.5 text-primary ml-2 shrink-0" />
-                              )}
-                            </DropdownMenuItem>
-                          );
-                        },
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {/* Active Operating Corporation & Depot */}
+                  <div
+                    className="inline-flex items-center gap-1.5 rounded-md border border-primary/25 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary select-none shrink-0"
+                    title={`Operating Authority: ${currentTenant.name} (${currentDepot})`}
+                  >
+                    <Building2 className="size-3.5 text-primary shrink-0" />
+                    <span className="font-mono text-[11px] truncate max-w-[140px] sm:max-w-[210px]">
+                      {currentTenant.name.replace(" Corporation", "").replace(" Transit", "")}: {currentDepot}
+                    </span>
+                  </div>
                 </div>
                 {subtitle ? (
                   <p className="text-[10px] text-muted-foreground truncate hidden xl:block">
@@ -446,8 +370,8 @@ export function AppShell({
               </div>
             </div>
 
-            {/* Persistent Global Search Bar with Options and Settings */}
-            <div className="hidden lg:flex items-center flex-1 max-w-md mx-3">
+            {/* Persistent Global Search Bar with Options and Settings - Expanded Size */}
+            <div className="hidden md:flex items-center flex-1 max-w-2xl lg:max-w-3xl mx-3 sm:mx-5">
               <GlobalSearchBar />
             </div>
 

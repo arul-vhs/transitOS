@@ -69,37 +69,37 @@ interface ParsedDataset {
   routes: Array<{
     code: string;
     name: string;
-    origin?: string;
-    destination?: string;
-    lengthKm?: number | string;
-    durationMin?: number;
-    peakFrequency?: number;
-    offPeakFrequency?: number;
-    color?: string;
+    origin?: string | undefined;
+    destination?: string | undefined;
+    lengthKm?: number | string | undefined;
+    durationMin?: number | undefined;
+    peakFrequency?: number | undefined;
+    offPeakFrequency?: number | undefined;
+    color?: string | undefined;
   }>;
   buses: Array<{
     registrationNumber: string;
-    fleetNumber?: string;
-    depot?: string;
-    busType?: string;
-    capacity?: number;
+    fleetNumber?: string | undefined;
+    depot?: string | undefined;
+    busType?: string | undefined;
+    capacity?: number | undefined;
   }>;
   crew: Array<{
     employeeId: string;
     name: string;
     role: "driver" | "conductor";
-    depot?: string;
-    licenseCategory?: string;
+    depot?: string | undefined;
+    licenseCategory?: string | undefined;
   }>;
   trips: Array<{
-    routeCode?: string;
-    tripCode?: string;
-    direction?: string;
-    startTime?: number;
-    endTime?: number;
-    durationMin?: number;
-    origin?: string;
-    destination?: string;
+    routeCode?: string | undefined;
+    tripCode?: string | undefined;
+    direction?: string | undefined;
+    startTime?: number | undefined;
+    endTime?: number | undefined;
+    durationMin?: number | undefined;
+    origin?: string | undefined;
+    destination?: string | undefined;
   }>;
 }
 
@@ -490,7 +490,7 @@ function SignupPage() {
           name: cName,
           role,
           depot: dep,
-          licenseCategory: lic,
+          ...(lic ? { licenseCategory: lic } : {}),
         });
       } else if (currentSection === "trips") {
         const rCode = row["routecode"] || "";
@@ -562,12 +562,13 @@ function SignupPage() {
         rows.forEach((c, idx) => {
           const roleStr = String(c.role || c.Role || "").toLowerCase();
           const role = roleStr.includes("cond") ? "conductor" : "driver";
+          const licCategory = String(c.licenseCategory || c.LicenseCategory || (role === "driver" ? "Heavy Passenger Vehicle (HPV) / PSV Badge" : "")).trim();
           parsed.crew.push({
             employeeId: String(c.employeeId || c.EmployeeId || c.employee_id || `EMP-${String(idx + 1).padStart(3, "0")}`).trim(),
             name: String(c.name || c.Name || `Staff Member ${idx + 1}`).trim(),
             role,
             depot: String(c.depot || c.Depot || depotName || "Central Depot").trim(),
-            licenseCategory: String(c.licenseCategory || c.LicenseCategory || (role === "driver" ? "Heavy Passenger Vehicle (HPV) / PSV Badge" : "")).trim(),
+            ...(licCategory ? { licenseCategory: licCategory } : {}),
           });
         });
       } else if (lower.includes("trip")) {
