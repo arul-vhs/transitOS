@@ -1,8 +1,18 @@
-import { eq, and, or, like, asc } from "drizzle-orm";
+import { eq, and, or, like, asc, inArray } from "drizzle-orm";
 import { db } from "./db";
-import { routes, stops, trips, auditLogs } from "./db/schema";
+import {
+  routes,
+  stops,
+  trips,
+  dutyTrips,
+  fleetAllocations,
+  demandSurges,
+  incidents,
+  auditLogs,
+} from "./db/schema";
 import { requireAuth, requirePermission } from "./auth";
 import { FALLBACK_ROUTES, FALLBACK_STOPS } from "./db/fallback-data";
+import { CHENNAI_MTC_ROUTES } from "./data/chennai-mtc-dataset";
 
 // ----------------------------------------------------
 // GIS & Distance Helpers
@@ -452,7 +462,6 @@ export async function deleteRouteImpl(id: string) {
   await requirePermission(currentUser.role, "routes.manage");
 
   let routeName = id;
-  let foundInDb = false;
 
   try {
     const route = await db.query.routes.findFirst({
@@ -460,24 +469,68 @@ export async function deleteRouteImpl(id: string) {
     });
 
     if (route) {
-      foundInDb = true;
       routeName = `${route.code} (${route.name})`;
 
-      // Delete linked stops and trips to satisfy foreign keys
-      await db
-        .delete(stops)
-        .where(and(eq(stops.routeId, id), eq(stops.tenantId, currentUser.tenantId)));
+      await db.transaction(async (tx) => {
+        // 1. Find all trips for this route
+        const tripRows = await tx
+          .select({ id: trips.id })
+          .from(trips)
+          .where(and(eq(trips.routeId, id), eq(trips.tenantId, currentUser.tenantId)));
+        const tripIds = tripRows.map((t) => t.id);
 
-      await db
-        .delete(trips)
-        .where(and(eq(trips.routeId, id), eq(trips.tenantId, currentUser.tenantId)));
+        if (tripIds.length > 0) {
+          // 2. Cascade delete duty_trips referencing these trips
+          await tx.delete(dutyTrips).where(inArray(dutyTrips.tripId, tripIds));
+          // 3. Nullify incidents referencing these trips
+          await tx
+            .update(incidents)
+            .set({ tripId: null })
+            .where(inArray(incidents.tripId, tripIds));
+          // 4. Delete trips
+          await tx
+            .delete(trips)
+            .where(and(eq(trips.routeId, id), eq(trips.tenantId, currentUser.tenantId)));
+        }
 
-      await db
-        .delete(routes)
-        .where(and(eq(routes.id, id), eq(routes.tenantId, currentUser.tenantId)));
+        // 5. Delete or disassociate fleet_allocations referencing this route
+        await tx
+          .delete(fleetAllocations)
+          .where(
+            and(
+              eq(fleetAllocations.tenantId, currentUser.tenantId),
+              or(
+                eq(fleetAllocations.targetRouteId, id),
+                eq(fleetAllocations.donorRouteId, id),
+              ),
+            ),
+          );
+
+        // 6. Delete demand_surges referencing this route
+        await tx
+          .delete(demandSurges)
+          .where(and(eq(demandSurges.routeId, id), eq(demandSurges.tenantId, currentUser.tenantId)));
+
+        // 7. Nullify incidents referencing this route
+        await tx
+          .update(incidents)
+          .set({ routeId: null })
+          .where(and(eq(incidents.routeId, id), eq(incidents.tenantId, currentUser.tenantId)));
+
+        // 8. Delete linked stops
+        await tx
+          .delete(stops)
+          .where(and(eq(stops.routeId, id), eq(stops.tenantId, currentUser.tenantId)));
+
+        // 9. Delete the route itself
+        await tx
+          .delete(routes)
+          .where(and(eq(routes.id, id), eq(routes.tenantId, currentUser.tenantId)));
+      });
     }
-  } catch (err) {
-    void err;
+  } catch (err: any) {
+    console.error("[deleteRouteImpl Error]:", err.message);
+    throw new Error(`Failed to delete route: ${err.message}`);
   }
 
   // Also remove from fallback and static datasets
