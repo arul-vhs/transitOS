@@ -1,6 +1,6 @@
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "./db";
-import { vehicleTelemetry, buses, trips, routes, auditLogs } from "./db/schema";
+import { vehicleTelemetry, buses, trips, routes, stops, auditLogs } from "./db/schema";
 import { requireAuth, requirePermission } from "./auth";
 import { getLiveTrackingAssignmentsImpl } from "./scheduling-ops";
 import {
@@ -9,7 +9,7 @@ import {
   CHENNAI_MTC_BUSES,
   CHENNAI_MTC_CREW,
 } from "./data/chennai-mtc-dataset";
-import { FALLBACK_ROUTES } from "./db/fallback-data";
+import { FALLBACK_ROUTES, FALLBACK_BUSES, FALLBACK_CREW } from "./db/fallback-data";
 import { formatRouteNumber, formatRouteName } from "../lib/route-utils";
 
 export interface VehicleTelemetryInput {

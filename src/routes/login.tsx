@@ -182,6 +182,16 @@ function LoginPage() {
                 "Sign In"
               )}
             </Button>
+
+            <div className="text-center pt-2">
+              <Link
+                to="/signup"
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-1"
+              >
+                <span>New transport undertaking?</span>
+                <span className="underline">Onboard New Corporation</span>
+              </Link>
+            </div>
           </form>
 
           {/* Quick Demo Logins Section */}

@@ -10,10 +10,27 @@ import { db } from "./db";
 import { users, tenants, auditLogs } from "./db/schema";
 import { ROLE_PERMISSIONS, hasPermission } from "../lib/auth-shared";
 
-const SECRET =
+export const SECRET =
   process.env.SESSION_SECRET ||
   "dev-session-secret-keys-for-transitos-platform-32-chars";
-const COOKIE_NAME = "transitOS_session";
+export const COOKIE_NAME = "transitOS_session";
+
+export function createAndSetSessionCookie(payload: SessionPayload) {
+  const token = jwt.sign(payload, SECRET, { expiresIn: "24h" });
+  const isProd = process.env.NODE_ENV === "production";
+  try {
+    setCookie(COOKIE_NAME, token, {
+      httpOnly: true,
+      path: "/",
+      sameSite: "lax",
+      maxAge: 86400,
+      secure: isProd,
+    });
+  } catch {
+    // Non-request context / testing environment
+  }
+  return token;
+}
 
 export interface SessionPayload {
   userId: string;
@@ -356,15 +373,7 @@ export async function loginFnImpl(credentials: {
           email: user.email,
           name: user.name,
         };
-        const token = jwt.sign(payload, SECRET, { expiresIn: "24h" });
-        const isProd = process.env.NODE_ENV === "production";
-        setCookie(COOKIE_NAME, token, {
-          httpOnly: true,
-          path: "/",
-          sameSite: "lax",
-          maxAge: 86400,
-          secure: isProd,
-        });
+        createAndSetSessionCookie(payload);
 
         return {
           success: true,
@@ -393,15 +402,7 @@ export async function loginFnImpl(credentials: {
       email: demoUser.email,
       name: demoUser.name,
     };
-    const token = jwt.sign(payload, SECRET, { expiresIn: "24h" });
-    const isProd = process.env.NODE_ENV === "production";
-    setCookie(COOKIE_NAME, token, {
-      httpOnly: true,
-      path: "/",
-      sameSite: "lax",
-      maxAge: 86400,
-      secure: isProd,
-    });
+    createAndSetSessionCookie(payload);
 
     return {
       success: true,
@@ -465,15 +466,7 @@ export async function switchTenantFnImpl(targetTenantId: string) {
     };
   }
 
-  const token = jwt.sign(updatedSession, SECRET, { expiresIn: "24h" });
-  const isProd = process.env.NODE_ENV === "production";
-  setCookie(COOKIE_NAME, token, {
-    httpOnly: true,
-    path: "/",
-    sameSite: "lax",
-    maxAge: 86400,
-    secure: isProd,
-  });
+  createAndSetSessionCookie(updatedSession);
 
   return { success: true, tenantId: targetTenantId };
 }

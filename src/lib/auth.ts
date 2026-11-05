@@ -48,3 +48,16 @@ export const switchTenantFn = async (
 ) => {
   return await _switchTenantFn(toServerFnArgs(payload)!);
 };
+
+const _onboardTenantAndSignupFn = createServerFn({ method: "POST" })
+  .validator((data: any) => data)
+  .handler(async ({ data }) => {
+    const { onboardTenantAndSignupImpl } = await import("../server/tenant-ops");
+    return await onboardTenantAndSignupImpl(data);
+  });
+
+export const onboardTenantAndSignupFn = async (
+  data: any | { data: any },
+) => {
+  return await _onboardTenantAndSignupFn(toServerFnArgs(data)!);
+};

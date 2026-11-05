@@ -15,6 +15,7 @@ import { Route as LandingRouteImport } from './routes/landing'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SimulationRouteImport } from './routes/simulation'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AnalyticsIndexRouteImport } from './routes/analytics.index'
@@ -67,6 +68,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SimulationRoute = SimulationRouteImport.update({
@@ -192,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
+  '/signup': typeof SignupRoute
   '/simulation': typeof SimulationRoute
   '/terms': typeof TermsRoute
   '/analytics/crew': typeof AnalyticsCrewRoute
@@ -222,6 +229,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
+  '/signup': typeof SignupRoute
   '/simulation': typeof SimulationRoute
   '/terms': typeof TermsRoute
   '/analytics/crew': typeof AnalyticsCrewRoute
@@ -254,6 +262,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
+  '/signup': typeof SignupRoute
   '/simulation': typeof SimulationRoute
   '/terms': typeof TermsRoute
   '/analytics/crew': typeof AnalyticsCrewRoute
@@ -287,6 +296,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/settings'
+    | '/signup'
     | '/simulation'
     | '/terms'
     | '/analytics/crew'
@@ -317,6 +327,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/settings'
+    | '/signup'
     | '/simulation'
     | '/terms'
     | '/analytics/crew'
@@ -348,6 +359,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/settings'
+    | '/signup'
     | '/simulation'
     | '/terms'
     | '/analytics/crew'
@@ -380,6 +392,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   SettingsRoute: typeof SettingsRoute
+  SignupRoute: typeof SignupRoute
   SimulationRoute: typeof SimulationRoute
   TermsRoute: typeof TermsRoute
   CrewAvailabilityRoute: typeof CrewAvailabilityRoute
@@ -441,6 +454,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/simulation': {
@@ -636,6 +656,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   SettingsRoute: SettingsRoute,
+  SignupRoute: SignupRoute,
   SimulationRoute: SimulationRoute,
   TermsRoute: TermsRoute,
   CrewAvailabilityRoute: CrewAvailabilityRoute,

@@ -307,16 +307,6 @@ function OperationsTodayPage() {
     queryFn: () => getBuses(),
   });
 
-  // Critical Crew SOS Issues
-  const activeCrewSosIssues = useMemo(() => {
-    return (issuesData?.issues || []).filter(
-      (iss) =>
-        (iss.category === "CREW_SOS" || iss.urgency === "CRITICAL") &&
-        iss.lifecycleStatus !== "RESOLVED" &&
-        iss.lifecycleStatus !== "AUTOMATICALLY_RESOLVED",
-    );
-  }, [issuesData?.issues]);
-
   // Fetch Live Tracking Assignments Table Data
   const {
     data: liveData,
@@ -357,6 +347,16 @@ function OperationsTodayPage() {
     queryFn: () => getOperationalIssues({ serviceDate }),
     refetchInterval: 15000,
   });
+
+  // Critical Crew SOS Issues
+  const activeCrewSosIssues = useMemo(() => {
+    return (issuesData?.issues || []).filter(
+      (iss) =>
+        (iss.category === "CREW_SOS" || iss.urgency === "CRITICAL") &&
+        iss.lifecycleStatus !== "RESOLVED" &&
+        iss.lifecycleStatus !== "AUTOMATICALLY_RESOLVED",
+    );
+  }, [issuesData?.issues]);
 
   const issues: OperationalIssue[] = useMemo(
     () => issuesData?.issues || [],
@@ -2397,14 +2397,14 @@ function OperationsTodayPage() {
                         onClick={() =>
                           approveMutation.mutate({
                             issueId: selectedIssue.id,
-                            solutionId: selectedSolutionId,
+                            solutionId: selectedSolutionId || undefined,
                             overrideDriverId:
                               resolutionActionType === "driver"
-                                ? selectedDriverId
+                                ? selectedDriverId || undefined
                                 : undefined,
                             overrideBusId:
                               resolutionActionType === "bus"
-                                ? selectedBusId
+                                ? selectedBusId || undefined
                                 : undefined,
                             dispatchNotes,
                           })

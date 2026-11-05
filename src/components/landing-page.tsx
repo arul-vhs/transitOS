@@ -21,8 +21,13 @@ import {
   Globe,
   Radio,
   FileText,
+  FileCode,
+  FileSpreadsheet,
   Server,
   HelpCircle,
+  Building2,
+  Database,
+  Upload,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -177,9 +182,9 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
   };
 
   // Estimator Formulations
-  const busCount = fleetSize[0];
-  const tripsCount = dailyTripsPerBus[0];
-  const costPerKm = fuelCostPerKm[0];
+  const busCount = fleetSize[0] ?? 45;
+  const tripsCount = dailyTripsPerBus[0] ?? 8;
+  const costPerKm = fuelCostPerKm[0] ?? 75;
 
   const annualTrips = busCount * tripsCount * 365;
   const deadheadKmSavedAnnual = Math.round(annualTrips * 1.85);
@@ -197,10 +202,13 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
             </span>
             <span className="text-slate-400 hidden sm:inline">|</span>
             <span className="text-slate-300 hidden sm:inline">
-              Multi-tenant operational datasets: Chennai Metropolitan Transport Corporation (50 buses, 70 crew, 12 corridors) and Salem Transport Corporation (24 buses, 48 crew, 8 corridors).
+              Active Municipal Networks: Chennai MTC (50 buses, 70 crew, 12 corridors) and Salem Transport (24 buses, 48 crew, 8 corridors).
             </span>
           </div>
           <div className="flex items-center gap-4 text-slate-400">
+            <Link to="/signup" className="text-blue-400 hover:text-blue-300 font-semibold transition-colors">
+              Onboard Corporation
+            </Link>
             <Link to="/privacy" className="hover:text-white transition-colors">
               Privacy Policy
             </Link>
@@ -230,13 +238,25 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-7 text-xs font-semibold text-slate-600 dark:text-slate-300">
+          <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
             <a
               href="#features"
               className="hover:text-slate-900 dark:hover:text-white transition-colors"
             >
               Core Capabilities
             </a>
+            <Link
+              to="/operations/today"
+              className="hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              Live Tracking &amp; AVL
+            </Link>
+            <Link
+              to="/simulation"
+              className="hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              Simulation Deck
+            </Link>
             <a
               href="#interactive-demo"
               className="hover:text-slate-900 dark:hover:text-white transition-colors"
@@ -249,34 +269,16 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
             >
               Operational Estimator
             </a>
-            <a
-              href="#benchmark"
-              className="hover:text-slate-900 dark:hover:text-white transition-colors"
+            <Link
+              to="/signup"
+              className="text-blue-600 dark:text-blue-400 font-bold hover:underline transition-colors"
             >
-              Salem Benchmark
-            </a>
-            <a
-              href="#architecture"
-              className="hover:text-slate-900 dark:hover:text-white transition-colors"
-            >
-              Technical Architecture
-            </a>
-            <a
-              href="#domains"
-              className="hover:text-slate-900 dark:hover:text-white transition-colors"
-            >
-              Custom Domains
-            </a>
-            <a
-              href="#pricing"
-              className="hover:text-slate-900 dark:hover:text-white transition-colors"
-            >
-              Deployment Tiers
-            </a>
+              Self-Service Onboarding
+            </Link>
           </nav>
 
           {/* Right Action Hub */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {currentUser ? (
               <Button
                 asChild
@@ -299,13 +301,14 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
                   <Link to="/login">Sign In</Link>
                 </Button>
                 <Button
+                  asChild
                   size="sm"
-                  onClick={() => handleQuickLogin("admin@salemtransport.demo")}
-                  disabled={loggingIn}
-                  className="rounded-md bg-slate-900 hover:bg-slate-800 text-white dark:bg-blue-600 dark:hover:bg-blue-700 font-medium text-xs cursor-pointer"
+                  className="rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs cursor-pointer"
                 >
-                  <Server className="mr-1.5 size-3.5" />
-                  <span>Launch Live Demo</span>
+                  <Link to="/signup">
+                    <Building2 className="mr-1.5 size-3.5" />
+                    <span>Onboard Corporation</span>
+                  </Link>
                 </Button>
               </>
             )}
@@ -322,7 +325,7 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
               <div className="inline-flex items-center gap-2 rounded border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs font-mono font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                 <span>Enterprise Transit Software</span>
                 <span className="text-slate-400">|</span>
-                <span>Version 2.4</span>
+                <span>Production Release</span>
               </div>
 
               <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.15]">
@@ -330,12 +333,11 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
               </h1>
 
               <p className="text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-                TransitOS is a multi-tenant operations platform designed for
-                municipal bus undertakings. It formulates vehicle-crew duty
-                pairings using mathematical constraint optimization, audits
-                route overlap geometry, and provides real-time disruption
-                recovery workflows under statutory Motor Vehicle Act labor
-                limits.
+                TransitOS is an enterprise operations platform designed for
+                municipal bus undertakings. It provides real-time AVL fleet telemetry,
+                corridor movement simulation, automated crew SOS incident escalation
+                with driver and standby bus reassignments, and mathematical constraint
+                optimization under statutory Motor Vehicles Act labor limits.
               </p>
 
               {/* Action Buttons */}
@@ -364,13 +366,12 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
 
                 <Button
                   asChild
-                  variant="outline"
                   size="default"
-                  className="rounded-md text-xs font-semibold px-4 h-10"
+                  className="rounded-md bg-slate-900 hover:bg-slate-800 text-white dark:bg-emerald-600 dark:hover:bg-emerald-700 text-xs font-semibold px-4 h-10"
                 >
-                  <Link to="/simulation">
-                    <Radio className="mr-2 size-4 text-blue-600 dark:text-blue-400" />
-                    <span>Open Route Simulator</span>
+                  <Link to="/signup">
+                    <Building2 className="mr-2 size-4" />
+                    <span>Onboard New Corporation</span>
                   </Link>
                 </Button>
 
@@ -380,10 +381,22 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
                   size="default"
                   className="rounded-md text-xs font-semibold px-4 h-10"
                 >
-                  <a href="#interactive-demo">
-                    <Sliders className="mr-2 size-4" />
-                    <span>Interactive Solver</span>
-                  </a>
+                  <Link to="/simulation">
+                    <Radio className="mr-2 size-4 text-blue-600 dark:text-blue-400" />
+                    <span>Simulation Deck</span>
+                  </Link>
+                </Button>
+
+                <Button
+                  asChild
+                  variant="outline"
+                  size="default"
+                  className="rounded-md text-xs font-semibold px-4 h-10"
+                >
+                  <Link to="/operations/today">
+                    <Gauge className="mr-2 size-4 text-blue-600 dark:text-blue-400" />
+                    <span>Live Tracking &amp; AVL</span>
+                  </Link>
                 </Button>
               </div>
 
@@ -407,10 +420,10 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
                 </div>
                 <div>
                   <span className="font-semibold text-slate-900 dark:text-white">
-                    Database Isolation:
+                    Data Ingestion:
                   </span>
                   <p className="text-slate-500 font-mono">
-                    PostgreSQL Row Bounds
+                    JSON, CSV &amp; Excel
                   </p>
                 </div>
               </div>
@@ -423,86 +436,93 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
                   <div className="flex items-center gap-2">
                     <Terminal className="size-4 text-slate-400" />
                     <span className="font-bold text-slate-200">
-                      SALEM DISPATCH CONTROLLER
+                      LIVE FLEET TELEMETRY &amp; AVL
                     </span>
                   </div>
-                  <span className="text-[11px] font-semibold text-emerald-400">
-                    TELEMETRY CONNECTED
+                  <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                    <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+                    43 ACTIVE AVL FEEDS
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 text-slate-300">
                   <div className="rounded border border-slate-800 bg-slate-900 p-2.5">
                     <span className="text-[10px] text-slate-400 uppercase">
-                      Registered Fleet
+                      Monitored Vehicles
                     </span>
                     <div className="text-lg font-bold text-white mt-0.5">
-                      24 Buses
+                      43 Buses
                     </div>
-                    <span className="text-[10px] text-slate-400">
-                      18 In-service, 6 Maintenance/Standby
+                    <span className="text-[10px] text-emerald-400">
+                      38 On-Time · 1 Delayed · 4 Depot Bays
                     </span>
                   </div>
 
                   <div className="rounded border border-slate-800 bg-slate-900 p-2.5">
                     <span className="text-[10px] text-slate-400 uppercase">
-                      Certified Crew
+                      Duty Assignments
                     </span>
                     <div className="text-lg font-bold text-white mt-0.5">
-                      48 Personnel
+                      40 Trips
                     </div>
                     <span className="text-[10px] text-slate-400">
-                      24 Drivers, 24 Conductors
+                      1-Click Auto Assign Available
                     </span>
                   </div>
 
                   <div className="rounded border border-slate-800 bg-slate-900 p-2.5">
                     <span className="text-[10px] text-slate-400 uppercase">
-                      Monitored Corridors
+                      Active Corridors
                     </span>
                     <div className="text-lg font-bold text-white mt-0.5">
-                      8 Lines
+                      17 Corridors
                     </div>
                     <span className="text-[10px] text-slate-400">
-                      54 Bus Stops Mapped
+                      Anti-Stacking Bay Dispersion
                     </span>
                   </div>
 
                   <div className="rounded border border-slate-800 bg-slate-900 p-2.5">
                     <span className="text-[10px] text-slate-400 uppercase">
-                      Scheduled Departures
+                      Emergency SOS Radar
                     </span>
-                    <div className="text-lg font-bold text-white mt-0.5">
-                      40 Trips/Day
+                    <div className="text-lg font-bold text-emerald-400 mt-0.5">
+                      Active Link
                     </div>
                     <span className="text-[10px] text-slate-400">
-                      06:00 to 22:30 Service Window
+                      Instant Driver / Fleet Reassignment
                     </span>
                   </div>
                 </div>
 
-                <div className="border-t border-slate-800 pt-3 space-y-1.5 text-[11px] text-slate-400">
-                  <p className="flex items-start gap-1.5">
-                    <span className="text-slate-500">[08:14:10]</span>
-                    <span className="text-slate-300">
-                      Solver batch #9042 converged in 418ms: 40/40 duty shifts
-                      assigned.
-                    </span>
-                  </p>
-                  <p className="flex items-start gap-1.5">
-                    <span className="text-slate-500">[08:14:25]</span>
-                    <span className="text-slate-300">
-                      Vehicle TN-27-N-4012 (Corridor 1A) departed Old Bus Stand
-                      (+12s variance).
-                    </span>
-                  </p>
-                  <p className="flex items-start gap-1.5">
-                    <span className="text-slate-500">[08:14:42]</span>
-                    <span className="text-slate-300">
-                      Standby bus SB-04 fueled and positioned at Meyyanur Depot
-                      Bay 2.
-                    </span>
-                  </p>
+                <div className="border-t border-slate-800 pt-3 space-y-2 text-[11px] text-slate-400">
+                  <div className="p-2 rounded bg-slate-900/90 border border-slate-800 flex items-center justify-between">
+                    <span className="text-slate-300">Meyyanur &amp; Broadway Dispatch Cells:</span>
+                    <span className="text-emerald-400 font-semibold">Synchronized</span>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      asChild
+                      size="sm"
+                      className="w-full rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs h-8"
+                    >
+                      <Link to="/operations/today">
+                        <Gauge className="mr-1.5 size-3.5" />
+                        <span>Open Live Tracking Map</span>
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="w-full rounded-md border-slate-700 text-slate-200 hover:bg-slate-800 text-xs h-8"
+                    >
+                      <Link to="/crew/portal">
+                        <Users className="mr-1.5 size-3.5" />
+                        <span>Crew SOS Portal</span>
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -532,7 +552,7 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
 
           <div className="max-w-5xl">
             <Tabs defaultValue="solver" className="w-full">
-              <TabsList className="grid grid-cols-2 md:grid-cols-4 h-auto p-1 rounded-md bg-white border border-slate-300 dark:bg-slate-900 dark:border-slate-800 mb-6">
+              <TabsList className="grid grid-cols-2 md:grid-cols-5 h-auto p-1 rounded-md bg-white border border-slate-300 dark:bg-slate-900 dark:border-slate-800 mb-6">
                 <TabsTrigger
                   value="solver"
                   className="rounded py-2 text-xs font-semibold"
@@ -543,7 +563,7 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
                   value="disruption"
                   className="rounded py-2 text-xs font-semibold"
                 >
-                  Disruption Radar
+                  Disruption &amp; Crew SOS
                 </TabsTrigger>
                 <TabsTrigger
                   value="gis"
@@ -556,6 +576,12 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
                   className="rounded py-2 text-xs font-semibold"
                 >
                   Labor Law Compliance
+                </TabsTrigger>
+                <TabsTrigger
+                  value="onboarding"
+                  className="rounded py-2 text-xs font-semibold"
+                >
+                  JSON / CSV Onboarding
                 </TabsTrigger>
               </TabsList>
 
@@ -1022,6 +1048,79 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
                   </CardContent>
                 </Card>
               </TabsContent>
+
+              {/* TAB 5: SELF-SERVICE ONBOARDING */}
+              <TabsContent value="onboarding">
+                <Card className="rounded-md border-slate-300 dark:border-slate-800 shadow-none bg-white dark:bg-slate-900">
+                  <CardHeader className="border-b border-slate-200 dark:border-slate-800 pb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div>
+                        <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+                          Automated Fleet &amp; Network Ingestion (JSON, CSV, Excel)
+                        </CardTitle>
+                        <CardDescription className="text-xs mt-1">
+                          Seamlessly provision and seed any municipal transport corporation with GTFS corridors, bus inventory, and crew duty rosters.
+                        </CardDescription>
+                      </div>
+                      <Button
+                        asChild
+                        size="sm"
+                        className="rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+                      >
+                        <Link to="/signup">
+                          <Building2 className="mr-1.5 size-3.5" />
+                          <span>Launch Onboarding Wizard</span>
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="pt-6 space-y-4 text-xs">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="rounded border border-slate-200 dark:border-slate-800 p-4 space-y-2 bg-slate-50 dark:bg-slate-950">
+                        <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                          <FileCode className="size-4 text-blue-600" />
+                          <span>1. JSON Schema Support</span>
+                        </div>
+                        <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
+                          Accepts structured JSON payloads containing routes, buses, crew, and scheduled trips with automatic schema validation.
+                        </p>
+                      </div>
+
+                      <div className="rounded border border-slate-200 dark:border-slate-800 p-4 space-y-2 bg-slate-50 dark:bg-slate-950">
+                        <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                          <FileText className="size-4 text-emerald-600" />
+                          <span>2. Multi-Section CSV Parser</span>
+                        </div>
+                        <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
+                          Intelligent header detection maps route codes, registration numbers, employee IDs, and shift times from comma-separated spreadsheets.
+                        </p>
+                      </div>
+
+                      <div className="rounded border border-slate-200 dark:border-slate-800 p-4 space-y-2 bg-slate-50 dark:bg-slate-950">
+                        <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                          <FileSpreadsheet className="size-4 text-amber-600" />
+                          <span>3. Excel (.xlsx) Workbooks</span>
+                        </div>
+                        <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
+                          Multi-sheet workbooks with named tabs (&quot;Routes&quot;, &quot;Buses&quot;, &quot;Crew&quot;, &quot;Trips&quot;) are parsed natively in browser memory.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-950 text-slate-300 font-mono text-[11px] space-y-1">
+                      <div className="text-slate-500">// Example Ingestion Payload Structure</div>
+                      <div>&#123;</div>
+                      <div className="pl-4">&quot;name&quot;: &quot;Coimbatore Metropolitan Transport&quot;,</div>
+                      <div className="pl-4">&quot;code&quot;: &quot;CMTC&quot;,</div>
+                      <div className="pl-4">&quot;routes&quot;: [ &#123; &quot;code&quot;: &quot;C-101&quot;, &quot;lengthKm&quot;: 14.8, &quot;durationMin&quot;: 36 &#125; ],</div>
+                      <div className="pl-4">&quot;buses&quot;: [ &#123; &quot;registrationNumber&quot;: &quot;TN-38-N-4101&quot;, &quot;capacity&quot;: 52 &#125; ],</div>
+                      <div className="pl-4">&quot;crew&quot;: [ &#123; &quot;employeeId&quot;: &quot;EMP-001&quot;, &quot;role&quot;: &quot;driver&quot; &#125; ]</div>
+                      <div>&#125;</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
           </div>
         </div>
@@ -1184,73 +1283,127 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
             <div className="rounded-md border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-2">
               <Cpu className="size-5 text-slate-800 dark:text-blue-400" />
               <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                1. Constraint Solver Engine
+                1. Schedule &amp; Shift Optimizer
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                 Mixed-Integer Linear Programming solver using Google OR-Tools.
-                Simultaneously solves vehicle duty links, depot pull-outs, and
-                driver rest constraints.
+                Regularizes headways, reduces deadhead kilometers by 32%, and
+                synchronizes vehicle-crew duty assignments across depots.
               </p>
+              <div className="pt-2">
+                <Link
+                  to="/scheduling/optimizer"
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                >
+                  <span>Open Schedule Optimizer</span>
+                  <ArrowRight className="size-3" />
+                </Link>
+              </div>
             </div>
 
             <div className="rounded-md border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-2">
-              <Map className="size-5 text-slate-800 dark:text-blue-400" />
+              <Radio className="size-5 text-slate-800 dark:text-blue-400" />
               <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                2. GIS Geometry and Overlap Audits
+                2. Live AVL Telemetry &amp; Bay Dispersion
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Leaflet GeoJSON coordinate mapping for all bus stops and
-                corridors. Detects corridor redundancy and prevents headway
-                bunching between parallel routes.
+                Real-time vehicle positioning along corridor polylines with
+                anti-stacking bay dispersion. Prevents overlapping markers at
+                major terminals and tracks delays down to the second.
               </p>
+              <div className="pt-2">
+                <Link
+                  to="/operations/today"
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                >
+                  <span>View Live AVL Map</span>
+                  <ArrowRight className="size-3" />
+                </Link>
+              </div>
             </div>
 
             <div className="rounded-md border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-2">
               <AlertTriangle className="size-5 text-slate-800 dark:text-blue-400" />
               <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                3. Disruption Recovery Radar
+                3. Crew SOS &amp; Dynamic Reassignment
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Maps delay propagation across linked duty shifts during vehicle
-                breakdown and calculates structured recovery options in under
-                420 milliseconds.
+                Instant 1-click crew SOS escalation to live dispatch boards.
+                Enables immediate driver reassignment with PSV licensing verification,
+                reserve conductor pairing, or standby bus deployment.
               </p>
+              <div className="pt-2">
+                <Link
+                  to="/crew/portal"
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                >
+                  <span>Access Crew Portal</span>
+                  <ArrowRight className="size-3" />
+                </Link>
+              </div>
             </div>
 
             <div className="rounded-md border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-2">
               <Shield className="size-5 text-slate-800 dark:text-blue-400" />
               <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                4. Motor Vehicle Act Compliance
+                4. Motor Vehicles Act Labor Compliance
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Automated guardrails enforce statutory rest limits: max 4.5
-                continuous driving hours, min 30 min breaks, and 12-hour
-                mandatory inter-shift rest periods.
+                Automated guardrails enforce statutory rest limits: max 8 continuous
+                driving hours, mandatory 30-minute intervals, weekly ceilings, and
+                Heavy Passenger Vehicle badge license verification.
               </p>
+              <div className="pt-2">
+                <Link
+                  to="/operations/duties"
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                >
+                  <span>Inspect Duty Rosters</span>
+                  <ArrowRight className="size-3" />
+                </Link>
+              </div>
             </div>
 
             <div className="rounded-md border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-2">
-              <Clock className="size-5 text-slate-800 dark:text-blue-400" />
+              <Sliders className="size-5 text-slate-800 dark:text-blue-400" />
               <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                5. Plan vs. Actual Variance Engine
+                5. Multi-Corridor Simulation Deck
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Compares published timetables with GPS departures. Tracks
-                on-time rates within a 5-minute tolerance window with exportable
-                audit logs.
+                Stress-test timetable robustness with 1x to 10x simulation speeds,
+                corridor search filters, simulated vehicle breakdowns, and live AI
+                recovery resilience scoring.
               </p>
+              <div className="pt-2">
+                <Link
+                  to="/simulation"
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                >
+                  <span>Launch Simulation Deck</span>
+                  <ArrowRight className="size-3" />
+                </Link>
+              </div>
             </div>
 
             <div className="rounded-md border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-2">
-              <Layers className="size-5 text-slate-800 dark:text-blue-400" />
+              <Database className="size-5 text-slate-800 dark:text-blue-400" />
               <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                6. Multi-Tenant Enterprise Isolation
+                6. Self-Service Tenant Onboarding
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Strict row-level multi-tenancy enforced at the database level.
-                HTTP-only signed JWT sessions, role-based access control, and
-                tenant data isolation.
+                Instant provisioning for municipal transit authorities or private operators.
+                Ingest routes, buses, crew, and scheduled trips via JSON, CSV, or Excel
+                with live data preview.
               </p>
+              <div className="pt-2">
+                <Link
+                  to="/signup"
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                >
+                  <span>Onboard New Corporation</span>
+                  <ArrowRight className="size-3" />
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -1525,7 +1678,10 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
                 variant="outline"
                 className="w-full rounded-md text-xs font-semibold"
               >
-                <Link to="/login">Start Depot Evaluation</Link>
+                <Link to="/signup">
+                  <Building2 className="mr-1.5 size-3.5" />
+                  <span>Onboard Depot</span>
+                </Link>
               </Button>
             </div>
 
@@ -1560,13 +1716,23 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
                   </div>
                 </div>
               </div>
-              <Button
-                onClick={() => handleQuickLogin("admin@salemtransport.demo")}
-                disabled={loggingIn}
-                className="w-full rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer"
-              >
-                Access Metropolitan Live Demo
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button
+                  onClick={() => handleQuickLogin("admin@mtcchennai.demo")}
+                  disabled={loggingIn}
+                  className="w-full rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer"
+                >
+                  Access Metropolitan Live Demo
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="w-full rounded-md text-xs font-semibold"
+                >
+                  <Link to="/signup">Onboard Metropolitan Corporation</Link>
+                </Button>
+              </div>
             </div>
 
             {/* Tier 3 */}
@@ -1602,7 +1768,10 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
                 variant="outline"
                 className="w-full rounded-md text-xs font-semibold"
               >
-                <Link to="/login">Contact Government Procurement</Link>
+                <Link to="/signup">
+                  <Building2 className="mr-1.5 size-3.5" />
+                  <span>Onboard Custom Fleet</span>
+                </Link>
               </Button>
             </div>
           </div>
@@ -1691,7 +1860,31 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
               </span>
             </div>
 
-            <div className="flex items-center gap-4 text-xs font-medium">
+            <div className="flex flex-wrap items-center gap-4 text-xs font-medium">
+              <Link
+                to="/signup"
+                className="text-blue-600 dark:text-blue-400 font-semibold hover:underline transition-colors"
+              >
+                Onboard Corporation
+              </Link>
+              <Link
+                to="/operations/today"
+                className="hover:text-slate-900 dark:hover:text-white transition-colors"
+              >
+                Live Tracking
+              </Link>
+              <Link
+                to="/simulation"
+                className="hover:text-slate-900 dark:hover:text-white transition-colors"
+              >
+                Route Simulator
+              </Link>
+              <Link
+                to="/login"
+                className="hover:text-slate-900 dark:hover:text-white transition-colors"
+              >
+                Operator Sign In
+              </Link>
               <Link
                 to="/privacy"
                 className="hover:text-slate-900 dark:hover:text-white transition-colors"
@@ -1703,18 +1896,6 @@ export function LandingPage({ currentUser }: LandingPageProps = {}) {
                 className="hover:text-slate-900 dark:hover:text-white transition-colors"
               >
                 Terms and Conditions
-              </Link>
-              <Link
-                to="/login"
-                className="hover:text-slate-900 dark:hover:text-white transition-colors"
-              >
-                Operator Sign In
-              </Link>
-              <Link
-                to="/simulation"
-                className="hover:text-slate-900 dark:hover:text-white transition-colors"
-              >
-                Route Simulator
               </Link>
             </div>
           </div>
